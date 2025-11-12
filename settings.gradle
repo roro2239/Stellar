@@ -48,7 +48,6 @@ dependencyResolutionManagement {
 }
 
 include ':server'
-include ':starter'
 include ':manager'
 include ':demo'
 include ':common'
