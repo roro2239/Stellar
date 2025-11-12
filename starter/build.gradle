@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.library'
+    id 'dev.rikka.tools.refine'
+}
+
+android {
+    namespace 'com.stellar.starter'
+    buildFeatures {
+        buildConfig = false
+    }
+}
+dependencies {
+    implementation project(':common')
+    implementation project(':shared')
+    implementation project(':server-shared')
+    compileOnly project(':provider')
+    
+    implementation 'androidx.annotation:annotation:1.9.1'
+    
+    implementation libs.hidden.compat
+    compileOnly libs.hidden.stub
+    
+    implementation libs.refine.runtime
+}

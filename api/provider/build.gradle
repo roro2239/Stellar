@@ -1,0 +1,51 @@
+/**
+ * Stellar Provider模块构建配置
+ * Stellar Provider Module Build Configuration
+ * 
+ * 功能说明：
+ * - 提供ContentProvider方式接入Stellar
+ * - 简化Binder获取流程
+ * - 自动处理服务连接和生命周期
+ * 
+ * 使用方式：
+ * 在AndroidManifest.xml中声明Provider，即可自动接入Stellar服务
+ */
+
+plugins {
+    id('com.android.library')               // Android库插件
+}
+
+android {
+    namespace 'roro.stellar.provider'
+    defaultConfig {
+        // 消费者ProGuard规则（传递给使用此库的应用）
+        consumerProguardFiles "consumer-rules.pro"
+    }
+    buildFeatures {
+        buildConfig false                   // 不生成BuildConfig
+    }
+    buildTypes {
+        release {
+            minifyEnabled false             // 不启用混淆
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint {
+        // 禁用特定Lint检查
+        disable 'UnspecifiedRegisterReceiverFlag'
+    }
+}
+
+// ============================================
+// 依赖项配置 Dependencies Configuration
+// ============================================
+dependencies {
+    // Stellar API核心库
+    implementation project(':api')
+    
+    // AndroidX注解支持
+    implementation 'androidx.annotation:annotation:1.9.1'
+}

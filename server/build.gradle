@@ -1,0 +1,36 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'dev.rikka.tools.refine'
+}
+
+android {
+    namespace 'com.stellar.server'
+    buildFeatures {
+        buildConfig = false
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+    lint {
+        disable 'NewApi'
+    }
+}
+dependencies {
+    // AndroidX注解
+    implementation "androidx.annotation:annotation:1.9.1"
+    
+    implementation 'com.google.code.gson:gson:2.13.1'
+    
+    api 'dev.rikka.rikkax.parcelablelist:parcelablelist:2.0.1'
+
+    implementation project(':aidl')
+    implementation project(':common')
+    implementation project(':shared')
+    compileOnly project(':provider')
+    implementation project(':starter')
+    implementation project(':server-shared')
+    
+    implementation libs.hidden.compat
+    compileOnly libs.hidden.stub
+}

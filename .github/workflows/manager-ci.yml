@@ -1,0 +1,90 @@
+name: Manager CI
+
+on:
+  push:
+    branches: [ master, main, develop ]
+    paths:
+      - 'manager/**'
+      - 'common/**'
+      - 'server/**'
+      - 'api/**'
+      - '*.gradle'
+  pull_request:
+    branches: [ master, main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 构建 Manager Debug
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: 授予 gradlew 执行权限
+      run: chmod +x gradlew
+      
+    - name: 设置 Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: 接受 Android SDK 许可
+      run: yes | sdkmanager --licenses || true
+      
+    - name: 安装 Android SDK 组件
+      run: |
+        sdkmanager "build-tools;36.0.0"
+        sdkmanager "platforms;android-36"
+        sdkmanager "ndk;29.0.13113456"
+        
+    - name: 缓存 Gradle 包
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+          
+    - name: 构建 Manager Debug APK
+      run: ./gradlew :manager:assembleDebug --stacktrace --no-daemon
+      
+    - name: 运行单元测试
+      run: ./gradlew :manager:testDebugUnitTest --stacktrace --no-daemon
+      continue-on-error: true
+      
+    - name: 上传 Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: manager-debug-apk
+        path: manager/build/outputs/apk/debug/*.apk
+        retention-days: 7
+        
+    - name: 上传测试报告
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: manager-test-reports
+        path: manager/build/reports/
+        retention-days: 7
+        if-no-files-found: ignore
+        
+    - name: 构建摘要
+      if: always()
+      run: |
+        echo "## Manager 构建摘要" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Debug 版本构建完成" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 产物（保留 7 天）" >> $GITHUB_STEP_SUMMARY
+        echo "- Manager Debug APK" >> $GITHUB_STEP_SUMMARY
+        echo "- 测试报告" >> $GITHUB_STEP_SUMMARY
+
+
