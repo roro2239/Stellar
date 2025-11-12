@@ -20,14 +20,14 @@ endif ()
 find_package(boringssl REQUIRED CONFIG)
 find_package(cxx REQUIRED CONFIG)
 
-add_executable(libStellar.so
+add_executable(libstellar.so
         starter.cpp misc.cpp selinux.cpp cgroup.cpp)
 
-target_link_libraries(libStellar.so log cxx::cxx)
+target_link_libraries(libstellar.so log cxx::cxx)
 
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_custom_command(TARGET libStellar.so POST_BUILD
-            COMMAND ${CMAKE_STRIP} --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libStellar.so")
+    add_custom_command(TARGET libstellar.so POST_BUILD
+            COMMAND ${CMAKE_STRIP} --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libstellar.so")
 endif ()
 
 add_library(adb SHARED

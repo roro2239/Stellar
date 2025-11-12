@@ -36,7 +36,7 @@
 #define EXIT_FATAL_BINDER_BLOCKED_BY_SELINUX 10
 
 #define PACKAGE_NAME "roro.stellar.manager"
-#define SERVER_NAME "Stellar_server"
+#define SERVER_NAME "stellar_server"
 #define SERVER_CLASS_PATH "roro.stellar.server.StellarService"
 
 #if defined(__arm__)
@@ -102,7 +102,7 @@ v_current = (uintptr_t) v + v_size - sizeof(char *); \
     ARG(argv)
     ARG_PUSH(argv, "/system/bin/app_process")
     ARG_PUSH_FMT(argv, "-Djava.class.path=%s", dex_path)
-    ARG_PUSH_FMT(argv, "-DStellar.library.path=%s", lib_path)
+    ARG_PUSH_FMT(argv, "-Dstellar.library.path=%s", lib_path)
     ARG_PUSH_DEBUG_VM_PARAMS(argv)
     ARG_PUSH(argv, "/system/bin")
     ARG_PUSH_FMT(argv, "--nice-name=%s", process_name)
@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
         // 查找 /lib/ 路径
         size_t lib_pos = so_path.find("/lib/");
         if (lib_pos != std::string::npos) {
-            // /data/app/.../lib/arm64/libStellar.so -> /data/app/.../base.apk
+            // /data/app/.../lib/arm64/libstellar.so -> /data/app/.../base.apk
             apk_path = so_path.substr(0, lib_pos) + "/base.apk";
             printf("信息：从执行路径推导 apk 路径\n");
             fflush(stdout);
