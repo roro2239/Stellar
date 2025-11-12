@@ -20,7 +20,7 @@ import java.io.File
 object Starter {
 
     /** Stellar native库文件 Stellar native library file */
-    private val starterFile = File(application.applicationInfo.nativeLibraryDir, "libStellar.so")
+    private val starterFile = File(application.applicationInfo.nativeLibraryDir, "libstellar.so")
 
     /** 
      * 用户命令（Root模式）

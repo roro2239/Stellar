@@ -29,10 +29,6 @@
     public static void main(java.lang.String[]);
 }
 
--keep class com.stellar.starter.ServiceStarter {
-    public static void main(java.lang.String[]);
-}
-
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
 }
