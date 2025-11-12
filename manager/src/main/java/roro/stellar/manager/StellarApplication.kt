@@ -18,10 +18,7 @@ package roro.stellar.manager
 
 import android.app.Application
 import android.content.Context
-import android.os.Build
-import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
-import com.tencent.bugly.crashreport.CrashReport
 import com.topjohnwu.superuser.Shell
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import roro.stellar.manager.compat.BuildUtils.atLeast30
@@ -80,21 +77,5 @@ class StellarApplication : Application() {
         super.onCreate()
         application = this
         init(this)
-        initBugly()
-    }
-
-    private fun initBugly() {
-        val strategy = CrashReport.UserStrategy(applicationContext).apply {
-            deviceModel = Build.MODEL
-            appVersion = BuildConfig.VERSION_NAME
-            isUploadProcess = true
-        }
-
-        if (BuildConfig.DEBUG) {
-            CrashReport.setIsDevelopmentDevice(applicationContext, true)
-        }
-
-        CrashReport.initCrashReport(applicationContext, "ed4a3def8c", BuildConfig.DEBUG, strategy)
-        CrashReport.setUserId(Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "未知设备")
     }
 }
