@@ -1,0 +1,196 @@
+import com.android.build.gradle.internal.tasks.CompileArtProfileTask
+
+import java.nio.file.Paths
+
+plugins {
+    id('com.android.application')
+    id('org.jetbrains.kotlin.android')
+    id('org.jetbrains.kotlin.plugin.compose')
+    id('dev.rikka.tools.refine')
+    id('dev.rikka.tools.autoresconfig')
+}
+android {
+    namespace 'roro.stellar.manager'
+    defaultConfig {
+        applicationId "roro.stellar.manager"
+        versionCode 1
+        versionName rootProject.ext.versionName
+
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=none'
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            }
+        }
+        targetSdk 36
+        minSdk 30
+    }
+
+    buildFeatures {
+        buildConfig true
+        prefab true
+        compose true
+    }
+
+    signingConfigs {
+        sign
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.sign
+        }
+        release {
+            signingConfig signingConfigs.sign
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/jni/CMakeLists.txt'
+            version = "3.22.1+"
+        }
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['/META-INF/**']
+        }
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    lint {
+        checkReleaseBuilds false
+        baseline = file("lint-baseline.xml")
+        abortOnError false
+    }
+    compileSdk 36
+}
+
+autoResConfig {
+    generatedClassFullName = "roro.stellar.manager.StellarLocales"
+    generateRes = false
+    generatedArrayFirstItem = "SYSTEM"
+    generateLocaleConfig = true
+}
+def collapseReleaseResourceNames = task('collapseReleaseResourceNames').doLast {
+    def aapt2 = Paths.get(project.android.sdkDirectory.path, 'build-tools', project.android.buildToolsVersion, 'aapt2')
+    def zip = Paths.get(project.buildDir.path, 'intermediates',
+            'optimized_processed_res', 'release', 'optimizeReleaseResources', 'resources-release-optimize.ap_')
+    def optimized = new File("${zip}.opt")
+    def cmd = exec {
+        commandLine aapt2, 'optimize', '--collapse-resource-names',
+                '--resources-config-path', 'aapt2-resources.cfg',
+                '-o', optimized, zip
+        ignoreExitValue false
+    }
+    if (cmd.exitValue == 0) {
+        delete(zip)
+        optimized.renameTo("$zip")
+    }
+}
+afterEvaluate {
+    tasks.getByName('optimizeReleaseResources').finalizedBy(collapseReleaseResourceNames)
+}
+android.applicationVariants.configureEach { variant ->
+    variant.outputs.configureEach {
+        outputFileName = "stellar-v${variant.versionName}-${variant.name}.apk"
+
+        variant.assembleProvider.get().doLast {
+            def outDir = new File(rootDir, "out")
+            def mappingDir = new File(outDir, "mapping").absolutePath
+            def apkDir = new File(outDir, "apk").absolutePath
+
+            if (variant.getBuildType().isMinifyEnabled()) {
+                copy {
+                    from variant.mappingFileProvider.get()
+                    into mappingDir
+                    rename { String fileName -> "mapping-${variant.versionName}.txt" }
+                }
+                copy {
+                    from outputFile
+                    into apkDir
+                }
+            }
+        }
+    }
+}
+tasks.withType(CompileArtProfileTask.class).configureEach {
+    enabled = false
+}
+
+configurations.configureEach {
+    exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
+}
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+
+    implementation project(':server')
+    implementation project(':starter')
+    implementation project(':api')
+    implementation project(':provider')
+
+    implementation libs.hidden.compat
+    compileOnly libs.hidden.stub
+
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.browser:browser:1.8.0'
+    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.fragment:fragment-ktx:1.8.7'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
+
+    implementation 'com.google.android.material:material:1.12.0'
+
+    def composeBom = platform('androidx.compose:compose-bom:2025.01.00')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.compose.runtime:runtime-livedata'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.navigation:navigation-compose:2.9.4'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    implementation 'com.github.topjohnwu.libsu:core:6.0.0'
+
+    implementation 'org.lsposed.libcxx:libcxx:27.0.12077973'
+    implementation 'io.github.vvb2060.ndk:boringssl:20250114'
+
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
+
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.80'
+
+    implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
+    
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    
+    implementation 'com.github.Kyant0:Capsule:2.1.0'
+    implementation 'com.tencent.bugly:crashreport:latest.release'
+    
+    // Shizuku
+    def shizuku_version = '13.1.5'
+    implementation "dev.rikka.shizuku:api:$shizuku_version"
+    implementation "dev.rikka.shizuku:provider:$shizuku_version"
+}
+apply from: rootProject.file('signing.gradle')
+
