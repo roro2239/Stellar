@@ -1,0 +1,14 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.stellar.common'
+    buildFeatures {
+        buildConfig = false
+    }
+}
+
+dependencies {
+    compileOnly libs.hidden.stub
+}
