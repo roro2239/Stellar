@@ -1,0 +1,35 @@
+/**
+ * Stellar AIDL模块构建配置
+ * Stellar AIDL Module Build Configuration
+ * 
+ * 功能说明：
+ * - 定义Stellar的AIDL接口
+ * - 提供跨进程通信的低级接口定义
+ * - 包含服务端和客户端的通信协议
+ * 
+ * 主要接口：
+ * - IStellarService: 主服务接口
+ * - IStellarApplication: 应用回调接口
+ * - IRemoteProcess: 远程进程接口
+ */
+
+plugins {
+    id('com.android.library')               // Android库插件
+}
+
+android {
+    namespace 'com.stellar.aidl'
+    buildFeatures {
+        buildConfig false                   // 不生成BuildConfig
+        aidl true                           // 启用AIDL支持
+    }
+    buildTypes {
+        release {
+            minifyEnabled false             // 不启用混淆（AIDL接口需要保持原样）
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
