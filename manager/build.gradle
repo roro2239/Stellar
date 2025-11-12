@@ -140,7 +140,6 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
 
     implementation project(':server')
-    implementation project(':starter')
     implementation project(':api')
     implementation project(':provider')
 

@@ -12,9 +12,6 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    lint {
-        disable 'NewApi'
-    }
 }
 dependencies {
     // AndroidX注解
@@ -28,7 +25,6 @@ dependencies {
     implementation project(':common')
     implementation project(':shared')
     compileOnly project(':provider')
-    implementation project(':starter')
     implementation project(':server-shared')
     
     implementation libs.hidden.compat
