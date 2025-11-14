@@ -6,9 +6,12 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.animateFloatAsState
+ 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +20,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -44,10 +50,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -93,7 +102,7 @@ fun AppsScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StandardLargeTopAppBar(
-                title = "Stellar",
+                title = "授权应用",
                 scrollBehavior = scrollBehavior
             )
         }
@@ -106,10 +115,7 @@ fun AppsScreen(
                     .padding(top = AppSpacing.topBarContentSpacing),
                 contentAlignment = Alignment.Center,
             ) {
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn() + scaleIn()
-                ) {
+                AnimatedVisibility(visible = true) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -155,10 +161,7 @@ fun AppsScreen(
                         .padding(top = AppSpacing.topBarContentSpacing),
                     contentAlignment = Alignment.Center,
                 ) {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + scaleIn()
-                    ) {
+                    AnimatedVisibility(visible = true) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -197,10 +200,7 @@ fun AppsScreen(
                             .padding(top = AppSpacing.topBarContentSpacing),
                         contentAlignment = Alignment.Center,
                     ) {
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn() + scaleIn()
-                        ) {
+                        AnimatedVisibility(visible = true) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -253,20 +253,19 @@ fun AppsScreen(
                             }
                             AppListItem(
                                 packageInfo = packageInfo,
-                                onToggle = {
+                                flag = flag,
+                                onUpdateFlag = { newFlag ->
                                     try {
                                         val uid = packageInfo.applicationInfo!!.uid
-
-                                        flag = (flag + 1) % 3
-                                        Stellar.updateFlagsForUid(uid, flag)
-
+                                        flag = newFlag
+                                        Stellar.updateFlagsForUid(uid, newFlag)
                                         appsViewModel.load(true)
                                     } catch (e: SecurityException) {
                                         showPermissionError = true
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                     }
-                                }, flag = flag
+                                }
                             )
                         }
                     }
@@ -294,8 +293,8 @@ fun AppsScreen(
 @Composable
 fun AppListItem(
     packageInfo: PackageInfo,
-    onToggle: () -> Unit,
-    flag: Int
+    flag: Int,
+    onUpdateFlag: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val pm = context.packageManager
@@ -318,13 +317,6 @@ fun AppListItem(
         }
     }
 
-    val requiresRoot = remember(ai) {
-        try {
-            ai.metaData?.getBoolean("com.stellar.client.V3_REQUIRES_ROOT") == true
-        } catch (e: Exception) {
-            false
-        }
-    }
 
     val iconPainter = remember(ai) {
         try {
@@ -336,19 +328,25 @@ fun AppListItem(
         }
     }
 
+    var expanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth(),
         shape = AppShape.shapes.cardMedium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        onClick = onToggle
+        )
     ) {
+        val rotation by animateFloatAsState(targetValue = if (expanded) 90f else 0f, label = "")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .run { this }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (iconPainter != null) {
@@ -382,13 +380,6 @@ fun AppListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (requiresRoot) {
-                    Text(
-                        text = "需要 Root",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
 
             Text(
@@ -407,8 +398,110 @@ fun AppListItem(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.rotate(rotation).size(24.dp)
             )
+        }
+        
+
+        AnimatedVisibility(visible = expanded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                PermissionSegmentSelector(
+                    currentFlag = flag,
+                    onFlagChange = onUpdateFlag
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionSegmentSelector(
+    currentFlag: Int,
+    onFlagChange: (Int) -> Unit
+) {
+    val density = LocalDensity.current
+    val entries = listOf(
+        AuthorizationManager.FLAG_ASK,
+        AuthorizationManager.FLAG_GRANTED,
+        AuthorizationManager.FLAG_DENIED
+    )
+    val labels = listOf("询问", "允许", "拒绝")
+    val currentIndex = entries.indexOf(currentFlag).coerceIn(0, entries.lastIndex)
+
+    var innerWidth by remember { mutableStateOf(0) }
+    val spacing = 4.dp
+    val spacingPx = with(density) { spacing.toPx() }
+    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = currentIndex.toFloat(),
+        label = "permission_index"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surface,
+                shape = AppShape.shapes.cardMedium
+            )
+            .padding(6.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { size -> innerWidth = size.width },
+            horizontalArrangement = Arrangement.spacedBy(spacing)
+        ) {
+            repeat(entries.size) {
+                Spacer(modifier = Modifier.weight(1f).height(40.dp))
+            }
+        }
+
+        if (innerWidth > 0) {
+            val itemWidth = (innerWidth - spacingPx * (entries.size - 1)) / entries.size
+            val offsetX = animatedIndex * (itemWidth + spacingPx)
+            Box(
+                modifier = Modifier
+                    .offset(x = with(density) { offsetX.toDp() })
+                    .width(with(density) { itemWidth.toDp() })
+                    .height(40.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = AppShape.shapes.iconSmall
+                    )
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing)
+        ) {
+            entries.forEachIndexed { index, entry ->
+                val isSelected = currentIndex == index
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { onFlagChange(entry) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = labels[index],
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 }
