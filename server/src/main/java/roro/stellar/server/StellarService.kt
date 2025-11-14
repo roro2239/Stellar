@@ -333,18 +333,9 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
 
         LOGGER.d("attachApplication: %s %d %d", requestPackageName, callingUid, callingPid)
 
-        var replyServerVersion = StellarApiConstants.SERVER_VERSION
-        if (apiVersion == -1) {
-            // StellarBinderWrapper has adapted API v13 in dev.rikka.stellar:api 12.2.0, however
-            // attachApplication in 12.2.0 is still old, so that server treat the client as pre 13.
-            // This finally cause transactRemote fails.
-            // So we can pass 12 here to pretend we are v12 server.
-            replyServerVersion = 12
-        }
-
         val reply = Bundle()
         reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_UID, OsUtils.getUid())
-        reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_VERSION, replyServerVersion)
+        reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_VERSION, StellarApiConstants.SERVER_VERSION)
         reply.putString(
             StellarApiConstants.BIND_APPLICATION_SERVER_SECONTEXT,
             OsUtils.getSELinuxContext()
