@@ -161,7 +161,11 @@ fun PermissionRequestDialog(
         onDismissRequest = {
             onResult(false, true)
         },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false
+        )
     ) {
         Surface(
             modifier = Modifier
@@ -191,7 +195,7 @@ fun PermissionRequestDialog(
                         modifier = Modifier.size(48.dp)
                     )
                 }
-                
+
                 // 标题
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -203,10 +207,15 @@ fun PermissionRequestDialog(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    
+
                     val text = buildAnnotatedString {
                         append("要允许 ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)) {
+                        withStyle(
+                            style = SpanStyle(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
                             append(appName)
                         }
                         append(" 使用 Stellar 吗？")
