@@ -22,9 +22,9 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.topjohnwu.superuser.Shell
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import roro.stellar.manager.compat.BuildUtils.atLeast30
-import roro.stellar.manager.ktx.logd
 import roro.stellar.manager.utils.CrashHandler
 import roro.stellar.manager.utils.LogFileManager
+import roro.stellar.manager.utils.Logger.Companion.LOGGER
 
 
 /** 全局应用程序实例 Global application instance */
@@ -39,7 +39,7 @@ class StellarApplication : Application() {
     companion object {
 
         init {
-            logd("StellarApplication", "init")
+            LOGGER.d("init")
 
             // 配置Shell环境 - 重定向stderr到stdout
             @Suppress("DEPRECATION")

@@ -78,9 +78,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".management.ApplicationManagementActivity"
-            android:label="应用管理" />
-        <activity
             android:name=".ui.features.home.others.AdbPairingTutorialActivity"
             android:label="配对" />
         <activity

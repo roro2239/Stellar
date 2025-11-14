@@ -3,17 +3,18 @@ package roro.stellar.manager.management
 import android.content.Context
 import android.content.pm.PackageInfo
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.annotation.MainThread
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
-import androidx.activity.viewModels
-import androidx.fragment.app.activityViewModels
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.compat.Resource
 
@@ -89,7 +90,7 @@ class AppsViewModel(context: Context) : ViewModel() {
                 for (pi in AuthorizationManager.getPackages()) {
                     list.add(pi)
                     // 统计已授权的应用数量
-                    if (AuthorizationManager.granted(pi.packageName, pi.applicationInfo!!.uid)) count++
+                    if (Stellar.getFlagsForUid(pi.applicationInfo!!.uid) == AuthorizationManager.FLAG_GRANTED) count++
                 }
                 
                 // 更新LiveData
