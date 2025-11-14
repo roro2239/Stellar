@@ -78,6 +78,6 @@ class StellarConfig {
 
     companion object {
         /** 最新配置版本 Latest configuration version  */
-        const val LATEST_VERSION: Int = 2
+        const val LATEST_VERSION: Int = 1
     }
 }
