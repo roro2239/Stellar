@@ -202,7 +202,7 @@ class StellarConfigManager : ConfigManager() {
         /** 延迟写入时间（毫秒） Delayed write time in milliseconds  */
         private const val WRITE_DELAY = (10 * 1000).toLong()
 
-        private val FILE = File("/data/user_de/0/com.android.shell/Stellar.json")
+        private val FILE = File("/data/user_de/0/com.android.shell/stellar.json")
         private val ATOMIC_FILE = AtomicFile(FILE)
 
         fun load(): StellarConfig {
