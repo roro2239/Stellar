@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="roro.stellar.manager.permission.MANAGER" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -31,10 +30,6 @@
         android:name="roro.stellar.manager.permission-group.API"
         android:icon="@drawable/ic_system_icon"
         android:label="Stellar" />
-
-    <permission
-        android:name="roro.stellar.manager.permission.MANAGER"
-        android:protectionLevel="signature" />
 
     <permission
         android:name="roro.stellar.manager.permission.API_V23"
