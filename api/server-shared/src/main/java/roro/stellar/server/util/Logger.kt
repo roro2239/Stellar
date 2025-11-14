@@ -1,198 +1,203 @@
-package roro.stellar.server.util;
+package roro.stellar.server.util
 
-import android.util.Log;
-
-import java.io.IOException;
-import java.util.Locale;
-import java.util.logging.FileHandler;
-import java.util.logging.SimpleFormatter;
+import android.util.Log
+import java.io.IOException
+import java.util.Locale
+import java.util.logging.FileHandler
+import java.util.logging.Logger
+import java.util.logging.SimpleFormatter
 
 /**
  * 日志工具类
  * Logger Utility Class
- * 
- * <p>功能说明 Features：</p>
- * <ul>
- * <li>封装Android Log API - Wraps Android Log API</li>
- * <li>支持格式化日志输出 - Supports formatted log output</li>
- * <li>支持文件日志记录 - Supports file logging</li>
- * <li>提供所有日志级别 - Provides all log levels (v/d/i/w/e)</li>
- * </ul>
- * 
- * <p>使用示例 Usage Example：</p>
+ *
+ *
+ * 功能说明 Features：
+ *
+ *  * 封装Android Log API - Wraps Android Log API
+ *  * 支持格式化日志输出 - Supports formatted log output
+ *  * 支持文件日志记录 - Supports file logging
+ *  * 提供所有日志级别 - Provides all log levels (v/d/i/w/e)
+ *
+ *
+ *
+ * 使用示例 Usage Example：
  * <pre>
  * private static final Logger LOGGER = new Logger("MyTag");
  * LOGGER.i("Info message");
  * LOGGER.w("Warning: %s", reason);
  * LOGGER.e(exception, "Error occurred");
- * </pre>
- * 
- * <p>日志级别 Log Levels：</p>
- * <ul>
- * <li>v() - Verbose（详细）</li>
- * <li>d() - Debug（调试）</li>
- * <li>i() - Info（信息）</li>
- * <li>w() - Warning（警告）</li>
- * <li>e() - Error（错误）</li>
- * </ul>
+</pre> *
+ *
+ *
+ * 日志级别 Log Levels：
+ *
+ *  * v() - Verbose（详细）
+ *  * d() - Debug（调试）
+ *  * i() - Info（信息）
+ *  * w() - Warning（警告）
+ *  * e() - Error（错误）
+ *
  */
-public class Logger {
+class Logger {
+    /** 日志标签 Log tag  */
+    private val tag: String?
 
-    /** 日志标签 Log tag */
-    private final String tag;
-    
-    /** 文件日志记录器（可选） File logger (optional) */
-    private final java.util.logging.Logger LOGGER;
+    /** 文件日志记录器（可选） File logger (optional)  */
+    private val LOGGER: Logger?
 
     /**
      * 构造日志记录器（仅控制台输出）
      * Construct logger (console only)
-     * 
+     *
      * @param tag 日志标签
      */
-    public Logger(String tag) {
-        this.tag = tag;
-        this.LOGGER = null;
+    constructor(tag: String?) {
+        this.tag = tag
+        this.LOGGER = null
     }
 
     /**
      * 构造日志记录器（支持文件输出）
      * Construct logger (with file output)
-     * 
+     *
      * @param tag 日志标签
      * @param file 日志文件路径
      */
-    public Logger(String tag, String file) {
-        this.tag = tag;
-        this.LOGGER = java.util.logging.Logger.getLogger(tag);
+    constructor(tag: String, file: String) {
+        this.tag = tag
+        this.LOGGER = Logger.getLogger(tag)
         try {
-            FileHandler fh = new FileHandler(file);
-            fh.setFormatter(new SimpleFormatter());
-            LOGGER.addHandler(fh);
-        } catch (IOException e) {
-            e.printStackTrace();
+            val fh = FileHandler(file)
+            fh.setFormatter(SimpleFormatter())
+            LOGGER.addHandler(fh)
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
     /**
      * 检查是否可以记录指定级别的日志
      * Check if logging is enabled for specified level
-     * 
+     *
      * @param tag 日志标签
      * @param level 日志级别
      * @return 总是返回true（默认所有级别都记录）
      */
-    public boolean isLoggable(String tag, int level) {
-        return true;
+    fun isLoggable(tag: String?, level: Int): Boolean {
+        return true
     }
 
-    public void v(String msg) {
+    fun v(msg: String) {
         if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, msg);
+            println(Log.VERBOSE, msg)
         }
     }
 
-    public void v(String fmt, Object... args) {
+    fun v(fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, String.format(Locale.ENGLISH, fmt, args));
+            println(Log.VERBOSE, String.format(Locale.ENGLISH, fmt, *args))
         }
     }
 
-    public void v(String msg, Throwable tr) {
+    fun v(msg: String?, tr: Throwable?) {
         if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, msg + '\n' + Log.getStackTraceString(tr));
+            println(Log.VERBOSE, msg + '\n' + Log.getStackTraceString(tr))
         }
     }
 
-    public void d(String msg) {
+    fun d(msg: String) {
         if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, msg);
+            println(Log.DEBUG, msg)
         }
     }
 
-    public void d(String fmt, Object... args) {
+    fun d(fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, String.format(Locale.ENGLISH, fmt, args));
+            println(Log.DEBUG, String.format(Locale.ENGLISH, fmt, *args))
         }
     }
 
-    public void d(String msg, Throwable tr) {
+    fun d(msg: String?, tr: Throwable?) {
         if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, msg + '\n' + Log.getStackTraceString(tr));
+            println(Log.DEBUG, msg + '\n' + Log.getStackTraceString(tr))
         }
     }
 
-    public void i(String msg) {
+    fun i(msg: String) {
         if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, msg);
+            println(Log.INFO, msg)
         }
     }
 
-    public void i(String fmt, Object... args) {
+    fun i(fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, String.format(Locale.ENGLISH, fmt, args));
+            println(Log.INFO, String.format(Locale.ENGLISH, fmt, *args))
         }
     }
 
-    public void i(String msg, Throwable tr) {
+    fun i(msg: String?, tr: Throwable?) {
         if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, msg + '\n' + Log.getStackTraceString(tr));
+            println(Log.INFO, msg + '\n' + Log.getStackTraceString(tr))
         }
     }
 
-    public void w(String msg) {
+    fun w(msg: String) {
         if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, msg);
+            println(Log.WARN, msg)
         }
     }
 
-    public void w(String fmt, Object... args) {
+    fun w(fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, String.format(Locale.ENGLISH, fmt, args));
+            println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args))
         }
     }
 
-    public void w(Throwable tr, String fmt, Object... args) {
+    fun w(tr: Throwable?, fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, String.format(Locale.ENGLISH, fmt, args) + '\n' + Log.getStackTraceString(tr));
+            println(
+                Log.WARN,
+                String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr)
+            )
         }
     }
 
-    public void w(String msg, Throwable tr) {
+    fun w(msg: String?, tr: Throwable?) {
         if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, msg + '\n' + Log.getStackTraceString(tr));
+            println(Log.WARN, msg + '\n' + Log.getStackTraceString(tr))
         }
     }
 
-    public void e(String msg) {
+    fun e(msg: String) {
         if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, msg);
+            println(Log.ERROR, msg)
         }
     }
 
-    public void e(String fmt, Object... args) {
+    fun e(fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, String.format(Locale.ENGLISH, fmt, args));
+            println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args))
         }
     }
 
-    public void e(String msg, Throwable tr) {
+    fun e(msg: String?, tr: Throwable?) {
         if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, msg + '\n' + Log.getStackTraceString(tr));
+            println(Log.ERROR, msg + '\n' + Log.getStackTraceString(tr))
         }
     }
 
-    public void e(Throwable tr, String fmt, Object... args) {
+    fun e(tr: Throwable?, fmt: String, vararg args: Any?) {
         if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, String.format(Locale.ENGLISH, fmt, args) + '\n' + Log.getStackTraceString(tr));
+            println(
+                Log.ERROR,
+                String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr)
+            )
         }
     }
 
-    public int println(int priority, String msg) {
-        if (LOGGER != null) {
-            LOGGER.info(msg);
-        }
-        return Log.println(priority, tag, msg);
+    fun println(priority: Int, msg: String): Int {
+        LOGGER?.info(msg)
+        return Log.println(priority, tag, msg)
     }
 }
-

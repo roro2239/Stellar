@@ -8,13 +8,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import roro.stellar.manager.BuildConfig
-import roro.stellar.manager.Manifest
+import roro.stellar.Stellar
 import roro.stellar.manager.compat.Resource
 import roro.stellar.manager.model.ServiceStatus
 import roro.stellar.manager.utils.Logger.LOGGER
-import roro.stellar.manager.utils.StellarSystemApis
-import roro.stellar.Stellar
 
 /**
  * 主页ViewModel
@@ -48,14 +45,14 @@ class HomeViewModel : ViewModel() {
         }
 
         // 获取服务信息
-        val uid = Stellar.getUid()
-        val apiVersion = Stellar.getVersion()
-        val patchVersion = Stellar.getServerPatchVersion().let { if (it < 0) 0 else it }
+        val uid = Stellar.uid
+        val apiVersion = Stellar.version
+        val patchVersion = Stellar.serverPatchVersion.let { if (it < 0) 0 else it }
         
         // API 6+支持SELinux上下文
         val seContext = if (apiVersion >= 6) {
             try {
-                Stellar.getSELinuxContext()
+                Stellar.sELinuxContext
             } catch (tr: Throwable) {
                 LOGGER.w(tr, "getSELinuxContext")
                 null
@@ -66,11 +63,6 @@ class HomeViewModel : ViewModel() {
         val permissionTest =
             Stellar.checkRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS") == PackageManager.PERMISSION_GRANTED
 
-        // 修复旧版本服务卸载后不退出的问题
-        // Before a526d6bb, server will not exit on uninstall, manager installed later will get not permission
-        // Run a random remote transaction here, report no permission as not running
-        StellarSystemApis.checkPermission(Manifest.permission.API_V23, BuildConfig.APPLICATION_ID, 0)
-        
         return ServiceStatus(uid, apiVersion, patchVersion, seContext, permissionTest)
     }
 
