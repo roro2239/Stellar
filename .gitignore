@@ -33,4 +33,5 @@ google-services.json
 # Android Profiling
 *.hprof
 
-/out.claude/settings.local.json
+/out
+/.kotlin.claude/settings.local.json

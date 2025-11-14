@@ -22,7 +22,7 @@ pluginManagement {
     plugins {
         id("com.android.application") version "8.10.0"               // Android应用插件
         id("com.android.library") version "8.10.0"                   // Android库插件
-        id("org.jetbrains.kotlin.android") version "2.1.21"          // Kotlin Android插件
+        id("org.jetbrains.kotlin.android") version "2.2.0"          // Kotlin Android插件
         id("dev.rikka.tools.autoresconfig") version "1.2.2"          // 自动资源配置工具
         id("dev.rikka.tools.materialthemebuilder") version "1.5.1"   // Material主题构建器
         id("dev.rikka.tools.refine") version "4.4.0"                 // Refine反射工具

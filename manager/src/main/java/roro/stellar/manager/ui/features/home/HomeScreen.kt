@@ -3,29 +3,43 @@ package roro.stellar.manager.ui.features.home
 import android.content.Intent
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import rikka.shizuku.Shizuku
+import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.management.AppsViewModel
-import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.components.ModernActionCard
 import roro.stellar.manager.ui.components.ModernSettingCard
+import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.utils.EnvironmentUtils
 import roro.stellar.manager.utils.UserHandleCompat
-import roro.stellar.Stellar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +84,7 @@ fun HomeScreen(
         try {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Shizuku未安装或不可用
         }
         
@@ -78,7 +92,7 @@ fun HomeScreen(
             try {
                 Shizuku.removeBinderReceivedListener(binderReceivedListener)
                 Shizuku.removeBinderDeadListener(binderDeadListener)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // 忽略
             }
         }
