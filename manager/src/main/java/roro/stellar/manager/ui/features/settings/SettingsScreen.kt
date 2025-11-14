@@ -209,7 +209,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
@@ -249,7 +249,9 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
                     Switch(
                         checked = startOnBoot,
                         onCheckedChange = { newValue ->
@@ -281,7 +283,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
@@ -321,7 +323,9 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
                     Switch(
                         checked = startOnBootWireless,
                         onCheckedChange = { newValue ->
@@ -381,7 +385,7 @@ fun SettingsScreen(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
@@ -397,7 +401,9 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
                         Switch(
                             checked = tcpipPortEnabled,
                             onCheckedChange = { enabled ->
