@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -234,7 +235,7 @@ fun AppsScreen(
                             start = AppSpacing.screenHorizontalPadding,
                             end = AppSpacing.screenHorizontalPadding
                         ),
-                        verticalArrangement = Arrangement.spacedBy(AppSpacing.itemSpacing)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(
                             count = packages.size,
@@ -242,7 +243,7 @@ fun AppsScreen(
                         ) { index ->
                             val packageInfo = packages[index]
                             var flag by remember {
-                                mutableStateOf(
+                                mutableIntStateOf(
                                     try {
                                         Stellar.getFlagsForUid(packageInfo.applicationInfo!!.uid)
                                     } catch (e: Exception) {
@@ -260,7 +261,7 @@ fun AppsScreen(
                                         flag = newFlag
                                         Stellar.updateFlagsForUid(uid, newFlag)
                                         appsViewModel.load(true)
-                                    } catch (e: SecurityException) {
+                                    } catch (_: SecurityException) {
                                         showPermissionError = true
                                     } catch (e: Exception) {
                                         e.printStackTrace()
@@ -309,7 +310,7 @@ fun AppListItem(
             try {
                 val userInfo = StellarSystemApis.getUserInfo(userId)
                 "${ai.loadLabel(pm)} - ${userInfo.name} ($userId)"
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 "${ai.loadLabel(pm)} - User $userId"
             }
         } else {
@@ -323,7 +324,7 @@ fun AppListItem(
             val drawable = ai.loadIcon(pm)
             val bitmap = drawableToBitmap(drawable)
             bitmap?.asImageBitmap()?.let { BitmapPainter(it) }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -341,7 +342,8 @@ fun AppListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+
                 .run { this }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -354,18 +356,18 @@ fun AppListItem(
                     painter = iconPainter,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(AppShape.shapes.iconSmall)
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(AppShape.shapes.iconSmall)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -408,7 +410,8 @@ fun AppListItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    // 顶部稍小、底部稍大，综合 Row 和内部 padding 后上下距离更接近
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
             ) {
                 PermissionSegmentSelector(
                     currentFlag = flag,
@@ -433,10 +436,10 @@ private fun PermissionSegmentSelector(
     val labels = listOf("询问", "允许", "拒绝")
     val currentIndex = entries.indexOf(currentFlag).coerceIn(0, entries.lastIndex)
 
-    var innerWidth by remember { mutableStateOf(0) }
-    val spacing = 4.dp
+    var innerWidth by remember { mutableIntStateOf(0) }
+    val spacing = 3.dp
     val spacingPx = with(density) { spacing.toPx() }
-    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+    val animatedIndex by animateFloatAsState(
         targetValue = currentIndex.toFloat(),
         label = "permission_index"
     )
@@ -448,7 +451,7 @@ private fun PermissionSegmentSelector(
                 color = MaterialTheme.colorScheme.surface,
                 shape = AppShape.shapes.cardMedium
             )
-            .padding(6.dp)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -457,7 +460,7 @@ private fun PermissionSegmentSelector(
             horizontalArrangement = Arrangement.spacedBy(spacing)
         ) {
             repeat(entries.size) {
-                Spacer(modifier = Modifier.weight(1f).height(40.dp))
+                Spacer(modifier = Modifier.weight(1f).height(36.dp))
             }
         }
 
@@ -468,7 +471,7 @@ private fun PermissionSegmentSelector(
                 modifier = Modifier
                     .offset(x = with(density) { offsetX.toDp() })
                     .width(with(density) { itemWidth.toDp() })
-                    .height(40.dp)
+                    .height(36.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primary,
                         shape = AppShape.shapes.iconSmall
@@ -479,7 +482,7 @@ private fun PermissionSegmentSelector(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp),
+                .height(36.dp),
             horizontalArrangement = Arrangement.spacedBy(spacing)
         ) {
             entries.forEachIndexed { index, entry ->
@@ -520,7 +523,7 @@ private fun drawableToBitmap(drawable: Drawable): Bitmap? {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         bitmap
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 }
