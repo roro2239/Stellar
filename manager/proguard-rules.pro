@@ -45,7 +45,3 @@
 -repackageclasses roro.stellar
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
-
--obfuscationdictionary lloveyou.txt
--classobfuscationdictionary lloveyou.txt
--packageobfuscationdictionary lloveyou.txt
