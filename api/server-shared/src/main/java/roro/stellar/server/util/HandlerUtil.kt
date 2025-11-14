@@ -1,8 +1,6 @@
 package roro.stellar.server.util
 
 import android.os.Handler
-import roro.stellar.server.util.HandlerUtil.mainHandler
-import java.util.Objects
 
 /**
  * Handler工具类
@@ -16,23 +14,6 @@ import java.util.Objects
  *
  */
 object HandlerUtil {
-    /**
-     * 设置主线程Handler
-     * Set main thread Handler
-     *
-     * @param mainHandler 主线程Handler
-     */
     /** 主线程Handler Main thread Handler  */
-    var mainHandler: Handler? = null
-        /**
-         * 获取主线程Handler
-         * Get main thread Handler
-         *
-         * @return 主线程Handler
-         * @throws NullPointerException 如果尚未调用setMainHandler
-         */
-        get() {
-            Objects.requireNonNull<Handler?>(field, "Please call setMainHandler first")
-            return field
-        }
+    lateinit var mainHandler: Handler
 }

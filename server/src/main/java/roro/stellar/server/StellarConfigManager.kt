@@ -98,12 +98,16 @@ class StellarConfigManager : ConfigManager() {
                 }
 
                 val uid = pi.applicationInfo!!.uid
-                val allowed: Boolean
+                val flag: Int
                 try {
-                    allowed = PermissionManagerApis.checkPermission(
+                    flag = when (PermissionManagerApis.checkPermission(
                         PERMISSION,
                         uid
-                    ) == PackageManager.PERMISSION_GRANTED
+                    )) {
+                        PackageManager.PERMISSION_GRANTED -> FLAG_GRANTED
+                        PackageManager.PERMISSION_DENIED -> FLAG_DENIED
+                        else -> FLAG_ASK
+                    }
                 } catch (_: Throwable) {
                     LOGGER.w("checkPermission")
                     continue
@@ -112,7 +116,7 @@ class StellarConfigManager : ConfigManager() {
                 val packages = ArrayList<String?>()
                 packages.add(pi.packageName)
 
-                updateLocked(uid, packages, MASK_PERMISSION, if (allowed) FLAG_ALLOWED else 0)
+                updateLocked(uid, packages, flag)
                 changed = true
             }
         }
@@ -148,17 +152,16 @@ class StellarConfigManager : ConfigManager() {
         }
     }
 
-    private fun updateLocked(uid: Int, packages: MutableList<String?>?, mask: Int, values: Int) {
+    private fun updateLocked(uid: Int, packages: MutableList<String?>?, newFlag: Int) {
         var entry = findLocked(uid)
         if (entry == null) {
-            entry = StellarConfig.PackageEntry(uid, mask and values)
+            entry = StellarConfig.PackageEntry(uid, newFlag)
             config.packages.add(entry)
         } else {
-            val newValue = (entry.flags and mask.inv()) or (mask and values)
-            if (newValue == entry.flags) {
+            if (newFlag == entry.flag) {
                 return
             }
-            entry.flags = newValue
+            entry.flag = newFlag
         }
         if (packages != null) {
             for (packageName in packages) {
@@ -171,9 +174,9 @@ class StellarConfigManager : ConfigManager() {
         scheduleWriteLocked()
     }
 
-    override fun update(uid: Int, packages: MutableList<String?>?, mask: Int, values: Int) {
+    override fun update(uid: Int, packages: MutableList<String?>?, newFlag: Int) {
         synchronized(this) {
-            updateLocked(uid, packages, mask, values)
+            updateLocked(uid, packages, newFlag)
         }
     }
 
@@ -233,7 +236,7 @@ class StellarConfigManager : ConfigManager() {
             return StellarConfig()
         }
 
-        fun write(config: StellarConfig?) {
+        fun write(config: StellarConfig) {
             synchronized(ATOMIC_FILE) {
                 val stream: FileOutputStream
                 try {

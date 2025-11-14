@@ -23,14 +23,9 @@ import roro.stellar.server.ServerConstants
  */
 object AuthorizationManager {
 
-    /** 权限标志：已授权 Permission flag: allowed */
-    private const val FLAG_ALLOWED = 1 shl 1
-    
-    /** 权限标志：已拒绝 Permission flag: denied */
-    private const val FLAG_DENIED = 1 shl 2
-    
-    /** 权限掩码 Permission mask */
-    private const val MASK_PERMISSION = FLAG_ALLOWED or FLAG_DENIED
+    const val FLAG_ASK: Int = 0
+    const val FLAG_GRANTED: Int = 1
+    const val FLAG_DENIED: Int = 2
 
     /**
      * 从服务端获取应用列表
@@ -69,40 +64,6 @@ object AuthorizationManager {
         val packages: MutableList<PackageInfo> = ArrayList()
         packages.addAll(getApplications(-1))
         return packages
-    }
-
-    /**
-     * 检查应用是否已授权
-     * Check if app is granted
-     * 
-     * @param packageName 包名
-     * @param uid 应用UID
-     * @return true表示已授权
-     */
-    fun granted(packageName: String, uid: Int): Boolean {
-        return (Stellar.getFlagsForUid(uid, MASK_PERMISSION) and FLAG_ALLOWED) == FLAG_ALLOWED
-    }
-
-    /**
-     * 授权应用
-     * Grant permission to app
-     * 
-     * @param packageName 包名
-     * @param uid 应用UID
-     */
-    fun grant(packageName: String, uid: Int) {
-        Stellar.updateFlagsForUid(uid, MASK_PERMISSION, FLAG_ALLOWED)
-    }
-
-    /**
-     * 撤销应用授权
-     * Revoke app permission
-     * 
-     * @param packageName 包名
-     * @param uid 应用UID
-     */
-    fun revoke(packageName: String, uid: Int) {
-        Stellar.updateFlagsForUid(uid, MASK_PERMISSION, 0)
     }
 }
 
