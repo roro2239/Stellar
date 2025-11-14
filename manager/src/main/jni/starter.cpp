@@ -138,8 +138,8 @@ static void start_server(const char *path, const char *main_class, const char *p
             run_server(path, main_class, process_name);
         }
         default: {
-            printf("信息：Stellar_server 进程号为 %d\n", pid);
-            printf("信息：Stellar_starter 正常退出（退出码 0）\n");
+            printf("信息：stellar_server 进程号为 %d\n", pid);
+            printf("信息：stellar_starter 正常退出（退出码 0）\n");
             exit(EXIT_SUCCESS);
         }
     }
