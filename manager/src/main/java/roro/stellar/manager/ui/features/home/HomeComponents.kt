@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -52,12 +53,13 @@ fun ServerStatusCard(
     isRunning: Boolean,
     isRoot: Boolean,
     apiVersion: Int,
-    patchVersion: Int
+    patchVersion: Int,
+    onStopClick: () -> Unit
 ) {
     val user = if (isRoot) "Root" else "ADB"
     val needsUpdate = isRunning && (apiVersion != Stellar.latestServiceVersion ||
-                     patchVersion != StellarApiConstants.SERVER_PATCH_VERSION)
-    
+            patchVersion != StellarApiConstants.SERVER_PATCH_VERSION)
+
     ModernStatusCard(
         icon = if (isRunning) Icons.Default.CheckCircle else Icons.Default.Error,
         title = "服务状态",
@@ -67,14 +69,14 @@ fun ServerStatusCard(
     ) {
         if (isRunning) {
             val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            
+
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             InfoRow("版本", "$apiVersion.$patchVersion", contentColor)
             InfoRow("运行模式", user, contentColor)
-            
+
             if (needsUpdate) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
@@ -89,14 +91,33 @@ fun ServerStatusCard(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onStopClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShape.shapes.buttonMedium,
+                colors = ButtonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                    disabledContainerColor = Color.Unspecified,
+                    disabledContentColor = Color.Unspecified,
+                )
+            ) {
+                Text(
+                    text = "停止服务",
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
 fun InfoRow(
-    label: String, 
-    value: String, 
+    label: String,
+    value: String,
     contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Row(
@@ -122,7 +143,7 @@ fun InfoRow(
 @Composable
 fun StartRootCard(isRestart: Boolean) {
     val context = LocalContext.current
-    
+
     ModernActionCard(
         icon = Icons.Default.Security,
         title = if (isRestart) "Root 重启" else "Root 启动",
@@ -175,7 +196,7 @@ fun StartWirelessAdbCard(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "无线调试",
@@ -191,15 +212,15 @@ fun StartWirelessAdbCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
                 text = "首次使用需要先配对，配对成功后可直接启动",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -216,7 +237,7 @@ fun StartWirelessAdbCard(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-                
+
                 Button(
                     onClick = onStartClick,
                     modifier = Modifier.weight(1f),
@@ -235,30 +256,32 @@ fun StartWirelessAdbCard(
 @Composable
 fun StartShizukuCard(isRestart: Boolean) {
     val context = LocalContext.current
-    
+
     // 使用响应式状态
     var isShizukuAvailable by remember { mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()) }
     var hasPermission by remember { mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()) }
-    
+
     // 使用Shizuku的Binder监听器来更新状态
     DisposableEffect(Unit) {
         val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-            isShizukuAvailable = roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()
-            hasPermission = roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()
+            isShizukuAvailable =
+                roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()
+            hasPermission =
+                roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()
         }
-        
+
         val binderDeadListener = Shizuku.OnBinderDeadListener {
             isShizukuAvailable = false
             hasPermission = false
         }
-        
+
         try {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
         } catch (e: Exception) {
             // Shizuku未安装或不可用
         }
-        
+
         onDispose {
             try {
                 Shizuku.removeBinderReceivedListener(binderReceivedListener)
@@ -268,7 +291,7 @@ fun StartShizukuCard(isRestart: Boolean) {
             }
         }
     }
-    
+
     // 根据状态确定标题和副标题
     val title = if (isRestart) "Shizuku 重启" else "Shizuku 启动"
     val subtitle = when {
@@ -276,7 +299,7 @@ fun StartShizukuCard(isRestart: Boolean) {
         !hasPermission -> "需要授予 Shizuku 权限"
         else -> "通过 Shizuku 服务启动 Stellar"
     }
-    
+
     // 根据状态确定按钮文本
     val buttonText = when {
         !isShizukuAvailable -> "查看"
@@ -284,7 +307,7 @@ fun StartShizukuCard(isRestart: Boolean) {
         isRestart -> "重启"
         else -> "启动"
     }
-    
+
     ModernActionCard(
         icon = Icons.Default.Star,
         title = title,
@@ -292,22 +315,24 @@ fun StartShizukuCard(isRestart: Boolean) {
         buttonText = buttonText,
         onButtonClick = {
             // 立即刷新状态
-            isShizukuAvailable = roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()
-            hasPermission = roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()
-            
+            isShizukuAvailable =
+                roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()
+            hasPermission =
+                roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()
+
             // 如果Shizuku未运行，提示用户
             if (!isShizukuAvailable) {
                 Toast.makeText(context, "请先安装并启动 Shizuku 应用", Toast.LENGTH_LONG).show()
                 return@ModernActionCard
             }
-            
+
             // 如果没有权限，请求权限
             if (!hasPermission) {
                 Toast.makeText(context, "正在请求 Shizuku 权限...", Toast.LENGTH_SHORT).show()
                 roro.stellar.manager.ui.features.starter.ShizukuStarter.requestPermission()
                 return@ModernActionCard
             }
-            
+
             // 有权限后启动
             val intent = Intent(context, StarterActivity::class.java).apply {
                 putExtra(StarterActivity.EXTRA_IS_ROOT, false)

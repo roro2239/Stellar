@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -125,23 +124,11 @@ fun HomeScreen(
                     isRunning = isRunning,
                     isRoot = isRoot,
                     apiVersion = serviceStatus?.apiVersion ?: 0,
-                    patchVersion = serviceStatus?.patchVersion ?: 0
+                    patchVersion = serviceStatus?.patchVersion ?: 0,
+                    onStopClick = {
+                        showStopDialog = true
+                    }
                 )
-            }
-
-            // 停止服务按钮
-            if (isRunning) {
-                item {
-                    ModernSettingCard(
-                        icon = Icons.Default.Stop,
-                        title = "停止服务",
-                        subtitle = "Stellar 服务将被停止",
-                        onClick = { showStopDialog = true },
-                        iconBackgroundColor = MaterialTheme.colorScheme.errorContainer,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        showArrow = false
-                    )
-                }
             }
 
             // 权限受限提示
