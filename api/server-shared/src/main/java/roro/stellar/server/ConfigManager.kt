@@ -41,7 +41,7 @@ abstract class ConfigManager {
      * @param mask 要更新的标志位掩码
      * @param values 标志位的新值
      */
-    abstract fun update(uid: Int, packages: MutableList<String?>?, mask: Int, values: Int)
+    abstract fun update(uid: Int, packages: MutableList<String?>?, newFlag: Int)
 
     /**
      * 移除指定UID的配置
@@ -55,13 +55,8 @@ abstract class ConfigManager {
         @JvmStatic
         protected val LOGGER: Logger = Logger("ConfigManager")
 
-        /** 权限标志：已授权 Permission flag: allowed  */
-        const val FLAG_ALLOWED: Int = 1 shl 1
-
-        /** 权限标志：已拒绝 Permission flag: denied  */
-        const val FLAG_DENIED: Int = 1 shl 2
-
-        /** 权限掩码：包含允许和拒绝 Permission mask: includes allowed and denied  */
-        const val MASK_PERMISSION: Int = FLAG_ALLOWED or FLAG_DENIED
+        const val FLAG_ASK: Int = 0
+        const val FLAG_GRANTED: Int = 1
+        const val FLAG_DENIED: Int = 2
     }
 }

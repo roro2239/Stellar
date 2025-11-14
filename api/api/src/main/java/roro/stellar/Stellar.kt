@@ -695,18 +695,18 @@ object Stellar {
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-    fun getFlagsForUid(uid: Int, mask: Int): Int {
+    fun getFlagsForUid(uid: Int): Int {
         try {
-            return requireService().getFlagsForUid(uid, mask)
+            return requireService().getFlagsForUid(uid)
         } catch (e: RemoteException) {
             throw rethrowAsRuntimeException(e)
         }
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-    fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
+    fun updateFlagsForUid(uid: Int, flag: Int) {
         try {
-            requireService().updateFlagsForUid(uid, mask, value)
+            requireService().updateFlagsForUid(uid, flag)
         } catch (e: RemoteException) {
             throw rethrowAsRuntimeException(e)
         }

@@ -41,7 +41,7 @@ class StellarConfig {
         /** 应用UID Application UID  */
         @field:SerializedName("uid") val uid: Int,
         /** 权限标志 Permission flags  */
-        @field:SerializedName("flags") var flags: Int
+        @field:SerializedName("flags") var flag: Int
     ) : ConfigPackageEntry() {
         /** 包名列表 Package names  */
         @SerializedName("packages")
@@ -52,14 +52,14 @@ class StellarConfig {
              * 是否已授权
              * Whether allowed
              */
-            get() = (flags and ConfigManager.FLAG_ALLOWED) != 0
+            get() = flag == ConfigManager.FLAG_GRANTED
 
         override val isDenied: Boolean
             /**
              * 是否已拒绝
              * Whether denied
              */
-            get() = (flags and ConfigManager.FLAG_DENIED) != 0
+            get() = flag == ConfigManager.FLAG_DENIED
     }
 
     /** 默认构造函数 Default constructor  */

@@ -83,11 +83,10 @@ import roro.stellar.server.util.UserHandleCompat.getUserId
 import kotlin.system.exitProcess
 
 class StellarService : Service<StellarClientManager, StellarConfigManager>() {
-    private val mainHandler = Handler(Looper.myLooper()!!)
 
     //private final Context systemContext = HiddenApiBridge.getSystemContext();
-    private val mClientManager: StellarClientManager?
-    private val mConfigManager: StellarConfigManager?
+    private val mClientManager: StellarClientManager
+    private val mConfigManager: StellarConfigManager
     private val managerAppId: Int
 
     /**
@@ -109,7 +108,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
      * 如果Manager应用未安装，服务将退出
      */
     init {
-        HandlerUtil.mainHandler = mainHandler
+        HandlerUtil.mainHandler = Handler(Looper.myLooper()!!)
 
         LOGGER.i("正在启动服务器...")
 
@@ -134,7 +133,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
 
         register(this)
 
-        mainHandler.post {
+        HandlerUtil.mainHandler.post {
             sendBinderToClient()
             sendBinderToManager()
         }
@@ -315,7 +314,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
             throw SecurityException("请求包 $requestPackageName 不属于 uid $callingUid")
         }
 
-        if (mClientManager!!.findClient(callingUid, callingPid) == null) {
+        if (mClientManager.findClient(callingUid, callingPid) == null) {
             synchronized(this) {
                 clientRecord = mClientManager.addClient(
                     callingUid,
@@ -335,7 +334,10 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
 
         val reply = Bundle()
         reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_UID, OsUtils.getUid())
-        reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_VERSION, StellarApiConstants.SERVER_VERSION)
+        reply.putInt(
+            StellarApiConstants.BIND_APPLICATION_SERVER_VERSION,
+            StellarApiConstants.SERVER_VERSION
+        )
         reply.putString(
             StellarApiConstants.BIND_APPLICATION_SERVER_SECONTEXT,
             OsUtils.getSELinuxContext()
@@ -416,6 +418,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
             .putExtra("pid", callingPid)
             .putExtra("requestCode", requestCode)
             .putExtra("applicationInfo", ai)
+            .putExtra("denyOnce", (System.currentTimeMillis() - clientRecord.lastDenyTime) > 10000)
         ActivityManagerApis.startActivityNoThrow(intent, null, if (isWorkProfileUser) 0 else userId)
     }
 
@@ -447,7 +450,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
         data: Bundle?
     ) {
         if (getAppId(getCallingUid()) != managerAppId) {
-            LOGGER.w("dispatchPermissionConfirmationResult 不是从管理器包调用的")
+            LOGGER.w("dispatchPermissionConfirmationResult 不是从管理器调用的")
             return
         }
 
@@ -463,7 +466,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
             requestUid, requestPid, requestCode, allowed.toString(), onetime.toString()
         )
 
-        val records: MutableList<ClientRecord> = mClientManager!!.findClients(requestUid)
+        val records: MutableList<ClientRecord> = mClientManager.findClients(requestUid)
         val packages = ArrayList<String?>()
         if (records.isEmpty()) {
             LOGGER.w("dispatchPermissionConfirmationResult：未找到 uid %d 的客户端", requestUid)
@@ -478,14 +481,11 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
             }
         }
 
-        if (!onetime) {
-            mConfigManager!!.update(
-                requestUid,
-                packages,
-                ConfigManager.MASK_PERMISSION,
-                if (allowed) ConfigManager.FLAG_ALLOWED else ConfigManager.FLAG_DENIED
-            )
-        }
+        mConfigManager.update(
+            requestUid,
+            packages,
+            if (onetime) ConfigManager.FLAG_ASK else if (allowed) ConfigManager.FLAG_GRANTED else ConfigManager.FLAG_DENIED
+        )
 
         if (!onetime) {
             val userId = getUserId(requestUid)
@@ -525,17 +525,16 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
      *
      *
      * @param uid 应用UID
-     * @param mask 标志掩码
      * @param allowRuntimePermission 是否允许检查运行时权限
      * @return 标志位
      */
-    private fun getFlagsForUidInternal(uid: Int, mask: Int, allowRuntimePermission: Boolean): Int {
-        val entry = mConfigManager!!.find(uid)
+    private fun getFlagsForUidInternal(uid: Int, allowRuntimePermission: Boolean): Int {
+        val entry = mConfigManager.find(uid)
         if (entry != null) {
-            return entry.flags and mask
+            return entry.flag
         }
 
-        if (allowRuntimePermission && (mask and ConfigManager.MASK_PERMISSION) != 0) {
+        if (allowRuntimePermission) {
             val userId = getUserId(uid)
             for (packageName in PackageManagerApis.getPackagesForUidNoThrow(uid)) {
                 val pi = PackageManagerApis.getPackageInfoNoThrow(
@@ -543,9 +542,9 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
                     PackageManager.GET_PERMISSIONS.toLong(),
                     userId
                 )
-                if (pi == null || pi.requestedPermissions == null || !(pi.requestedPermissions as Array<out String?>).contains(
-                        PERMISSION
-                    )
+                if (pi == null ||
+                    pi.requestedPermissions == null ||
+                    !(pi.requestedPermissions as Array<out String?>).contains(PERMISSION)
                 ) {
                     continue
                 }
@@ -556,14 +555,14 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
                             uid
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
-                        return ConfigManager.FLAG_ALLOWED
+                        return ConfigManager.FLAG_GRANTED
                     }
                 } catch (_: Throwable) {
                     LOGGER.w("getFlagsForUid 失败")
                 }
             }
         }
-        return 0
+        return ConfigManager.FLAG_ASK
     }
 
     /**
@@ -577,12 +576,12 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
      * @param mask 标志掩码
      * @return 标志位
      */
-    override fun getFlagsForUid(uid: Int, mask: Int): Int {
+    override fun getFlagsForUid(uid: Int): Int {
         if (getAppId(getCallingUid()) != managerAppId) {
             LOGGER.w("getFlagsForUid 只允许从管理器调用")
             return 0
         }
-        return getFlagsForUidInternal(uid, mask, true)
+        return getFlagsForUidInternal(uid, true)
     }
 
     /**
@@ -600,12 +599,11 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
      *
      *
      * @param uid 应用UID
-     * @param mask 标志掩码
-     * @param value 标志值
+     * @param newFlag 标志值
      * @throws RemoteException IPC异常
      */
     @Throws(RemoteException::class)
-    override fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
+    override fun updateFlagsForUid(uid: Int, newFlag: Int) {
         if (getAppId(getCallingUid()) != managerAppId) {
             LOGGER.w("updateFlagsForUid 只允许从管理器调用")
             return
@@ -613,47 +611,62 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
 
         val userId = getUserId(uid)
 
-        if ((mask and ConfigManager.MASK_PERMISSION) != 0) {
-            val allowed = (value and ConfigManager.FLAG_ALLOWED) != 0
-            val denied = (value and ConfigManager.FLAG_DENIED) != 0
-
-            val records: MutableList<ClientRecord> = mClientManager!!.findClients(uid)
-            for (record in records) {
-                if (allowed) {
-                    record.allowed = true
-                } else {
-                    record.allowed = false
-                    ActivityManagerApis.forceStopPackageNoThrow(
-                        record.packageName,
-                        getUserId(record.uid)
-                    )
-                    onPermissionRevoked(record.packageName)
-                }
+        val records: MutableList<ClientRecord> = mClientManager.findClients(uid)
+        for (record in records) {
+            fun stopAppAndRevoke() {
+                ActivityManagerApis.forceStopPackageNoThrow(
+                    record.packageName,
+                    getUserId(record.uid)
+                )
+                onPermissionRevoked(record.packageName)
             }
 
-            for (packageName in PackageManagerApis.getPackagesForUidNoThrow(uid)) {
-                val pi = PackageManagerApis.getPackageInfoNoThrow(
-                    packageName,
-                    PackageManager.GET_PERMISSIONS.toLong(),
-                    userId
-                )
-                if (pi == null || pi.requestedPermissions == null || !(pi.requestedPermissions as Array<out String?>).contains(
-                        PERMISSION
-                    )
-                ) {
-                    continue
+            when (newFlag) {
+                ConfigManager.FLAG_ASK -> {
+                    if (record.allowed) {
+                        stopAppAndRevoke()
+                    }
+                    record.allowed = false
+                    record.onetime = false
                 }
 
-                val deviceId = 0 //Context.DEVICE_ID_DEFAULT
-                if (allowed) {
-                    PermissionManagerApis.grantRuntimePermission(packageName, PERMISSION, userId)
-                } else {
-                    PermissionManagerApis.revokeRuntimePermission(packageName, PERMISSION, userId)
+                ConfigManager.FLAG_DENIED -> {
+                    if (record.allowed) {
+                        stopAppAndRevoke()
+                    }
+                    record.allowed = false
+                    record.onetime = false
+                }
+
+                ConfigManager.FLAG_GRANTED -> {
+                    record.allowed = true
+                    record.onetime = false
                 }
             }
         }
 
-        mConfigManager!!.update(uid, null, mask, value)
+        for (packageName in PackageManagerApis.getPackagesForUidNoThrow(uid)) {
+            val pi = PackageManagerApis.getPackageInfoNoThrow(
+                packageName,
+                PackageManager.GET_PERMISSIONS.toLong(),
+                userId
+            )
+            if (pi == null ||
+                pi.requestedPermissions == null ||
+                !(pi.requestedPermissions as Array<out String?>).contains(PERMISSION)
+            ) {
+                continue
+            }
+
+            if (newFlag == ConfigManager.FLAG_GRANTED) {
+                PermissionManagerApis.grantRuntimePermission(packageName, PERMISSION, userId)
+            } else {
+                PermissionManagerApis.revokeRuntimePermission(packageName, PERMISSION, userId)
+            }
+        }
+
+
+        mConfigManager.update(uid, null, newFlag)
     }
 
     /**
@@ -698,19 +711,19 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
                 user!!
             )) {
                 if (MANAGER_APPLICATION_ID == pi.packageName) continue
-                if (pi.applicationInfo == null) continue
+                val applicationInfo = pi.applicationInfo ?: continue
 
-                val uid = pi.applicationInfo!!.uid
-                var flags = 0
-                val entry = mConfigManager!!.find(uid)
-                if (entry != null) {
-                    if (!entry.packages.contains(pi.packageName)) continue
-                    flags = entry.flags and ConfigManager.MASK_PERMISSION
+                val uid = applicationInfo.uid
+                var flag = -1
+
+                mConfigManager.find(uid)?.let {
+                    if (!it.packages.contains(pi.packageName)) continue
+                    flag = it.flag
                 }
 
-                if (flags != 0) {
+                if (flag != -1) {
                     list.add(pi)
-                } else if (pi.applicationInfo!!.metaData != null && pi.applicationInfo!!.metaData.getBoolean(
+                } else if (applicationInfo.metaData != null && applicationInfo.metaData.getBoolean(
                         "com.stellar.client.V3_SUPPORT",
                         false
                     )

@@ -9,7 +9,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,14 +21,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarState
@@ -61,6 +62,7 @@ import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
+import roro.stellar.manager.utils.Logger.Companion.LOGGER
 import roro.stellar.manager.utils.StellarSystemApis
 import roro.stellar.manager.utils.UserHandleCompat
 
@@ -75,7 +77,7 @@ fun AppsScreen(
     var showPermissionError by remember { mutableStateOf(false) }
     val isServiceRunning = Stellar.pingBinder()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    
+
     // 每次页面可见时刷新列表
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -84,7 +86,7 @@ fun AppsScreen(
             }
         }
     }
-    
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -115,7 +117,7 @@ fun AppsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        
+
                         Text(
                             text = "服务未运行",
                             style = MaterialTheme.typography.headlineMedium,
@@ -144,6 +146,7 @@ fun AppsScreen(
                     CircularProgressIndicator()
                 }
             }
+
             Status.ERROR -> {
                 Box(
                     modifier = Modifier
@@ -163,7 +166,7 @@ fun AppsScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            
+
                             Text(
                                 text = "加载失败",
                                 style = MaterialTheme.typography.headlineMedium,
@@ -182,9 +185,10 @@ fun AppsScreen(
                     }
                 }
             }
+
             Status.SUCCESS -> {
                 val packages = packagesResource?.data ?: emptyList()
-                
+
                 if (packages.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -237,31 +241,38 @@ fun AppsScreen(
                             key = { index -> "${packages[index].packageName}_${packages[index].applicationInfo?.uid}" }
                         ) { index ->
                             val packageInfo = packages[index]
+                            var flag by remember {
+                                mutableStateOf(
+                                    try {
+                                        Stellar.getFlagsForUid(packageInfo.applicationInfo!!.uid)
+                                    } catch (e: Exception) {
+                                        LOGGER.w("获取应用授权状态异常", tr = e)
+                                        AuthorizationManager.FLAG_ASK
+                                    }
+                                )
+                            }
                             AppListItem(
                                 packageInfo = packageInfo,
-                                onToggle = { granted ->
+                                onToggle = {
                                     try {
-                                        val packageName = packageInfo.packageName
                                         val uid = packageInfo.applicationInfo!!.uid
-                                        
-                                        if (granted) {
-                                            AuthorizationManager.grant(packageName, uid)
-                                        } else {
-                                            AuthorizationManager.revoke(packageName, uid)
-                                        }
-                                        
+
+                                        flag = (flag + 1) % 3
+                                        Stellar.updateFlagsForUid(uid, flag)
+
                                         appsViewModel.load(true)
                                     } catch (e: SecurityException) {
                                         showPermissionError = true
                                     } catch (e: Exception) {
                                         e.printStackTrace()
                                     }
-                                }
+                                }, flag = flag
                             )
                         }
                     }
                 }
             }
+
             null -> {}
         }
     }
@@ -283,34 +294,17 @@ fun AppsScreen(
 @Composable
 fun AppListItem(
     packageInfo: PackageInfo,
-    onToggle: (Boolean) -> Unit
+    onToggle: () -> Unit,
+    flag: Int
 ) {
     val context = LocalContext.current
     val pm = context.packageManager
     val ai = packageInfo.applicationInfo ?: return
-    
+
     val uid = ai.uid
     val userId = UserHandleCompat.getUserId(uid)
     val packageName = packageInfo.packageName
-    
-    val isGranted = remember(packageName, uid) {
-        try {
-            AuthorizationManager.granted(packageName, uid)
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    var checked by remember(packageName, uid) { mutableStateOf(isGranted) }
-    
-    LaunchedEffect(packageName, uid) {
-        checked = try {
-            AuthorizationManager.granted(packageName, uid)
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
+
     val appName = remember(ai) {
         if (userId != UserHandleCompat.myUserId()) {
             try {
@@ -323,7 +317,7 @@ fun AppListItem(
             ai.loadLabel(pm).toString()
         }
     }
-    
+
     val requiresRoot = remember(ai) {
         try {
             ai.metaData?.getBoolean("com.stellar.client.V3_REQUIRES_ROOT") == true
@@ -331,7 +325,7 @@ fun AppListItem(
             false
         }
     }
-    
+
     val iconPainter = remember(ai) {
         try {
             val drawable = ai.loadIcon(pm)
@@ -341,18 +335,15 @@ fun AppListItem(
             null
         }
     }
-    
+
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                checked = !checked
-                onToggle(checked)
-            },
+            .fillMaxWidth(),
         shape = AppShape.shapes.cardMedium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+        ),
+        onClick = onToggle
     ) {
         Row(
             modifier = Modifier
@@ -375,9 +366,9 @@ fun AppListItem(
                         .clip(AppShape.shapes.iconSmall)
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -399,13 +390,24 @@ fun AppListItem(
                     )
                 }
             }
-            
-            Switch(
-                checked = checked,
-                onCheckedChange = {
-                    checked = it
-                    onToggle(it)
-                }
+
+            Text(
+                text = when (flag) {
+                    AuthorizationManager.FLAG_ASK -> "询问"
+                    AuthorizationManager.FLAG_GRANTED -> "允许"
+                    AuthorizationManager.FLAG_DENIED -> "拒绝"
+                    else -> "未知"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -415,10 +417,10 @@ private fun drawableToBitmap(drawable: Drawable): Bitmap? {
     if (drawable is BitmapDrawable) {
         return drawable.bitmap
     }
-    
+
     val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 48
     val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 48
-    
+
     return try {
         val bitmap = createBitmap(width, height)
         val canvas = Canvas(bitmap)

@@ -53,6 +53,8 @@ open class ClientRecord
     /** 是否为一次性授权 Whether one-time authorization  */
     var onetime: Boolean = false
 
+    var lastDenyTime: Long = 0
+
     /**
      * 分发权限请求结果到客户端
      * Dispatch permission request result to client
@@ -63,6 +65,7 @@ open class ClientRecord
     fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean) {
         val reply = Bundle()
         reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
+        if (!allowed) lastDenyTime = System.currentTimeMillis()
         try {
             client.dispatchRequestPermissionResult(requestCode, reply)
         } catch (e: Throwable) {
