@@ -10,17 +10,36 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.PowerOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +50,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.compat.Status
 import roro.stellar.manager.management.AppsViewModel
@@ -40,8 +63,6 @@ import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.utils.StellarSystemApis
 import roro.stellar.manager.utils.UserHandleCompat
-import roro.stellar.Stellar
-import androidx.core.graphics.createBitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,12 +97,12 @@ fun AppsScreen(
         }
     ) { paddingValues ->
         if (!isServiceRunning) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(top = AppSpacing.topBarContentSpacing),
-                verticalArrangement = Arrangement.spacedBy(AppSpacing.itemSpacing)
+                contentAlignment = Alignment.Center,
             ) {
                 AnimatedVisibility(
                     visible = true,
@@ -94,23 +115,6 @@ fun AppsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        Surface(
-                            shape = AppShape.shapes.iconLarge,
-                            color = MaterialTheme.colorScheme.tertiaryContainer,
-                            modifier = Modifier.size(120.dp)
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PowerOff,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(72.dp)
-                                )
-                            }
-                        }
                         
                         Text(
                             text = "服务未运行",
@@ -141,12 +145,12 @@ fun AppsScreen(
                 }
             }
             Status.ERROR -> {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(top = AppSpacing.topBarContentSpacing),
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.itemSpacing)
+                    contentAlignment = Alignment.Center,
                 ) {
                     AnimatedVisibility(
                         visible = true,
@@ -159,23 +163,6 @@ fun AppsScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            Surface(
-                                shape = AppShape.shapes.iconExtraLarge,
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                modifier = Modifier.size(120.dp)
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Error,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(72.dp)
-                                    )
-                                }
-                            }
                             
                             Text(
                                 text = "加载失败",
@@ -199,12 +186,12 @@ fun AppsScreen(
                 val packages = packagesResource?.data ?: emptyList()
                 
                 if (packages.isEmpty()) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues)
                             .padding(top = AppSpacing.topBarContentSpacing),
-                        verticalArrangement = Arrangement.spacedBy(AppSpacing.itemSpacing)
+                        contentAlignment = Alignment.Center,
                     ) {
                         AnimatedVisibility(
                             visible = true,
@@ -217,24 +204,6 @@ fun AppsScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
-                                Surface(
-                                    shape = AppShape.shapes.iconLarge,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(120.dp)
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Apps,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.secondary,
-                                            modifier = Modifier.size(72.dp)
-                                        )
-                                    }
-                                }
-                                
                                 Text(
                                     text = "暂无授权应用",
                                     style = MaterialTheme.typography.headlineMedium,
