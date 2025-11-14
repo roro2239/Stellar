@@ -1,16 +1,10 @@
 package roro.stellar.manager.authorization
 
 import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.os.Parcel
-import roro.stellar.manager.BuildConfig
-import roro.stellar.manager.Manifest
-import roro.stellar.manager.utils.Logger.LOGGER
-import roro.stellar.manager.utils.StellarSystemApis
-import roro.stellar.server.ServerConstants
 import rikka.parcelablelist.ParcelableListSlice
 import roro.stellar.Stellar
-import java.util.*
+import roro.stellar.server.ServerConstants
 
 /**
  * 授权管理器
@@ -52,7 +46,7 @@ object AuthorizationManager {
             data.writeInterfaceToken("com.stellar.server.IStellarService")
             data.writeInt(userId)
             try {
-                Stellar.getBinder()!!.transact(ServerConstants.BINDER_TRANSACTION_getApplications, data, reply, 0)
+                Stellar.binder!!.transact(ServerConstants.BINDER_TRANSACTION_getApplications, data, reply, 0)
             } catch (e: Throwable) {
                 throw RuntimeException(e)
             }

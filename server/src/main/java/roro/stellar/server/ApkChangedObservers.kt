@@ -27,13 +27,13 @@ package roro.stellar.server
 import android.os.FileObserver
 import android.util.Log
 import java.io.File
-import java.util.*
+import java.util.Collections
 
 /**
  * APK变化监听器接口
  * APK Change Listener Interface
  */
-interface ApkChangedListener {
+fun interface ApkChangedListener {
     /**
      * APK文件发生变化时调用
      * Called when APK file changes
