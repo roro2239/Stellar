@@ -12,7 +12,8 @@
  */
 
 plugins {
-    id('com.android.library')               // Android库插件
+    id('com.android.library')
+    id 'org.jetbrains.kotlin.android'// Android库插件
 }
 
 android {
@@ -37,6 +38,9 @@ android {
         // 禁用特定Lint检查
         disable 'UnspecifiedRegisterReceiverFlag'
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
 }
 
 // ============================================
@@ -48,4 +52,5 @@ dependencies {
     
     // AndroidX注解支持
     implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
 }

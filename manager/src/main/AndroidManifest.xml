@@ -19,10 +19,6 @@
     <uses-permission
         android:name="roro.stellar.manager.permission.API_V23"
         tools:node="remove" />
-    
-    <!-- Shizuku权限 -->
-    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
-    <uses-permission android:name="rikka.shizuku.permission.API_V23" />
 
     <uses-feature
         android:name="android.software.leanback"
@@ -92,14 +88,6 @@
         <activity
             android:name=".ui.features.home.others.AdbPairingTutorialActivity"
             android:label="配对" />
-        <activity
-            android:name=".settings.SettingsActivity"
-            android:exported="false"
-            android:label="设置">
-            <intent-filter>
-                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".ui.features.starter.StarterActivity"
             android:label="启动程序" />

@@ -3,7 +3,6 @@ package com.stellar.demo
 import android.content.Context
 import android.content.pm.PackageManager
 import roro.stellar.Stellar
-import roro.stellar.StellarHelper
 import roro.stellar.StellarSystemProperties
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -33,16 +32,16 @@ object DemoFunctions {
         try {
             logger.log("━━━ 服务基本信息 ━━━")
             
-            val version = Stellar.getVersion()
+            val version = Stellar.version
             logger.log("服务版本: $version")
             
-            val latestVersion = Stellar.getLatestServiceVersion()
+            val latestVersion = Stellar.latestServiceVersion
             logger.log("客户端支持版本: $latestVersion")
             
-            val uid = Stellar.getUid()
+            val uid = Stellar.uid
             logger.log("服务 UID: $uid")
             
-            val seContext = Stellar.getSELinuxContext()
+            val seContext = Stellar.sELinuxContext
             logger.log("SELinux 上下文: $seContext")
             
             val mode = when (uid) {
@@ -70,19 +69,19 @@ object DemoFunctions {
             logger.log("━━━ 版本信息 ━━━")
             
             // 服务API版本
-            val apiVersion = Stellar.getVersion()
+            val apiVersion = Stellar.version
             logger.log("服务 API 版本: $apiVersion")
             
-            val latestVersion = Stellar.getLatestServiceVersion()
+            val latestVersion = Stellar.latestServiceVersion
             logger.log("客户端支持版本: $latestVersion")
             
             logger.log("")
             
             // Manager应用版本信息（新增功能）
-            val versionName = Stellar.getVersionName() ?: "unknown"
+            val versionName = Stellar.versionName ?: "unknown"
             logger.log("Manager 版本名称: $versionName")
             
-            val versionCode = Stellar.getVersionCode()
+            val versionCode = Stellar.versionCode
             if (versionCode > 0) {
                 logger.log("Manager 版本代码: $versionCode")
             } else {
@@ -92,7 +91,7 @@ object DemoFunctions {
             logger.log("")
             
             // 服务端补丁版本
-            val patchVersion = Stellar.getServerPatchVersion()
+            val patchVersion = Stellar.serverPatchVersion
             logger.log("服务补丁版本: $patchVersion")
             
             logger.log("")

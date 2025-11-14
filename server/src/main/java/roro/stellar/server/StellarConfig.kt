@@ -1,107 +1,83 @@
-package roro.stellar.server;
+package roro.stellar.server
 
-import androidx.annotation.NonNull;
-
-import com.google.gson.annotations.SerializedName;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.google.gson.annotations.SerializedName
 
 /**
  * Stellar配置类
  * Stellar Configuration Class
- * 
- * <p>功能说明 Features：</p>
- * <ul>
- * <li>存储应用权限配置信息 - Stores app permission configuration</li>
- * <li>支持JSON序列化和反序列化 - Supports JSON serialization/deserialization</li>
- * <li>管理多个应用包的权限状态 - Manages permission status for multiple app packages</li>
- * </ul>
- * 
- * <p>配置格式 Configuration Format：</p>
- * <ul>
- * <li>version: 配置版本号</li>
- * <li>packages: 包权限列表（按UID分组）</li>
- * </ul>
+ *
+ *
+ * 功能说明 Features：
+ *
+ *  * 存储应用权限配置信息 - Stores app permission configuration
+ *  * 支持JSON序列化和反序列化 - Supports JSON serialization/deserialization
+ *  * 管理多个应用包的权限状态 - Manages permission status for multiple app packages
+ *
+ *
+ *
+ * 配置格式 Configuration Format：
+ *
+ *  * version: 配置版本号
+ *  * packages: 包权限列表（按UID分组）
+ *
  */
-public class StellarConfig {
-
-    /** 最新配置版本 Latest configuration version */
-    public static final int LATEST_VERSION = 2;
-
-    /** 配置版本 Configuration version */
+class StellarConfig {
+    /** 配置版本 Configuration version  */
     @SerializedName("version")
-    public int version = LATEST_VERSION;
+    var version: Int = LATEST_VERSION
 
-    /** 包权限列表 Package permission list */
+    /** 包权限列表 Package permission list  */
     @SerializedName("packages")
-    public List<PackageEntry> packages = new ArrayList<>();
+    var packages: MutableList<PackageEntry> = ArrayList<PackageEntry>()
 
     /**
      * 包权限条目
      * Package Permission Entry
-     * 
-     * <p>按UID分组存储应用包权限</p>
+     *
+     *
+     * 按UID分组存储应用包权限
      */
-    public static class PackageEntry extends ConfigPackageEntry {
-
-        /** 应用UID Application UID */
-        @SerializedName("uid")
-        public final int uid;
-
-        /** 权限标志 Permission flags */
-        @SerializedName("flags")
-        public int flags;
-
-        /** 包名列表 Package names */
+    class PackageEntry(
+        /** 应用UID Application UID  */
+        @field:SerializedName("uid") val uid: Int,
+        /** 权限标志 Permission flags  */
+        @field:SerializedName("flags") var flags: Int
+    ) : ConfigPackageEntry() {
+        /** 包名列表 Package names  */
         @SerializedName("packages")
-        public List<String> packages;
+        var packages = ArrayList<String?>()
 
-        /**
-         * 构造包权限条目
-         * Construct package permission entry
-         * 
-         * @param uid 应用UID
-         * @param flags 权限标志
-         */
-        public PackageEntry(int uid, int flags) {
-            this.uid = uid;
-            this.flags = flags;
-            this.packages = new ArrayList<>();
-        }
+        override val isAllowed: Boolean
+            /**
+             * 是否已授权
+             * Whether allowed
+             */
+            get() = (flags and ConfigManager.FLAG_ALLOWED) != 0
 
-        /**
-         * 是否已授权
-         * Whether allowed
-         */
-        @Override
-        public boolean isAllowed() {
-            return (flags & ConfigManager.FLAG_ALLOWED) != 0;
-        }
-
-        /**
-         * 是否已拒绝
-         * Whether denied
-         */
-        @Override
-        public boolean isDenied() {
-            return (flags & ConfigManager.FLAG_DENIED) != 0;
-        }
+        override val isDenied: Boolean
+            /**
+             * 是否已拒绝
+             * Whether denied
+             */
+            get() = (flags and ConfigManager.FLAG_DENIED) != 0
     }
 
-    /** 默认构造函数 Default constructor */
-    public StellarConfig() {
-    }
+    /** 默认构造函数 Default constructor  */
+    constructor()
 
     /**
      * 从包列表构造配置
      * Construct configuration from package list
-     * 
+     *
      * @param packages 包权限列表
      */
-    public StellarConfig(@NonNull List<PackageEntry> packages) {
-        this.version = LATEST_VERSION;
-        this.packages = packages;
+    constructor(packages: MutableList<PackageEntry>) {
+        this.version = LATEST_VERSION
+        this.packages = packages
+    }
+
+    companion object {
+        /** 最新配置版本 Latest configuration version  */
+        const val LATEST_VERSION: Int = 2
     }
 }
-

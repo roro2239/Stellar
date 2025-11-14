@@ -16,7 +16,8 @@
  */
 
 plugins {
-    id('com.android.library')               // Android库插件
+    id('com.android.library')
+    id 'org.jetbrains.kotlin.android'// Android库插件
 }
 
 android {
@@ -33,6 +34,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
 }
 
 // ============================================
@@ -45,4 +49,5 @@ dependencies {
 
     // AndroidX注解支持
     implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
 }

@@ -15,7 +15,8 @@
 
 plugins {
     id('com.android.library')               // Android库插件
-    id('dev.rikka.tools.refine')            // Refine反射工具
+    id('dev.rikka.tools.refine')
+    id 'org.jetbrains.kotlin.android'// Refine反射工具
 }
 
 android {
@@ -28,6 +29,9 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
     }
 }
 
@@ -48,6 +52,7 @@ dependencies {
 
     // Refine和Hidden API支持
     implementation libs.refine.runtime      // Refine运行时
-    implementation libs.hidden.compat       // Hidden API兼容层
+    implementation libs.hidden.compat
+    implementation 'androidx.core:core-ktx:1.17.0'// Hidden API兼容层
     compileOnly libs.hidden.stub           // Hidden API存根
 }

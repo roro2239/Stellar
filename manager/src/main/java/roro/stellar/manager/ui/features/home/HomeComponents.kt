@@ -3,11 +3,30 @@ package roro.stellar.manager.ui.features.home
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -21,12 +40,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import rikka.shizuku.Shizuku
-import roro.stellar.manager.ui.features.starter.StarterActivity
-import roro.stellar.manager.ui.components.ModernActionCard
-import roro.stellar.manager.ui.components.ModernStatusCard
-import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.Stellar
 import roro.stellar.StellarApiConstants
+import roro.stellar.manager.ui.components.ModernActionCard
+import roro.stellar.manager.ui.components.ModernStatusCard
+import roro.stellar.manager.ui.features.starter.StarterActivity
+import roro.stellar.manager.ui.theme.AppShape
 
 @Composable
 fun ServerStatusCard(
@@ -36,7 +55,7 @@ fun ServerStatusCard(
     patchVersion: Int
 ) {
     val user = if (isRoot) "Root" else "ADB"
-    val needsUpdate = isRunning && (apiVersion != Stellar.getLatestServiceVersion() || 
+    val needsUpdate = isRunning && (apiVersion != Stellar.latestServiceVersion ||
                      patchVersion != StellarApiConstants.SERVER_PATCH_VERSION)
     
     ModernStatusCard(
@@ -63,7 +82,7 @@ fun ServerStatusCard(
                     shape = AppShape.shapes.iconSmall
                 ) {
                     Text(
-                        text = "💡 可升级到版本 ${Stellar.getLatestServiceVersion()}.${StellarApiConstants.SERVER_PATCH_VERSION}",
+                        text = "💡 可升级到版本 ${Stellar.latestServiceVersion}.${StellarApiConstants.SERVER_PATCH_VERSION}",
                         style = MaterialTheme.typography.bodySmall,
                         color = contentColor,
                         modifier = Modifier.padding(12.dp)
