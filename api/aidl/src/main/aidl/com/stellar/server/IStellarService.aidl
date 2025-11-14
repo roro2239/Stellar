@@ -168,12 +168,12 @@ interface IStellarService {
      * 获取UID的标志位（管理器内部使用）
      * Get flags for UID (internal use)
      */
-    int getFlagsForUid(int uid, int mask) = 105;
+    int getFlagsForUid(int uid) = 105;
 
     /**
      * 更新UID的标志位（管理器内部使用）
      * Update flags for UID (internal use)
      */
-    void updateFlagsForUid(int uid, int mask, int value) = 106;
+    void updateFlagsForUid(int uid, int flag) = 106;
  }
 

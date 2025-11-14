@@ -7,13 +7,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.HourglassBottom
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,16 +37,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import roro.stellar.manager.R
-import roro.stellar.manager.ui.theme.AppShape
-import roro.stellar.manager.ui.theme.StellarTheme
-import roro.stellar.manager.utils.Logger.LOGGER
 import roro.stellar.Stellar
 import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED
 import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME
+import roro.stellar.manager.R
+import roro.stellar.manager.ui.theme.AppShape
+import roro.stellar.manager.ui.theme.StellarTheme
+import roro.stellar.manager.utils.Logger.Companion.LOGGER
 import roro.stellar.server.ktx.workerHandler
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -41,7 +53,13 @@ import java.util.concurrent.TimeoutException
 
 class RequestPermissionActivity : ComponentActivity() {
 
-    private fun setResult(requestUid: Int, requestPid: Int, requestCode: Int, allowed: Boolean, onetime: Boolean) {
+    private fun setResult(
+        requestUid: Int,
+        requestPid: Int,
+        requestCode: Int,
+        allowed: Boolean,
+        onetime: Boolean
+    ) {
         val data = Bundle()
         data.putBoolean(REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
         data.putBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
@@ -53,7 +71,8 @@ class RequestPermissionActivity : ComponentActivity() {
     }
 
     private fun checkSelfPermission(): Boolean {
-        val permission = Stellar.checkRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS") == PackageManager.PERMISSION_GRANTED
+        val permission =
+            Stellar.checkRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS") == PackageManager.PERMISSION_GRANTED
         if (permission) return true
 
         setContent {
@@ -97,7 +116,9 @@ class RequestPermissionActivity : ComponentActivity() {
 
         val uid = intent.getIntExtra("uid", -1)
         val pid = intent.getIntExtra("pid", -1)
+        val denyOnce = intent.getBooleanExtra("denyOnce", true)
         val requestCode = intent.getIntExtra("requestCode", -1)
+
         @Suppress("DEPRECATION")
         val ai = intent.getParcelableExtra<ApplicationInfo>("applicationInfo")
         if (uid == -1 || pid == -1 || ai == null) {
@@ -119,16 +140,9 @@ class RequestPermissionActivity : ComponentActivity() {
             StellarTheme {
                 PermissionRequestDialog(
                     appName = label,
-                    onAllow = {
-                        setResult(uid, pid, requestCode, allowed = true, onetime = false)
-                        finish()
-                    },
-                    onAllowOnce = {
-                        setResult(uid, pid, requestCode, allowed = true, onetime = true)
-                        finish()
-                    },
-                    onDeny = {
-                        setResult(uid, pid, requestCode, allowed = false, onetime = true)
+                    denyOnce = denyOnce,
+                    onResult = { allowed, onetime ->
+                        setResult(uid, pid, requestCode, allowed = allowed, onetime = onetime)
                         finish()
                     }
                 )
@@ -140,12 +154,13 @@ class RequestPermissionActivity : ComponentActivity() {
 @Composable
 fun PermissionRequestDialog(
     appName: String,
-    onAllow: () -> Unit,
-    onAllowOnce: () -> Unit,
-    onDeny: () -> Unit
+    denyOnce: Boolean,
+    onResult: (allowed: Boolean, onetime: Boolean) -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDeny,
+        onDismissRequest = {
+            onResult(false, true)
+        },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
@@ -153,7 +168,7 @@ fun PermissionRequestDialog(
                 .fillMaxWidth(0.85f)
                 .wrapContentHeight(),
             shape = AppShape.shapes.cardMedium24,
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Column(
                 modifier = Modifier
@@ -203,15 +218,17 @@ fun PermissionRequestDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 // 按钮组
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // 始终允许
-                    ElevatedCard(
-                        onClick = onAllow,
+                    Card(
+                        onClick = {
+                            onResult(true, false)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = AppShape.shapes.buttonSmall14,
                         colors = CardDefaults.elevatedCardColors(
@@ -225,29 +242,24 @@ fun PermissionRequestDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "始终允许",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                    
-                    // 仅此一次
-                    ElevatedCard(
-                        onClick = onAllowOnce,
+
+                    // 允许一次
+                    Card(
+                        onClick = {
+                            onResult(true, true)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = AppShape.shapes.buttonSmall14,
                         colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     ) {
                         Row(
@@ -257,25 +269,20 @@ fun PermissionRequestDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.HourglassBottom,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "仅此一次",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                    
+
                     // 拒绝
-                    ElevatedCard(
-                        onClick = onDeny,
+                    Card(
+                        onClick = {
+                            onResult(false, denyOnce)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = AppShape.shapes.buttonSmall14,
                         colors = CardDefaults.elevatedCardColors(
@@ -289,18 +296,11 @@ fun PermissionRequestDialog(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "拒绝",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                text = if (denyOnce) "拒绝" else "拒绝且不再询问",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -346,7 +346,7 @@ fun PermissionDeniedDialog(
                         modifier = Modifier.size(48.dp)
                     )
                 }
-                
+
                 // 标题和内容
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -358,7 +358,7 @@ fun PermissionDeniedDialog(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    
+
                     Text(
                         text = "您的设备制造商很可能限制了 adb 的权限。",
                         style = MaterialTheme.typography.bodyLarge,
@@ -366,7 +366,7 @@ fun PermissionDeniedDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 // 确定按钮
                 ElevatedCard(
                     onClick = onDismiss,
