@@ -8,9 +8,9 @@ import android.text.TextUtils
 import androidx.annotation.RequiresApi
 import rikka.hidden.compat.ActivityManagerApis
 import rikka.hidden.compat.PackageManagerApis
-import rikka.hidden.compat.PermissionManagerApis
 import rikka.hidden.compat.adapter.ProcessObserverAdapter
 import rikka.hidden.compat.adapter.UidObserverAdapter
+import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.util.Logger
 
 /**
@@ -36,9 +36,6 @@ import roro.stellar.server.util.Logger
  */
 object BinderSender {
     private val LOGGER = Logger("BinderSender")
-
-    /** Manager权限 Manager permission  */
-    private const val PERMISSION_MANAGER = "roro.stellar.manager.permission.MANAGER"
 
     /** API权限 API permission  */
     private const val PERMISSION = "roro.stellar.manager.permission.API_V23"
@@ -72,25 +69,12 @@ object BinderSender {
             if (pi == null || pi.requestedPermissions == null) continue
 
             // 检查是否为Manager应用
-            if ((pi.requestedPermissions as Array<out String?>).contains(PERMISSION_MANAGER)) {
-                val granted: Boolean = if (pid == -1) PermissionManagerApis.checkPermission(
-                    PERMISSION_MANAGER,
-                    uid
-                ) == PackageManager.PERMISSION_GRANTED
-                else ActivityManagerApis.checkPermission(
-                    PERMISSION_MANAGER,
-                    pid,
-                    uid
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    StellarService.sendBinderToManger(sStellarService, userId)
-                    return
-                }
+            if (pi.packageName == MANAGER_APPLICATION_ID) {
+                StellarService.sendBinderToManger(sStellarService, userId)
             } else if ((pi.requestedPermissions as Array<out String?>).contains(PERMISSION)) {
                 StellarService.sendBinderToUserApp(sStellarService, packageName, userId)
-                return
             }
+            return
         }
     }
 
