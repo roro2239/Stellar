@@ -490,14 +490,20 @@ abstract class Service<ClientMgr : ClientManager<ConfigMgr>, ConfigMgr : ConfigM
 
         // 已授权，直接返回成功
         if (clientRecord.allowed) {
-            clientRecord.dispatchRequestPermissionResult(requestCode, true)
+            clientRecord.dispatchRequestPermissionResult(requestCode,
+                allowed = true,
+                onetime = false
+            )
             return
         }
 
         // 配置中已拒绝，直接返回失败
         val entry = configManager.find(callingUid)
         if (entry != null && entry.isDenied) {
-            clientRecord.dispatchRequestPermissionResult(requestCode, false)
+            clientRecord.dispatchRequestPermissionResult(requestCode,
+                allowed = false,
+                onetime = false
+            )
             return
         }
 

@@ -127,9 +127,12 @@ object Stellar {
         override fun dispatchRequestPermissionResult(requestCode: Int, data: Bundle) {
             val allowed =
                 data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false)
+            val onetime =
+                data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, false)
             scheduleRequestPermissionResultListener(
                 requestCode,
-                if (allowed) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED
+                allowed,
+                onetime
             )
         }
     }
@@ -403,24 +406,26 @@ object Stellar {
         }
     }
 
-    private fun scheduleRequestPermissionResultListener(requestCode: Int, result: Int) {
+    private fun scheduleRequestPermissionResultListener(requestCode: Int, allowed: Boolean, onetime: Boolean) {
         synchronized(RECEIVED_LISTENERS) {
             for (holder in PERMISSION_LISTENERS) {
                 if (holder.handler != null) {
                     holder.handler.post {
                         holder.listener.onRequestPermissionResult(
                             requestCode,
-                            result
+                            allowed,
+                            onetime
                         )
                     }
                 } else {
                     if (Looper.myLooper() == Looper.getMainLooper()) {
-                        holder.listener.onRequestPermissionResult(requestCode, result)
+                        holder.listener.onRequestPermissionResult(requestCode, allowed, onetime)
                     } else {
                         MAIN_HANDLER.post {
                             holder.listener.onRequestPermissionResult(
                                 requestCode,
-                                result
+                                allowed,
+                                onetime
                             )
                         }
                     }
@@ -725,10 +730,11 @@ object Stellar {
          * 请求权限结果回调.
          *
          * @param requestCode The code passed in [requestPermission].
-         * @param grantResult The grant result for which is either [PackageManager.PERMISSION_GRANTED]
-         * or [PackageManager.PERMISSION_DENIED].
+         *
+         * @param allowed
+         * @param onetime The grant result
          */
-        fun onRequestPermissionResult(requestCode: Int, grantResult: Int)
+        fun onRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean)
     }
 
     private class ListenerHolder<T>(val listener: T, val handler: Handler?) {
