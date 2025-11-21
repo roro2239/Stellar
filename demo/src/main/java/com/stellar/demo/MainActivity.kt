@@ -112,8 +112,8 @@ class MainActivity : ComponentActivity() {
         serviceInfo = null
     }
 
-    private val permissionResultListener = Stellar.OnRequestPermissionResultListener { _, grantResult ->
-        if (grantResult == PackageManager.PERMISSION_GRANTED) {
+    private val permissionResultListener = Stellar.OnRequestPermissionResultListener { _, allowed, _ ->
+        if (allowed) {
             log("✓ 权限已授予")
             Toast.makeText(this, "权限已授予", Toast.LENGTH_SHORT).show()
             checkStatus()

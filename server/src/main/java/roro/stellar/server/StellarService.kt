@@ -407,7 +407,10 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
             if (BuildUtils.atLeast30()) ("android.os.usertype.profile.MANAGED" == userInfo.userType) else (userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE) != 0
         if (pi == null && !isWorkProfileUser) {
             LOGGER.w("在非工作配置文件用户 %d 中未找到管理器，撤销权限", userId)
-            clientRecord.dispatchRequestPermissionResult(requestCode, false)
+            clientRecord.dispatchRequestPermissionResult(requestCode,
+                allowed = false,
+                onetime = false
+            )
             return
         }
 
@@ -476,7 +479,7 @@ class StellarService : Service<StellarClientManager, StellarConfigManager>() {
                 record.allowed = allowed
                 record.onetime = onetime
                 if (record.pid == requestPid) {
-                    record.dispatchRequestPermissionResult(requestCode, allowed)
+                    record.dispatchRequestPermissionResult(requestCode, allowed, onetime)
                 }
             }
         }

@@ -62,9 +62,10 @@ open class ClientRecord
      * @param requestCode 请求码
      * @param allowed 是否允许
      */
-    fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean) {
+    fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean) {
         val reply = Bundle()
         reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
+        reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
         if (!allowed) lastDenyTime = System.currentTimeMillis()
         try {
             client.dispatchRequestPermissionResult(requestCode, reply)
