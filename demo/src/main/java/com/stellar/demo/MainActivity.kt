@@ -1,6 +1,5 @@
 package com.stellar.demo
 
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -511,7 +510,7 @@ class MainActivity : ComponentActivity() {
         serviceInfo = StellarHelper.serviceInfo
         
         // 检查权限
-        val permissionGranted = Stellar.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        val permissionGranted = Stellar.checkSelfPermission()
         if (!permissionGranted) {
             serviceStatus = ServiceStatus.NO_PERMISSION
             log("✗ 权限未授予")

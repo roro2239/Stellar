@@ -553,7 +553,6 @@ object Stellar {
          *
          *
          * @return SELinux context
-         * @since Added from version 6
          */
         get() {
             if (serverContext != null) return serverContext
@@ -625,7 +624,6 @@ object Stellar {
      * reported to [OnRequestPermissionResultListener.onRequestPermissionResult].
      * @see .addRequestPermissionResultListener
      * @see .removeRequestPermissionResultListener
-     * @since Added from version 11
      */
     fun requestPermission(requestCode: Int) {
         try {
@@ -638,24 +636,20 @@ object Stellar {
     /**
      * Check if self has permission.
      *
-     * @return Either [PackageManager.PERMISSION_GRANTED]
-     * or [PackageManager.PERMISSION_DENIED].
-     * @since Added from version 11
+     * @return [Boolean]
      */
-    fun checkSelfPermission(): Int {
-        if (permissionGranted) return PackageManager.PERMISSION_GRANTED
-        try {
-            permissionGranted = requireService().checkSelfPermission()
-        } catch (e: RemoteException) {
-            throw rethrowAsRuntimeException(e)
+    fun checkSelfPermission(): Boolean {
+        if (permissionGranted) return true
+        permissionGranted = try {
+            requireService().checkSelfPermission()
+        } catch (_: RemoteException) {
+            false
         }
-        return if (permissionGranted) PackageManager.PERMISSION_GRANTED else PackageManager.PERMISSION_DENIED
+        return permissionGranted
     }
 
     /**
      * Should show UI with rationale before requesting the permission.
-     *
-     * @since Added from version 11
      */
     fun shouldShowRequestPermissionRationale(): Boolean {
         if (permissionGranted) return false

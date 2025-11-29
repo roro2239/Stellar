@@ -2,12 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="roro.stellar.manager.permission.API_V23" />
+    <uses-permission android:name="roro.stellar.manager.permission.API_V1" />
 
-    <application tools:ignore="AllowBackup,GoogleAppIndexingWarning">
-        <meta-data
-            android:name="com.stellar.client.V3_SUPPORT"
-            android:value="true" />
-    </application>
+    <application tools:ignore="AllowBackup,GoogleAppIndexingWarning" />
 
 </manifest>

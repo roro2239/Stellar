@@ -17,7 +17,7 @@ object ServerConstants {
     const val MANAGER_APP_NOT_FOUND: Int = 50
 
     /** Stellar API权限名称 Stellar API permission name  */
-    const val PERMISSION: String = "roro.stellar.manager.permission.API_V23"
+    const val PERMISSION: String = "roro.stellar.manager.permission.API_V1"
 
     /** 管理器应用ID Manager application ID  */
     const val MANAGER_APPLICATION_ID: String = "roro.stellar.manager"
