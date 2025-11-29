@@ -125,9 +125,8 @@ object DemoFunctions {
 
         try {
             logger.log("━━━ 权限检查 ━━━")
-            
-            val result = Stellar.checkSelfPermission()
-            val status = if (result == PackageManager.PERMISSION_GRANTED) {
+
+            val status = if (Stellar.checkSelfPermission()) {
                 "已授予 ✓"
             } else {
                 "未授予 ✗"
@@ -377,9 +376,8 @@ object DemoFunctions {
             logger.log("✗ 服务未运行")
             return false
         }
-        
-        val permission = Stellar.checkSelfPermission()
-        if (permission != PackageManager.PERMISSION_GRANTED) {
+
+        if (!Stellar.checkSelfPermission()) {
             logger.log("✗ 权限未授予")
             return false
         }

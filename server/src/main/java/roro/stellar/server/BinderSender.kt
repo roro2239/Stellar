@@ -38,7 +38,7 @@ object BinderSender {
     private val LOGGER = Logger("BinderSender")
 
     /** API权限 API permission  */
-    private const val PERMISSION = "roro.stellar.manager.permission.API_V23"
+    private const val PERMISSION = "roro.stellar.manager.permission.API_V1"
 
     /** Stellar服务实例 Stellar service instance  */
     private var sStellarService: StellarService? = null
