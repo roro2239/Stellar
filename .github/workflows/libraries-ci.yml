@@ -5,7 +5,6 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'server/**'
-      - 'starter/**'
       - 'api/**'
       - 'aidl/**'
       - 'provider/**'
@@ -58,10 +57,7 @@ jobs:
           
     - name: 构建所有库模块
       run: |
-        ./gradlew :common:assembleDebug --stacktrace --no-daemon
         ./gradlew :server:assembleDebug --stacktrace --no-daemon
-        ./gradlew :server-shared:assembleDebug --stacktrace --no-daemon
-        ./gradlew :starter:assembleDebug --stacktrace --no-daemon
         ./gradlew :api:assembleDebug --stacktrace --no-daemon
         ./gradlew :aidl:assembleDebug --stacktrace --no-daemon
         ./gradlew :provider:assembleDebug --stacktrace --no-daemon
@@ -69,9 +65,7 @@ jobs:
       
     - name: 运行库测试
       run: |
-        ./gradlew :common:testDebugUnitTest --stacktrace --no-daemon || true
         ./gradlew :server:testDebugUnitTest --stacktrace --no-daemon || true
-        ./gradlew :server-shared:testDebugUnitTest --stacktrace --no-daemon || true
         ./gradlew :starter:testDebugUnitTest --stacktrace --no-daemon || true
       continue-on-error: true
       
