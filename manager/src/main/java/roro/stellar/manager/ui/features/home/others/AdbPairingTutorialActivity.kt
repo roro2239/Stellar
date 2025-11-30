@@ -186,7 +186,6 @@ fun AdbPairingTutorialScreen(
                     bottom = AppSpacing.screenBottomPadding
                 )
         ) {
-            // 步骤1：通知权限
             TimelineStep(
                 isFirst = true,
                 isLast = false,
@@ -224,7 +223,6 @@ fun AdbPairingTutorialScreen(
                 }
             }
 
-            // 步骤2：打开无线调试
             TimelineStep(
                 isFirst = false,
                 isLast = false,
@@ -255,7 +253,6 @@ fun AdbPairingTutorialScreen(
                 }
             }
 
-            // 步骤3：配对设备
             TimelineStep(
                 isFirst = false,
                 isLast = false,
@@ -266,7 +263,6 @@ fun AdbPairingTutorialScreen(
                 enabled = hasNotificationPermission
             )
 
-            // 步骤4：输入配对信息
             TimelineStep(
                 isFirst = false,
                 isLast = false,
@@ -277,7 +273,6 @@ fun AdbPairingTutorialScreen(
                 enabled = hasNotificationPermission
             )
             
-            // ColorOS警告
             if (isColorOS) {
                 TimelineStep(
                     isFirst = false,
@@ -313,7 +308,6 @@ fun AdbPairingTutorialScreen(
                 }
             }
 
-            // 系统要求
             TimelineStep(
                 isFirst = false,
                 isLast = true,
@@ -343,12 +337,10 @@ fun TimelineStep(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 左侧时间轴
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(36.dp)
         ) {
-            // 圆点
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -383,7 +375,6 @@ fun TimelineStep(
                 }
             }
             
-            // 连接线
             if (!isLast) {
                 Box(
                     modifier = Modifier
@@ -400,7 +391,6 @@ fun TimelineStep(
             }
         }
         
-        // 右侧卡片
         Surface(
             modifier = Modifier
                 .weight(1f)
@@ -424,7 +414,6 @@ fun TimelineStep(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 图标
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -452,7 +441,6 @@ fun TimelineStep(
                         )
                     }
                     
-                    // 标题
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,

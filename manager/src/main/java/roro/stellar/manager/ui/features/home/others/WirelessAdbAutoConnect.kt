@@ -31,7 +31,6 @@ fun AdbAutoConnect(
     val systemPort = remember { EnvironmentUtils.getAdbTcpPort() }
     
     LaunchedEffect(Unit) {
-        // 自动启用无线调试（如果有WRITE_SECURE_SETTINGS权限）
         if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED) {
             try {
                 val cr = context.contentResolver
@@ -42,7 +41,6 @@ fun AdbAutoConnect(
             }
         }
         
-        // 检查系统属性端口
         if (systemPort in 1..65535) {
             onStartConnection(systemPort)
             onComplete()
@@ -51,14 +49,12 @@ fun AdbAutoConnect(
         }
     }
     
-    // 清理资源
     DisposableEffect(Unit) {
         onDispose {
             viewModel.stopDiscovery()
         }
     }
     
-    // 监听搜索到的端口
     LaunchedEffect(discoveredPort) {
         if (discoveredPort > 0 && discoveredPort <= 65535) {
             onStartConnection(discoveredPort)
@@ -67,9 +63,6 @@ fun AdbAutoConnect(
     }
 }
 
-/**
- * 无线ADB连接ViewModel - 负责mDNS端口搜索
- */
 @RequiresApi(Build.VERSION_CODES.R)
 class WirelessAdbViewModel(private val context: Context) : ViewModel() {
     private val _port = MutableStateFlow(-1)

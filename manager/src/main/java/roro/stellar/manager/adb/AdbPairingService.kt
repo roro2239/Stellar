@@ -24,124 +24,42 @@ import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
 import kotlin.getValue
 
-/**
- * ADB配对前台服务
- * ADB Pairing Foreground Service
- * 
- * 功能说明 Features：
- * - 在通知栏中提供无线ADB配对界面 - Provides wireless ADB pairing interface in notification
- * - 使用mDNS自动发现配对服务端口 - Auto discovers pairing service port using mDNS
- * - 支持在通知中直接输入配对码 - Supports entering pairing code directly in notification
- * - 自动执行配对流程 - Auto executes pairing process
- * - 显示配对状态和结果 - Shows pairing status and results
- * 
- * 工作流程 Workflow：
- * - 1. 启动为前台服务显示搜索通知
- * - 2. 使用mDNS发现配对服务端口
- * - 3. 发现端口后显示输入通知
- * - 4. 用户在通知中输入配对码
- * - 5. 生成ADB密钥并执行配对
- * - 6. 显示配对结果
- * - 7. 配对成功后自动停止服务
- * 
- * 通知状态 Notification States：
- * - searchingNotification: 正在搜索配对服务
- * - inputNotification: 已找到服务，等待输入配对码
- * - workingNotification: 正在进行配对
- * - manualInputNotification: 已停止搜索，手动输入
- * - 成功/失败通知：显示最终结果
- * 
- * 用户交互 User Interaction：
- * - 停止搜索按钮：停止mDNS发现
- * - 输入配对码按钮：在通知中输入
- * - 重试按钮：重新开始搜索
- * - RemoteInput：直接在通知中输入配对码
- * 
- * Intent Actions：
- * - startAction: 开始搜索
- * - stopAction: 停止搜索
- * - replyAction: 输入配对码
- * 
- * 使用场景 Use Cases：
- * - 从AdbPairingTutorialActivity启动
- * - 用户首次配对设备
- * - 重新配对设备
- * 
- * 注意事项 Notes：
- * - 仅限Android 11+
- * - 需要通知权限
- * - 需要WiFi连接
- * - Android 12+需要前台服务权限
- * - 配对成功后密钥永久保存
- */
 @TargetApi(Build.VERSION_CODES.R)
 class AdbPairingService : Service() {
 
     companion object {
 
-        /** 通知渠道ID Notification channel ID */
         const val notificationChannel = "adb_pairing"
 
-        /** 日志标签 Log tag */
         private const val tag = "AdbPairingService"
 
-        /** 通知ID Notification ID */
         private const val notificationId = 1
-        /** 回复请求ID Reply request ID */
         private const val replyRequestId = 1
-        /** 停止请求ID Stop request ID */
         private const val stopRequestId = 2
-        /** 重试请求ID Retry request ID */
         private const val retryRequestId = 3
-        /** 启动动作 Start action */
         private const val startAction = "start"
-        /** 停止动作 Stop action */
         private const val stopAction = "stop"
-        /** 回复动作 Reply action */
         private const val replyAction = "reply"
-        /** RemoteInput结果键 RemoteInput result key */
         private const val remoteInputResultKey = "paring_code"
-        /** 端口键 Port key */
         private const val portKey = "paring_code"
 
-        /**
-         * 创建启动Intent
-         * Create start intent
-         */
         fun startIntent(context: Context): Intent {
             return Intent(context, AdbPairingService::class.java).setAction(startAction)
         }
 
-        /**
-         * 创建停止Intent
-         * Create stop intent
-         */
         private fun stopIntent(context: Context): Intent {
             return Intent(context, AdbPairingService::class.java).setAction(stopAction)
         }
 
-        /**
-         * 创建回复Intent
-         * Create reply intent
-         */
         private fun replyIntent(context: Context, port: Int): Intent {
             return Intent(context, AdbPairingService::class.java).setAction(replyAction).putExtra(portKey, port)
         }
     }
 
-    /** mDNS服务发现实例 mDNS service discovery instance */
     private var adbMdns: AdbMdns? = null
-    /** 重试Handler Retry handler */
     private val retryHandler = Handler(Looper.getMainLooper())
-    /** 已发现的配对端口 Discovered pairing port */
     private var discoveredPort: Int = -1
 
-    /**
-     * 端口发现观察者
-     * Port discovery observer
-     * 
-     * 当mDNS发现配对服务端口时触发
-     */
     private val observer = Observer<Int> { port ->
         Log.i(tag, "配对服务端口: $port")
         if (port <= 0) return@Observer
@@ -152,7 +70,6 @@ class AdbPairingService : Service() {
         getSystemService(NotificationManager::class.java).notify(notificationId, notification)
     }
 
-    /** 是否已启动搜索 Whether search has started */
     private var started = false
 
     override fun onCreate() {

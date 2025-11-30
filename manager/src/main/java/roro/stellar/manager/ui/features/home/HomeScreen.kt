@@ -65,12 +65,10 @@ fun HomeScreen(
     var showAdbCommandDialog by remember { mutableStateOf(false) }
     var triggerAdbAutoConnect by remember { mutableStateOf(false) }
     
-    // 使用响应式状态跟踪Shizuku可用性
     var isShizukuAvailable by remember { 
         mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()) 
     }
     
-    // 监听Shizuku状态变化
     DisposableEffect(Unit) {
         val binderReceivedListener = Shizuku.OnBinderReceivedListener {
             isShizukuAvailable = true
@@ -84,7 +82,6 @@ fun HomeScreen(
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
         } catch (_: Exception) {
-            // Shizuku未安装或不可用
         }
         
         onDispose {
@@ -92,7 +89,6 @@ fun HomeScreen(
                 Shizuku.removeBinderReceivedListener(binderReceivedListener)
                 Shizuku.removeBinderDeadListener(binderDeadListener)
             } catch (_: Exception) {
-                // 忽略
             }
         }
     }
@@ -118,7 +114,6 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.itemSpacing)
         ) {
-            // 服务状态卡片
             item {
                 ServerStatusCard(
                     isRunning = isRunning,
@@ -131,7 +126,6 @@ fun HomeScreen(
                 )
             }
 
-            // 权限受限提示
             if (isRunning && !hasPermission) {
                 item {
                     ModernSettingCard(
@@ -154,14 +148,12 @@ fun HomeScreen(
                     }
                 }
 
-                // Shizuku卡片 - 如果服务已运行，放在前面
                 if (isShizukuAvailable) {
                     item {
                         StartShizukuCard(isRestart = isRunning && !isRoot)
                     }
                 }
 
-                // 无线调试卡片
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || EnvironmentUtils.getAdbTcpPort() > 0) {
                     item {
                         StartWirelessAdbCard(
@@ -174,7 +166,6 @@ fun HomeScreen(
                             },
                             onStartClick = {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    // 触发自动连接（会自动搜索端口并启动）
                                     triggerAdbAutoConnect = true
                                 }
                             }
@@ -182,7 +173,6 @@ fun HomeScreen(
                     }
                 }
 
-                // 有线ADB卡片
                 item {
                     ModernActionCard(
                         icon = Icons.Default.Cable,
@@ -199,7 +189,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Shizuku卡片 - 如果服务未运行，放在最后
                 if (!isShizukuAvailable) {
                     item {
                         StartShizukuCard(isRestart = isRunning && !isRoot)
@@ -209,7 +198,6 @@ fun HomeScreen(
         }
     }
 
-    // 停止服务确认对话框
     if (showStopDialog) {
         AlertDialog(
             onDismissRequest = { showStopDialog = false },
@@ -238,7 +226,6 @@ fun HomeScreen(
         )
     }
 
-    // ADB命令对话框
     if (showAdbCommandDialog) {
         AlertDialog(
             onDismissRequest = { showAdbCommandDialog = false },
@@ -270,7 +257,6 @@ fun HomeScreen(
         )
     }
     
-    // 无线调试自动连接处理
     if (triggerAdbAutoConnect && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
             onStartConnection = { port ->

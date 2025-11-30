@@ -72,15 +72,6 @@ import androidx.compose.ui.unit.sp
 import roro.stellar.Stellar
 import roro.stellar.StellarHelper
 
-/**
- * Stellar API Demo - 简洁现代化设计
- *
- * 功能特性：
- * - 实时服务状态监控
- * - 直接使用 Stellar API
- * - 简洁的 Material Design 3 界面
- * - 分类功能演示
- */
 class MainActivity : ComponentActivity() {
 
     private var serviceStatus by mutableStateOf(ServiceStatus.CHECKING)
@@ -89,7 +80,6 @@ class MainActivity : ComponentActivity() {
     private var serviceInfo by mutableStateOf<StellarHelper.ServiceInfo?>(null)
     private var logText by mutableStateOf("")
 
-    // 服务状态枚举
     enum class ServiceStatus(
         val title: String,
         val color: Color,
@@ -158,7 +148,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 添加监听器
         Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
         Stellar.addBinderDeadListener(binderDeadListener)
         Stellar.addRequestPermissionResultListener(permissionResultListener)
@@ -166,7 +155,6 @@ class MainActivity : ComponentActivity() {
         log("=== Stellar API Demo ===")
         log("欢迎使用 Stellar API 演示应用\n")
 
-        // 初始状态检查
         checkStatus()
 
         setContent {
@@ -225,12 +213,10 @@ class MainActivity : ComponentActivity() {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 状态卡片
                 item {
                     StatusCard()
                 }
 
-                // 功能分类
                 val categories = getDemoCategories()
                 categories.forEach { category ->
                     item {
@@ -242,7 +228,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // 日志卡片
                 item {
                     LogCard()
                 }
@@ -292,20 +277,17 @@ class MainActivity : ComponentActivity() {
                     InfoRow("UID", info.uid.toString())
                     InfoRow("API 版本", info.version.toString())
 
-                    // 显示Manager版本信息（仅在服务就绪时）
                     if (serviceStatus == ServiceStatus.READY) {
                         val managerVersionInfo = remember(serviceStatus) {
                             try {
                                 val versionName = Stellar.versionName
                                 val versionCode = Stellar.versionCode
-                                // 只有当获取到有效版本信息时才显示
                                 if (versionName != null && versionName != "unknown" && versionCode >= 1) {
                                     "$versionName ($versionCode)"
                                 } else {
                                     null
                                 }
                             } catch (e: Exception) {
-                                // 获取失败时不显示
                                 null
                             }
                         }
@@ -564,7 +546,6 @@ class MainActivity : ComponentActivity() {
     private fun checkStatus() {
         serviceStatus = ServiceStatus.CHECKING
 
-        // 检查管理器是否安装
         val managerInstalled = StellarHelper.isManagerInstalled(this)
         if (!managerInstalled) {
             serviceStatus = ServiceStatus.NOT_INSTALLED
@@ -573,7 +554,6 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // 检查服务是否运行
         val serviceRunning = Stellar.pingBinder()
         if (!serviceRunning) {
             serviceStatus = ServiceStatus.NOT_RUNNING
@@ -582,10 +562,8 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // 获取服务信息
         serviceInfo = StellarHelper.serviceInfo
 
-        // 检查权限
         val permissionGranted = Stellar.checkSelfPermission()
         if (!permissionGranted) {
             serviceStatus = ServiceStatus.NO_PERMISSION
@@ -593,7 +571,6 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // 一切就绪
         serviceStatus = ServiceStatus.READY
         log("✓ Stellar 已就绪，可以使用所有功能")
 
@@ -726,7 +703,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// 数据类
 data class DemoCategory(
     val name: String,
     val icon: ImageVector,

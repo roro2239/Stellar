@@ -27,4 +27,4 @@
 #define LOGE(...)
 #define PLOGE(fmt, args...)
 #endif
-#endif // _LOGGING_H
+#endif

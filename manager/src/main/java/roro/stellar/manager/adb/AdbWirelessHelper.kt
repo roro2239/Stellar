@@ -21,37 +21,8 @@ import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.features.starter.StarterActivity
 import java.net.Socket
 
-/**
- * 无线ADB辅助类
- * Wireless ADB Helper Class
- * 
- * 功能说明 Features：
- * - 启用和管理无线ADB连接 - Enables and manages wireless ADB connection
- * - 验证WiFi连接状态 - Validates WiFi connection status
- * - 自动连接到本地ADB服务 - Auto connects to local ADB service
- * - 支持同步和异步操作 - Supports sync and async operations
- * 
- * 工作流程 Workflow：
- * - 1. 检查WiFi连接状态
- * - 2. 启用无线ADB（修改系统设置）
- * - 3. 连接到本地ADB服务器
- * - 4. 启动Stellar服务
- * 
- * 注意事项 Notes：
- * - 需要WRITE_SECURE_SETTINGS权限
- * - 仅在WiFi连接时有效
- * - Android 11+支持原生无线ADB
- */
 class AdbWirelessHelper {
 
-    /**
-     * 验证WiFi连接并启用无线ADB（同步）
-     * Validate WiFi and enable wireless ADB (sync)
-     * 
-     * @param contentResolver 内容解析器
-     * @param context 上下文
-     * @return 是否成功启用
-     */
     fun validateThenEnableWirelessAdb(
         contentResolver: ContentResolver,
         context: Context
@@ -70,18 +41,6 @@ class AdbWirelessHelper {
         return false
     }
 
-    /**
-     * 验证WiFi连接并启用无线ADB（异步，带超时）
-     * Validate WiFi and enable wireless ADB (async with timeout)
-     * 
-     * 会等待WiFi连接最多timeoutMs毫秒
-     * Will wait for WiFi connection up to timeoutMs milliseconds
-     * 
-     * @param contentResolver 内容解析器
-     * @param context 上下文
-     * @param timeoutMs 超时时间（毫秒）
-     * @return 是否成功启用
-     */
     suspend fun validateThenEnableWirelessAdbAsync(
         contentResolver: ContentResolver,
         context: Context,
@@ -93,7 +52,6 @@ class AdbWirelessHelper {
         val intervalMs = 500L
         var elapsed = 0L
 
-        // 轮询检查WiFi连接状态
         while (elapsed < timeoutMs) {
             val networkCapabilities =
                 connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
@@ -112,16 +70,8 @@ class AdbWirelessHelper {
         return false
     }
 
-    /**
-     * 启用无线ADB（内部方法）
-     * Enable wireless ADB (internal method)
-     * 
-     * @param contentResolver 内容解析器
-     * @param context 上下文
-     */
     private fun enableWirelessADB(contentResolver: ContentResolver, context: Context) {
         try {
-            // 检查是否已启用
             val isAlreadyEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1 &&
                                   Settings.Global.getInt(contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
             
@@ -145,14 +95,6 @@ class AdbWirelessHelper {
         }
     }
 
-    /**
-     * 启动Starter Activity
-     * Launch Starter Activity
-     * 
-     * @param context 上下文
-     * @param host ADB主机地址
-     * @param port ADB端口
-     */
     fun launchStarterActivity(context: Context, host: String, port: Int) {
         val intent = Intent(context, StarterActivity::class.java).apply {
             putExtra(StarterActivity.EXTRA_IS_ROOT, false)
@@ -165,18 +107,6 @@ class AdbWirelessHelper {
 
 
 
-    /**
-     * 如需要则更改TCP/IP端口
-     * Change TCP/IP port if needed
-     * 
-     * @param host ADB主机地址
-     * @param port 当前ADB端口
-     * @param newPort 新的TCP/IP端口
-     * @param key ADB密钥
-     * @param commandOutput 命令输出缓冲区
-     * @param onOutput 输出回调
-     * @return true表示更改成功
-     */
     private fun changeTcpipPortIfNeeded(
         host: String,
         port: Int,
@@ -205,15 +135,6 @@ class AdbWirelessHelper {
         }
     }
 
-    /**
-     * 等待ADB端口可用
-     * Wait for ADB port available
-     * 
-     * @param host ADB主机地址
-     * @param port ADB端口
-     * @param timeoutMs 超时时间（毫秒）
-     * @return true表示端口可用
-     */
     private fun waitForAdbPortAvailable(
         host: String,
         port: Int,
@@ -258,10 +179,8 @@ class AdbWirelessHelper {
 
                 val commandOutput = StringBuilder()
 
-                // 检查是否启用了端口切换功能
                 val portEnabled = StellarSettings.getPreferences().getBoolean(TCPIP_PORT_ENABLED, true)
                 
-                // 检查用户是否设置了要切换的ADB端口
                 var newPort: Int = -1
                 val shouldChangePort = if (portEnabled) {
                     StellarSettings.getPreferences().getString(TCPIP_PORT, "").let {
@@ -270,7 +189,6 @@ class AdbWirelessHelper {
                         } else {
                             try {
                                 newPort = it.toInt()
-                                // 只有当目标端口与当前端口不同时才需要切换
                                 newPort != port
                             } catch (_: NumberFormatException) {
                                 false
@@ -278,11 +196,9 @@ class AdbWirelessHelper {
                         }
                     }
                 } else {
-                    // 功能关闭，不切换端口
                     false
                 }
                 
-                // 只有当用户设置了端口且与当前端口不同时才进行切换
                 val finalPort = if (shouldChangePort && changeTcpipPortIfNeeded(
                         host,
                         port,

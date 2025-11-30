@@ -11,15 +11,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
-/**
- * 统一的顶部应用栏管理器
- * 
- * 提供整个应用的TopAppBar状态管理和统一组件，确保所有页面的应用栏行为一致性。
- */
-
-/**
- * 记忆化的顶部应用栏状态创建函数
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberTopAppBarState(): TopAppBarState {
@@ -32,9 +23,6 @@ fun rememberTopAppBarState(): TopAppBarState {
     }
 }
 
-/**
- * 创建统一的TopAppBar滚动行为
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun createTopAppBarScrollBehavior(
@@ -45,9 +33,6 @@ fun createTopAppBarScrollBehavior(
     )
 }
 
-/**
- * 统一的大型顶部应用栏组件
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StandardLargeTopAppBar(
