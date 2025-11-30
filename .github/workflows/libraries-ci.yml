@@ -4,9 +4,7 @@ on:
   push:
     branches: [ master, main, develop ]
     paths:
-      - 'common/**'
       - 'server/**'
-      - 'server-shared/**'
       - 'starter/**'
       - 'api/**'
       - 'aidl/**'
