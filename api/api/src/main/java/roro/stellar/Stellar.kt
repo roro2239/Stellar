@@ -20,47 +20,7 @@ import roro.stellar.Stellar.removeRequestPermissionResultListener
 import roro.stellar.Stellar.requestPermission
 import java.util.Objects
 
-/**
- * Stellar API 核心类
- * Stellar API Core Class
- *
- *
- * 功能说明 Features：
- *
- *  * 提供与Stellar服务的通信接口 - Provides communication interface with Stellar service
- *  * 管理Binder生命周期和监听器 - Manages Binder lifecycle and listeners
- *  * 处理权限请求和状态检查 - Handles permission requests and status checks
- *  * 支持远程进程执行 - Supports remote process execution
- *  * 提供系统服务访问能力 - Provides system service access capabilities
- *
- *
- *
- * 使用流程 Usage Flow：
- *
- *  1. 添加Binder接收监听器 - Add binder received listener
- *  1. 等待服务连接 - Wait for service connection
- *  1. 检查权限状态 - Check permission status
- *  1. 调用API方法 - Call API methods
- *
- *
- *
- * 注意事项 Notes：
- *
- *  * 所有API调用必须在Binder就绪后进行 - All API calls must be made after Binder is ready
- *  * 监听器默认在主线程回调 - Listeners callback on main thread by default
- *  * 支持自定义Handler以在特定线程回调 - Supports custom Handler for specific thread callbacks
- *
- */
 object Stellar {
-    // ============================================
-    // 服务连接状态 Service Connection State
-    // ============================================
-    /**
-     * Get the binder.
-     *
-     *
-     * Normal apps should not use this method.
-     */
     /** 服务Binder对象 Service Binder object  */
     @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     var binder: IBinder? = null
@@ -148,8 +108,8 @@ object Stellar {
     }
 
     /**
-     * 附加应用到Stellar服务（V13版本协议）
-     * Attach application to Stellar service (V13 protocol)
+     * 附加应用到Stellar服务
+     * Attach application to Stellar service
      *
      * @param binder 服务Binder对象
      * @param packageName 应用包名
