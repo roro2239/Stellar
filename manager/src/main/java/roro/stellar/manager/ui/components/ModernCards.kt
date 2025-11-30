@@ -22,6 +22,7 @@ fun ModernStatusCard(
     statusText: String,
     isPositive: Boolean,
     modifier: Modifier = Modifier,
+    action: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
     val backgroundColor = if (isPositive) {
@@ -91,17 +92,30 @@ fun ModernStatusCard(
                     }
                 }
                 
-                Surface(
-                    shape = AppShape.shapes.iconSmall,
-                    color = contentColor.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = contentColor,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                if (statusText.isNotEmpty() || action != null) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (statusText.isNotEmpty()) {
+                            Surface(
+                                shape = AppShape.shapes.iconSmall,
+                                color = contentColor.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = statusText,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+
+                        if (action != null) {
+                            action()
+                        }
+                    }
                 }
             }
             

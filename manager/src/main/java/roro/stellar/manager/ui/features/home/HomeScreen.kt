@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import rikka.shizuku.Shizuku
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.management.AppsViewModel
@@ -64,34 +62,6 @@ fun HomeScreen(
     var showStopDialog by remember { mutableStateOf(false) }
     var showAdbCommandDialog by remember { mutableStateOf(false) }
     var triggerAdbAutoConnect by remember { mutableStateOf(false) }
-    
-    var isShizukuAvailable by remember { 
-        mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()) 
-    }
-    
-    DisposableEffect(Unit) {
-        val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-            isShizukuAvailable = true
-        }
-        
-        val binderDeadListener = Shizuku.OnBinderDeadListener {
-            isShizukuAvailable = false
-        }
-        
-        try {
-            Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
-            Shizuku.addBinderDeadListener(binderDeadListener)
-        } catch (_: Exception) {
-        }
-        
-        onDispose {
-            try {
-                Shizuku.removeBinderReceivedListener(binderReceivedListener)
-                Shizuku.removeBinderDeadListener(binderDeadListener)
-            } catch (_: Exception) {
-            }
-        }
-    }
     
     Scaffold(
         modifier = Modifier
@@ -148,12 +118,6 @@ fun HomeScreen(
                     }
                 }
 
-                if (isShizukuAvailable) {
-                    item {
-                        StartShizukuCard(isRestart = isRunning && !isRoot)
-                    }
-                }
-
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || EnvironmentUtils.getAdbTcpPort() > 0) {
                     item {
                         StartWirelessAdbCard(
@@ -186,12 +150,6 @@ fun HomeScreen(
                 if (!hasRoot) {
                     item {
                         StartRootCard(isRestart = isRunning && isRoot)
-                    }
-                }
-
-                if (!isShizukuAvailable) {
-                    item {
-                        StartShizukuCard(isRestart = isRunning && !isRoot)
                     }
                 }
             }

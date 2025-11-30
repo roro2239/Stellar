@@ -97,7 +97,6 @@ class StarterActivity : ComponentActivity() {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return StarterViewModel(
                     isRoot = intent.getBooleanExtra(EXTRA_IS_ROOT, true),
-                    isShizuku = intent.getBooleanExtra(EXTRA_IS_SHIZUKU, false),
                     host = intent.getStringExtra(EXTRA_HOST),
                     port = intent.getIntExtra(EXTRA_PORT, 0)
                 ) as T
@@ -120,7 +119,6 @@ class StarterActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_IS_ROOT = "$EXTRA.IS_ROOT"
-        const val EXTRA_IS_SHIZUKU = "$EXTRA.IS_SHIZUKU"
         const val EXTRA_HOST = "$EXTRA.HOST"
         const val EXTRA_PORT = "$EXTRA.PORT"
     }
@@ -754,7 +752,6 @@ fun ErrorView(
 
 class StarterViewModel(
     private val isRoot: Boolean,
-    private val isShizuku: Boolean,
     private val host: String?,
     private val port: Int
 ) : ViewModel() {
@@ -763,7 +760,6 @@ class StarterViewModel(
         StarterState.Loading(
             command = when {
                 isRoot -> Starter.internalCommand
-                isShizuku -> Starter.userCommand
                 else -> "adb shell ${Starter.userCommand}"
             }
         )
@@ -775,7 +771,6 @@ class StarterViewModel(
 
     val lastCommand: String = when {
         isRoot -> Starter.internalCommand
-        isShizuku -> Starter.userCommand
         else -> "adb shell ${Starter.userCommand}"
     }
 
@@ -811,7 +806,6 @@ class StarterViewModel(
             _state.value = StarterState.Loading(
                 command = when {
                     isRoot -> Starter.internalCommand
-                    isShizuku -> Starter.userCommand
                     else -> "adb shell ${Starter.userCommand}"
                 }
             )
@@ -826,7 +820,6 @@ class StarterViewModel(
     private fun startService() {
         when {
             isRoot -> startRoot()
-            isShizuku -> startShizuku()
             else -> startAdb(host!!, port)
         }
     }
@@ -869,46 +862,6 @@ class StarterViewModel(
                         addOutputLine("错误：$errorMsg")
                         setError(Exception(errorMsg))
                     }
-                }
-            } catch (e: Exception) {
-                addOutputLine("Error: ${e.message}")
-                setError(e)
-            }
-        }
-    }
-
-    private fun startShizuku() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (!ShizukuStarter.checkPermission()) {
-                    setError(Exception("没有Shizuku权限，请先授予权限"))
-                    return@launch
-                }
-
-                val exitCode = ShizukuStarter.executeCommand(
-                    command = Starter.internalCommand,
-                    onOutput = { output ->
-                        addOutputLine(output)
-
-                        if (output.contains("stellar_starter 正常退出")) {
-                            waitForService()
-                        }
-                    }
-                )
-
-                if (exitCode != 0) {
-                    val errorMsg = when (exitCode) {
-                        9 -> "无法终止进程，请先从应用中停止现有服务"  // EXIT_FATAL_KILL
-                        3 -> "无法设置 CLASSPATH"  // EXIT_FATAL_SET_CLASSPATH
-                        4 -> "无法创建进程"  // EXIT_FATAL_FORK
-                        5 -> "app_process 执行失败"  // EXIT_FATAL_APP_PROCESS
-                        6 -> "权限不足，需要 root 或 adb 权限"  // EXIT_FATAL_UID
-                        7 -> "无法获取应用路径"  // EXIT_FATAL_PM_PATH
-                        10 -> "SELinux 阻止了应用通过 binder 连接"  // EXIT_FATAL_BINDER_BLOCKED_BY_SELINUX
-                        else -> "启动失败，退出码: $exitCode"
-                    }
-                    addOutputLine("错误：$errorMsg")
-                    setError(Exception(errorMsg))
                 }
             } catch (e: Exception) {
                 addOutputLine("Error: ${e.message}")

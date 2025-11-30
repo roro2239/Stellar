@@ -138,8 +138,8 @@ static void start_server(const char *path, const char *main_class, const char *p
             run_server(path, main_class, process_name);
         }
         default: {
-            printf("信息：stellar_server 进程号为 %d\n", pid);
-            printf("信息：stellar_starter 正常退出（退出码 0）\n");
+            printf("stellar_server 进程号为 %d\n", pid);
+            printf("stellar_starter 正常退出（退出码 0）\n");
             exit(EXIT_SUCCESS);
         }
     }
@@ -150,7 +150,7 @@ static int check_selinux(const char *s, const char *t, const char *c, const char
 #ifndef DEBUG
     if (res != 0) {
 #endif
-    printf("信息：selinux_check_access %s %s %s %s: %d\n", s, t, c, p, res);
+    printf("selinux_check_access %s %s %s %s: %d\n", s, t, c, p, res);
     fflush(stdout);
 #ifndef DEBUG
     }
@@ -161,22 +161,22 @@ static int check_selinux(const char *s, const char *t, const char *c, const char
 static int switch_cgroup() {
     int pid = getpid();
     if (cgroup::switch_cgroup("/acct", pid)) {
-        printf("信息：切换 cgroup 成功，cgroup 位于 /acct\n");
+        printf("切换 cgroup 成功，cgroup 位于 /acct\n");
         return 0;
     }
     if (cgroup::switch_cgroup("/dev/cg2_bpf", pid)) {
-        printf("信息：切换 cgroup 成功，cgroup 位于 /dev/cg2_bpf\n");
+        printf("切换 cgroup 成功，cgroup 位于 /dev/cg2_bpf\n");
         return 0;
     }
     if (cgroup::switch_cgroup("/sys/fs/cgroup", pid)) {
-        printf("信息：切换 cgroup 成功，cgroup 位于 /sys/fs/cgroup\n");
+        printf("切换 cgroup 成功，cgroup 位于 /sys/fs/cgroup\n");
         return 0;
     }
     char buf[PROP_VALUE_MAX + 1];
     if (__system_property_get("ro.config.per_app_memcg", buf) > 0 &&
         strncmp(buf, "false", 5) != 0) {
         if (cgroup::switch_cgroup("/dev/memcg/apps", pid)) {
-            printf("信息：切换 cgroup 成功，cgroup 位于 /dev/memcg/apps\n");
+            printf("切换 cgroup 成功，cgroup 位于 /dev/memcg/apps\n");
             return 0;
         }
     }
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
         switch_cgroup();
 
         if (android_get_device_api_level() >= 29) {
-            printf("信息：切换挂载命名空间到 init...\n");
+            printf("切换挂载命名空间到 init...\n");
             switch_mnt_ns(1);
         }
     }
@@ -226,10 +226,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("信息：启动器开始运行\n");
+    printf("启动器开始运行\n");
     fflush(stdout);
 
-    printf("信息：正在终止旧进程...\n");
+    printf("正在终止旧进程...\n");
     fflush(stdout);
 
     foreach_proc([](pid_t pid) {
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
             return;
 
         if (kill(pid, SIGKILL) == 0)
-            printf("信息：已终止进程 %d (%s)\n", pid, name);
+            printf("已终止进程 %d (%s)\n", pid, name);
         else if (errno == EPERM) {
             perrorf("错误：无法终止进程 %d，请先从应用中停止现有服务\n", pid);
             exit(EXIT_FATAL_KILL);
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
     });
 
     if (access(apk_path.c_str(), R_OK) == 0) {
-        printf("信息：使用来自参数的 apk 路径\n");
+        printf("使用来自参数的 apk 路径\n");
         fflush(stdout);
     }
 
@@ -274,7 +274,7 @@ int main(int argc, char *argv[]) {
         size_t lib_pos = so_path.find("/lib/");
         if (lib_pos != std::string::npos) {
             apk_path = so_path.substr(0, lib_pos) + "/base.apk";
-            printf("信息：从执行路径推导 apk 路径\n");
+            printf("从执行路径推导 apk 路径\n");
             fflush(stdout);
         }
     }
@@ -284,13 +284,13 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FATAL_PM_PATH);
     }
 
-    printf("信息：apk 路径为 %s\n", apk_path.c_str());
+    printf("apk 路径为 %s\n", apk_path.c_str());
     if (access(apk_path.c_str(), R_OK) != 0) {
         perrorf("错误：无法访问应用文件 %s\n", apk_path.c_str());
         exit(EXIT_FATAL_PM_PATH);
     }
 
-    printf("信息：正在启动服务器...\n");
+    printf("正在启动服务器...\n");
     fflush(stdout);
     LOGD("启动服务器");
     start_server(apk_path.c_str(), SERVER_CLASS_PATH, SERVER_NAME);
