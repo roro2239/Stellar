@@ -14,9 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import roro.stellar.manager.ui.theme.AppShape
 
-/**
- * 现代化状态卡片
- */
 @Composable
 fun ModernStatusCard(
     icon: ImageVector,
@@ -113,9 +110,6 @@ fun ModernStatusCard(
     }
 }
 
-/**
- * 现代化操作卡片
- */
 @Composable
 fun ModernActionCard(
     icon: ImageVector,
@@ -190,9 +184,6 @@ fun ModernActionCard(
     }
 }
 
-/**
- * 现代化设置卡片
- */
 @Composable
 fun ModernSettingCard(
     icon: ImageVector,

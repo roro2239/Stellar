@@ -20,46 +20,23 @@ import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.utils.UserHandleCompat
 import roro.stellar.Stellar
 
-/**
- * 开机启动接收器
- * Boot Complete Receiver
- * 
- * 功能说明 Features：
- * - 监听系统开机完成事件 - Listens to system boot complete event
- * - 根据设置自动启动Stellar服务 - Auto starts Stellar service based on settings
- * - 支持Root和无线ADB两种启动方式 - Supports Root and Wireless ADB startup methods
- * - 仅在主用户下执行 - Only executes in main user
- * 
- * 启动条件 Startup Conditions：
- * - Root启动：需要Root权限且开启相应设置
- * - 无线ADB启动：需要WRITE_SECURE_SETTINGS权限（Android 13+）
- */
 class BootCompleteReceiver : BroadcastReceiver() {
-    /** 无线ADB辅助工具 Wireless ADB helper */
     private val adbWirelessHelper = AdbWirelessHelper()
 
-    /**
-     * 接收开机广播
-     * Receive boot broadcast
-     */
     override fun onReceive(context: Context, intent: Intent) {
-        // 只处理开机完成广播
         if (Intent.ACTION_LOCKED_BOOT_COMPLETED != intent.action
             && Intent.ACTION_BOOT_COMPLETED != intent.action
         ) {
             return
         }
 
-        // 仅在主用户(userId=0)下执行，且服务未运行
         if (UserHandleCompat.myUserId() > 0 || Stellar.pingBinder()) return
 
-        // 读取开机启动设置
         val startOnBootRootIsEnabled = StellarSettings.getPreferences()
             .getBoolean(StellarSettings.KEEP_START_ON_BOOT, false)
         val startOnBootWirelessIsEnabled = StellarSettings.getPreferences()
             .getBoolean(StellarSettings.KEEP_START_ON_BOOT_WIRELESS, false)
 
-        // 根据设置选择启动方式
         if (startOnBootRootIsEnabled) {
             rootStart(context)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
@@ -72,10 +49,6 @@ class BootCompleteReceiver : BroadcastReceiver() {
         }
     }
 
-    /**
-     * Root模式启动
-     * Root mode startup
-     */
     private fun rootStart(context: Context) {
         if (!Shell.getShell().isRoot) {
             Shell.getCachedShell()?.close()
@@ -84,10 +57,6 @@ class BootCompleteReceiver : BroadcastReceiver() {
         Shell.cmd(Starter.internalCommand).exec()
     }
 
-    /**
-     * 无线ADB模式启动（Android 13+）
-     * Wireless ADB mode startup (Android 13+)
-     */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun adbStart(context: Context) {
         Log.i(

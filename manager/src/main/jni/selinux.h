@@ -18,4 +18,4 @@ namespace se {
     extern freecon_t *freecon;
 }
 
-#endif // SELINUX_H
+#endif

@@ -10,18 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import roro.stellar.manager.ui.navigation.routes.MainScreen
 
-/**
- * 统一的底部导航栏管理器
- * 
- * 提供标准化的底部导航栏组件，管理导航项的状态、图标切换和页面跳转逻辑。
- */
-
-/**
- * 标准底部导航栏组件
- * 
- * @param selectedIndex 当前选中的导航项索引
- * @param onItemClick 导航项点击回调，参数为点击的项目索引
- */
 @Composable
 fun StandardBottomNavigation(
     selectedIndex: Int,

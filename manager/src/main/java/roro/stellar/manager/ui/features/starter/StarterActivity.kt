@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
@@ -84,9 +84,6 @@ import javax.net.ssl.SSLProtocolException
 
 private class NotRootedException : Exception()
 
-/**
- * 启动状态
- */
 sealed class StarterState {
     data class Loading(val command: String, val isSuccess: Boolean = false) : StarterState()
     data class Error(val error: Throwable) : StarterState()
@@ -136,8 +133,7 @@ fun StarterScreen(
     onClose: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    
-    // 成功后3秒自动关闭
+
     LaunchedEffect(state) {
         if (state is StarterState.Loading && (state as StarterState.Loading).isSuccess) {
             delay(3000)
@@ -151,7 +147,7 @@ fun StarterScreen(
                 title = { Text("Stellar 启动器") },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
@@ -194,7 +190,7 @@ fun LoadingView(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(3) }
-    
+
     LaunchedEffect(isSuccess) {
         if (isSuccess) {
             while (countdown > 0) {
@@ -203,7 +199,7 @@ fun LoadingView(
             }
         }
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -213,7 +209,6 @@ fun LoadingView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 加载动画/成功图标区域
         Surface(
             shape = AppShape.shapes.iconLarge,
             color = if (isSuccess) {
@@ -228,20 +223,18 @@ fun LoadingView(
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (isSuccess) {
-                    // 成功图标
                     Surface(
                         shape = AppShape.shapes.iconLarge,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         modifier = Modifier.size(100.dp)
                     ) {}
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = Icons.Filled.CheckCircle,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(70.dp)
                     )
                 } else {
-                    // 加载动画
                     CircularProgressIndicator(
                         modifier = Modifier.size(100.dp),
                         strokeWidth = 4.dp,
@@ -255,8 +248,7 @@ fun LoadingView(
                 }
             }
         }
-        
-        // 标题和描述
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -268,7 +260,7 @@ fun LoadingView(
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
-            
+
             if (isSuccess) {
                 Text(
                     text = "Stellar 服务已成功启动",
@@ -285,8 +277,7 @@ fun LoadingView(
                 )
             }
         }
-        
-        // 命令显示卡片
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -302,7 +293,6 @@ fun LoadingView(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 标题栏
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -322,7 +312,7 @@ fun LoadingView(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Terminal,
+                                imageVector = Icons.Filled.Terminal,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
@@ -334,20 +324,19 @@ fun LoadingView(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     IconButton(
                         onClick = { isExpanded = !isExpanded },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = if (isExpanded) "收起" else "展开",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                
-                // 命令显示
+
                 Surface(
                     shape = AppShape.shapes.iconSmall,
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
@@ -362,11 +351,10 @@ fun LoadingView(
                         modifier = Modifier.padding(12.dp)
                     )
                 }
-                
-                // 输出日志（展开时显示）
+
                 if (isExpanded && outputLines.isNotEmpty()) {
                     HorizontalDivider()
-                    
+
                     Surface(
                         shape = AppShape.shapes.iconSmall,
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
@@ -394,8 +382,7 @@ fun LoadingView(
                 }
             }
         }
-        
-        // 成功后的倒计时提示
+
         if (isSuccess) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -451,14 +438,12 @@ fun ErrorView(
 ) {
     val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(false) }
-    
-    // 未配对或无线调试未启用的错误
+
     val needsPairing = error is SSLProtocolException || error is ConnectException
-    
-    // 检查是否是无法终止进程的错误
+
     val isProcessKillError = error.message?.contains("无法终止进程") == true ||
                              error.message?.contains("停止现有服务") == true
-    
+
     val (errorTitle, errorMessage, errorTip) = when {
         isProcessKillError -> Triple(
             "服务已在运行",
@@ -491,7 +476,7 @@ fun ErrorView(
             "请展开查看完整日志以了解详细信息"
         )
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -501,7 +486,6 @@ fun ErrorView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 错误图标
         Surface(
             shape = AppShape.shapes.iconLarge,
             color = MaterialTheme.colorScheme.errorContainer,
@@ -517,15 +501,14 @@ fun ErrorView(
                     modifier = Modifier.size(100.dp)
                 ) {}
                 Icon(
-                    imageVector = Icons.Default.Error,
+                    imageVector = Icons.Filled.Error,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(70.dp)
                 )
             }
         }
-        
-        // 标题和描述
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -537,7 +520,7 @@ fun ErrorView(
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center
             )
-            
+
             Text(
                 text = errorMessage,
                 style = MaterialTheme.typography.bodyMedium,
@@ -545,8 +528,7 @@ fun ErrorView(
                 textAlign = TextAlign.Center
             )
         }
-        
-        // 命令显示卡片
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -562,7 +544,6 @@ fun ErrorView(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 标题栏
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -582,7 +563,7 @@ fun ErrorView(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Terminal,
+                                imageVector = Icons.Filled.Terminal,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)
@@ -594,20 +575,19 @@ fun ErrorView(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     IconButton(
                         onClick = { isExpanded = !isExpanded },
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = if (isExpanded) "收起" else "展开",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                
-                // 命令显示
+
                 Surface(
                     shape = AppShape.shapes.iconSmall,
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
@@ -622,11 +602,10 @@ fun ErrorView(
                         modifier = Modifier.padding(12.dp)
                     )
                 }
-                
-                // 输出日志（展开时显示）
+
                 if (isExpanded && outputLines.isNotEmpty()) {
                     HorizontalDivider()
-                    
+
                     Surface(
                         shape = AppShape.shapes.iconSmall,
                         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
@@ -655,7 +634,6 @@ fun ErrorView(
             }
         }
 
-        // 错误提示卡片（仅在有提示时显示）
         if (errorTip.isNotEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -670,7 +648,7 @@ fun ErrorView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
+                        imageVector = Icons.Filled.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
@@ -684,20 +662,16 @@ fun ErrorView(
             }
         }
 
-        // 操作按钮
         when {
             isProcessKillError -> {
-                // 服务已在运行的特殊处理
                 Button(
                     onClick = {
-                        // 尝试停止服务
                         if (Stellar.pingBinder()) {
                             try {
                                 Stellar.exit()
                             } catch (_: Throwable) {
                             }
                         }
-                        // 延迟后重试
                         viewModel.retry()
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -708,7 +682,7 @@ fun ErrorView(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = Icons.Filled.Refresh,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -743,7 +717,7 @@ fun ErrorView(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-                
+
                 OutlinedButton(
                     onClick = onClose,
                     modifier = Modifier.fillMaxWidth(),
@@ -778,9 +752,6 @@ fun ErrorView(
     }
 }
 
-/**
- * 启动ViewModel
- */
 class StarterViewModel(
     private val isRoot: Boolean,
     private val isShizuku: Boolean,
@@ -835,12 +806,8 @@ class StarterViewModel(
         }
     }
 
-    /**
-     * 重新启动服务
-     */
     fun retry() {
         viewModelScope.launch {
-            // 重置状态
             _state.value = StarterState.Loading(
                 command = when {
                     isRoot -> Starter.internalCommand
@@ -849,11 +816,9 @@ class StarterViewModel(
                 }
             )
             _outputLines.value = emptyList()
-            
-            // 延迟一下，等待服务完全停止
+
             delay(500)
-            
-            // 重新启动
+
             startService()
         }
     }
@@ -869,7 +834,6 @@ class StarterViewModel(
     private fun startRoot() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 检查Root权限
                 if (!Shell.getShell().isRoot) {
                     Shell.getCachedShell()?.close()
                     if (!Shell.getShell().isRoot) {
@@ -879,12 +843,12 @@ class StarterViewModel(
                 }
 
                 addOutputLine("$ ${Starter.internalCommand}")
-                
+
                 Shell.cmd(Starter.internalCommand).to(object : CallbackList<String?>() {
                     override fun onAddElement(line: String?) {
                         line?.let {
                             addOutputLine(it)
-                            
+
                             if (it.contains("stellar_starter 正常退出")) {
                                 waitForService()
                             }
@@ -892,7 +856,6 @@ class StarterViewModel(
                     }
                 }).submit { result ->
                     if (result.code != 0) {
-                        // 根据退出码判断错误类型
                         val errorMsg = when (result.code) {
                             9 -> "无法终止进程，请先从应用中停止现有服务"  // EXIT_FATAL_KILL
                             3 -> "无法设置 CLASSPATH"  // EXIT_FATAL_SET_CLASSPATH
@@ -914,25 +877,19 @@ class StarterViewModel(
         }
     }
 
-    /**
-     * Shizuku模式启动
-     * Shizuku mode startup
-     */
     private fun startShizuku() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 检查Shizuku权限
                 if (!ShizukuStarter.checkPermission()) {
                     setError(Exception("没有Shizuku权限，请先授予权限"))
                     return@launch
                 }
 
-                // 执行启动命令
                 val exitCode = ShizukuStarter.executeCommand(
                     command = Starter.internalCommand,
                     onOutput = { output ->
                         addOutputLine(output)
-                        
+
                         if (output.contains("stellar_starter 正常退出")) {
                             waitForService()
                         }
@@ -940,7 +897,6 @@ class StarterViewModel(
                 )
 
                 if (exitCode != 0) {
-                    // 根据退出码判断错误类型
                     val errorMsg = when (exitCode) {
                         9 -> "无法终止进程，请先从应用中停止现有服务"  // EXIT_FATAL_KILL
                         3 -> "无法设置 CLASSPATH"  // EXIT_FATAL_SET_CLASSPATH
@@ -963,25 +919,22 @@ class StarterViewModel(
 
     private fun startAdb(host: String, port: Int) {
         addOutputLine("Connecting to $host:$port...")
-        
+
         adbWirelessHelper.startStellarViaAdb(
             host = host,
             port = port,
             coroutineScope = viewModelScope,
             onOutput = { output ->
                 addOutputLine(output)
-                
-                // 检测错误输出（native代码通过perrorf输出）
-                // 需要检查每一行，因为ADB输出可能包含多行
+
                 output.lines().forEach { line ->
                     val trimmedLine = line.trim()
                     if (trimmedLine.startsWith("错误：")) {
-                        // 提取错误消息（移除"错误："前缀）
                         val errorMsg = trimmedLine.substringAfter("错误：").trim()
                         setError(Exception(errorMsg))
                     }
                 }
-                
+
                 if (output.contains("stellar_starter 正常退出")) {
                     waitForService()
                 }
@@ -993,9 +946,6 @@ class StarterViewModel(
         )
     }
 
-    /**
-     * 等待Stellar服务启动
-     */
     private fun waitForService() {
         viewModelScope.launch {
             var binderReceived = false
@@ -1008,10 +958,9 @@ class StarterViewModel(
                     }
                 }
             }
-            
+
             Stellar.addBinderReceivedListener(listener)
-            
-            // 等待10秒
+
             delay(10000)
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)

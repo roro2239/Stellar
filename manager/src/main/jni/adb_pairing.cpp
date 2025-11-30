@@ -13,8 +13,6 @@
 
 #include "logging.h"
 
-// ---------------------------------------------------------
-
 static constexpr spake2_role_t kClientRole = spake2_role_alice;
 static constexpr spake2_role_t kServerRole = spake2_role_bob;
 
@@ -116,7 +114,6 @@ static jboolean PairingContext_InitCipher(JNIEnv *env, jobject obj, jlong ptr, j
         return JNI_FALSE;
     }
 
-    // --------
     uint8_t key[kHkdfKeyLength];
     uint8_t info[] = "adb pairing_auth aes-128-gcm key";
 
@@ -205,8 +202,6 @@ static void PairingContext_Destroy(JNIEnv *env, jobject obj, jlong ptr) {
     if (ctx->aes_ctx) EVP_AEAD_CTX_free(ctx->aes_ctx);
     free(ctx);
 }
-
-// ---------------------------------------------------------
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     JNIEnv *env = nullptr;

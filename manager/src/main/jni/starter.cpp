@@ -229,7 +229,6 @@ int main(int argc, char *argv[]) {
     printf("信息：启动器开始运行\n");
     fflush(stdout);
 
-    // kill old server
     printf("信息：正在终止旧进程...\n");
     fflush(stdout);
 
@@ -270,13 +269,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // 如果 pm 命令失败，尝试从 argv[0] 推导
     if (apk_path.empty() && argc > 0) {
         std::string so_path(argv[0]);
-        // 查找 /lib/ 路径
         size_t lib_pos = so_path.find("/lib/");
         if (lib_pos != std::string::npos) {
-            // /data/app/.../lib/arm64/libstellar.so -> /data/app/.../base.apk
             apk_path = so_path.substr(0, lib_pos) + "/base.apk";
             printf("信息：从执行路径推导 apk 路径\n");
             fflush(stdout);
