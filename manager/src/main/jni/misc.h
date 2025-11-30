@@ -11,4 +11,4 @@ void foreach_proc(foreach_proc_function *func);
 
 char *trim(char *str);
 
-#endif // MISC_H
+#endif

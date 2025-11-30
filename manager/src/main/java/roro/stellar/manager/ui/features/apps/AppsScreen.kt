@@ -87,7 +87,6 @@ fun AppsScreen(
     val isServiceRunning = Stellar.pingBinder()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    // 每次页面可见时刷新列表
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             if (Stellar.pingBinder()) {
@@ -409,7 +408,6 @@ fun AppListItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // 顶部稍小、底部稍大，综合 Row 和内部 padding 后上下距离更接近
                     .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
             ) {
                 PermissionSegmentSelector(

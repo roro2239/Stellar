@@ -7,21 +7,6 @@ import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 
-/**
- * View扩展函数
- * View Extension Functions
- * 
- * 替代Rikka core功能
- * Replaces Rikka core functions
- */
-
-/**
- * 解析颜色属性
- * Resolve color attribute
- * 
- * @param attr 颜色属性
- * @return 颜色值
- */
 @ColorInt
 fun Context.resolveColor(@AttrRes attr: Int): Int {
     val typedValue = TypedValue()
@@ -29,13 +14,6 @@ fun Context.resolveColor(@AttrRes attr: Int): Int {
     return typedValue.data
 }
 
-/**
- * 解析颜色属性（Theme扩展）
- * Resolve color attribute (Theme extension)
- * 
- * @param attr 颜色属性
- * @return 颜色值
- */
 @ColorInt
 fun Resources.Theme.resolveColor(@AttrRes attr: Int): Int {
     val typedValue = TypedValue()
@@ -43,10 +21,6 @@ fun Resources.Theme.resolveColor(@AttrRes attr: Int): Int {
     return typedValue.data
 }
 
-/**
- * 将Context转换为Activity
- * Convert Context to Activity
- */
 fun Context.asActivity(): Activity? {
     var context = this
     while (context is android.content.ContextWrapper) {

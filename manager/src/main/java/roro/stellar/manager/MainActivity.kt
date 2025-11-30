@@ -39,11 +39,6 @@ import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.Stellar
 import rikka.shizuku.Shizuku
 
-/**
- * Stellar Manager主Activity
- * 
- * 应用程序启动入口，管理主界面导航和UI状态。
- */
 class MainActivity : ComponentActivity() {
     
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
@@ -62,12 +57,10 @@ class MainActivity : ComponentActivity() {
     private val homeModel by viewModels<HomeViewModel>()
     private val appsModel by appsViewModel()
     
-    // Shizuku权限监听器
     private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
         if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
             if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Shizuku权限已授予", Toast.LENGTH_SHORT).show()
-                // 刷新界面状态
                 homeModel.reload()
             } else {
                 Toast.makeText(this, "Shizuku权限被拒绝", Toast.LENGTH_SHORT).show()
@@ -99,18 +92,14 @@ class MainActivity : ComponentActivity() {
         Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
         Stellar.addBinderDeadListener(binderDeadListener)
         
-        // 初始化Shizuku
         try {
             Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         } catch (e: Exception) {
-            // Shizuku未安装或不可用
             e.printStackTrace()
         }
         
-        // 初始加载
         checkServerStatus()
         
-        // 加载应用列表（需要服务运行）
         if (Stellar.pingBinder() && appsModel.packages.value == null) {
             appsModel.load()
         }
@@ -133,7 +122,6 @@ class MainActivity : ComponentActivity() {
         Stellar.removeBinderReceivedListener(binderReceivedListener)
         Stellar.removeBinderDeadListener(binderDeadListener)
         
-        // 移除Shizuku监听器
         try {
             Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
         } catch (e: Exception) {
@@ -142,11 +130,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * 主界面内容
- * 
- * 构建应用的主要界面结构，包括底部导航栏和页面内容。
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
@@ -160,10 +143,8 @@ private fun MainScreenContent(
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     val context = navController.context
     
-    // 处理系统返回键
     BackHandler {
         if (navController.previousBackStackEntry == null) {
-            // 双击退出
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBackPressTime < 2000) {
                 (context as? ComponentActivity)?.finish()
@@ -185,11 +166,9 @@ private fun MainScreenContent(
                         selectedIndex = index
                         val route = MainScreen.entries[index].route
                         navController.navigate(route) {
-                            // 清除导航栈
                             popUpTo(0) {
                                 inclusive = true
                             }
-                            // 避免重复导航到同一目标
                             launchSingleTop = true
                         }
                     }
@@ -205,7 +184,6 @@ private fun MainScreenContent(
                 .fillMaxSize()
                 .padding(it)
         ) {
-            // 主页导航图
             navigation(
                 startDestination = "home",
                 route = MainScreen.Home.route
@@ -219,7 +197,6 @@ private fun MainScreenContent(
                 }
             }
             
-            // 授权应用导航图
             navigation(
                 startDestination = "apps",
                 route = MainScreen.Apps.route
@@ -232,7 +209,6 @@ private fun MainScreenContent(
                 }
             }
             
-            // 设置导航图
             navigation(
                 startDestination = "settings",
                 route = MainScreen.Settings.route

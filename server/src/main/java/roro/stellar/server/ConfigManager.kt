@@ -19,26 +19,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
 
-/**
- * 配置管理器抽象类
- * Configuration Manager Abstract Class
- *
- *
- * 功能说明 Features：
- *
- *  * 管理客户端应用的权限配置 - Manages permission configuration for client apps
- *  * 提供配置的查询、更新和删除接口 - Provides query, update and delete interfaces for configuration
- *  * 支持按UID管理多个包的权限 - Supports managing permissions for multiple packages by UID
- *
- *
- *
- * 权限标志 Permission Flags：
- *
- *  * FLAG_ALLOWED - 已授权标志
- *  * FLAG_DENIED - 已拒绝标志
- *  * MASK_PERMISSION - 权限掩码（包含允许和拒绝）
- *
- */
 class ConfigManager {
 
     private val mWriteRunner: Runnable = Runnable { write(config) }
@@ -54,7 +34,6 @@ class ConfigManager {
 
             val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
             if (packages.isEmpty()) {
-                LOGGER.i("remove config for uid %d since it has gone", entry.key)
                 config.packages.remove(entry.key)
                 changed = true
                 continue
@@ -75,11 +54,12 @@ class ConfigManager {
             entry.value.packages.addAll(s)
             val shrunkSize = entry.value.packages.size
             if (shrunkSize < rawSize) {
-                LOGGER.w("entry.packages has duplicate! Shrunk. (%d -> %d)", rawSize, shrunkSize)
+                val s1 = LinkedHashSet(entry.value.packages)
+                entry.value.packages.clear()
+                entry.value.packages.addAll(s1)
             }
 
             if (needRemoving) {
-                LOGGER.i("remove config for uid %d since the packages for it changed", entry.key)
                 config.packages.remove(entry.key)
                 changed = true
             }
@@ -216,23 +196,19 @@ class ConfigManager {
     }
 
     companion object {
-        @JvmStatic
         private val LOGGER: Logger = Logger("ConfigManager")
 
         const val FLAG_ASK: Int = 0
         const val FLAG_GRANTED: Int = 1
         const val FLAG_DENIED: Int = 2
 
-        /** JSON反序列化器 JSON deserializer  */
         private val GSON_IN: Gson = GsonBuilder()
             .create()
 
-        /** JSON序列化器（带版本过滤） JSON serializer (with version filter)  */
         private val GSON_OUT: Gson = GsonBuilder()
             .setVersion(StellarConfig.LATEST_VERSION.toDouble())
             .create()
 
-        /** 延迟写入时间（毫秒） Delayed write time in milliseconds  */
         private const val WRITE_DELAY = (1 * 1000).toLong()
 
         private val FILE = File("/data/user_de/0/com.android.shell/stellar.json")

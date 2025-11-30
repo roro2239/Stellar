@@ -5,4 +5,4 @@ namespace cgroup {
     bool switch_cgroup(const char *cgroup, int pid);
 }
 
-#endif // CGROUP_H
+#endif

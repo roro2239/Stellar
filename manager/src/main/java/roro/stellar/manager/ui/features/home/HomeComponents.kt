@@ -257,11 +257,9 @@ fun StartWirelessAdbCard(
 fun StartShizukuCard(isRestart: Boolean) {
     val context = LocalContext.current
 
-    // 使用响应式状态
     var isShizukuAvailable by remember { mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.isShizukuAvailable()) }
     var hasPermission by remember { mutableStateOf(roro.stellar.manager.ui.features.starter.ShizukuStarter.checkPermission()) }
 
-    // 使用Shizuku的Binder监听器来更新状态
     DisposableEffect(Unit) {
         val binderReceivedListener = Shizuku.OnBinderReceivedListener {
             isShizukuAvailable =
@@ -279,7 +277,6 @@ fun StartShizukuCard(isRestart: Boolean) {
             Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
             Shizuku.addBinderDeadListener(binderDeadListener)
         } catch (e: Exception) {
-            // Shizuku未安装或不可用
         }
 
         onDispose {
@@ -287,12 +284,10 @@ fun StartShizukuCard(isRestart: Boolean) {
                 Shizuku.removeBinderReceivedListener(binderReceivedListener)
                 Shizuku.removeBinderDeadListener(binderDeadListener)
             } catch (e: Exception) {
-                // 忽略
             }
         }
     }
 
-    // 根据状态确定标题和副标题
     val title = if (isRestart) "Shizuku 重启" else "Shizuku 启动"
     val subtitle = when {
         !isShizukuAvailable -> "Shizuku 服务未运行"
@@ -300,7 +295,6 @@ fun StartShizukuCard(isRestart: Boolean) {
         else -> "通过 Shizuku 服务启动 Stellar"
     }
 
-    // 根据状态确定按钮文本
     val buttonText = when {
         !isShizukuAvailable -> "查看"
         !hasPermission -> "授权"

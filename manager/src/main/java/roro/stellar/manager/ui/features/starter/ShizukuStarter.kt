@@ -11,17 +11,8 @@ import java.io.BufferedReader
 import java.io.FileInputStream
 import java.io.InputStreamReader
 
-/**
- * Shizuku 命令执行器
- * 
- * 通过 Binder IPC 直接与 Shizuku 服务通信执行 shell 命令
- * 使用底层 transact 方式，避免已废弃的 API
- */
 object ShizukuStarter {
 
-    /**
-     * 检查 Shizuku 服务是否运行
-     */
     fun isShizukuAvailable(): Boolean {
         return try {
             Shizuku.pingBinder()
@@ -30,9 +21,6 @@ object ShizukuStarter {
         }
     }
 
-    /**
-     * 检查是否已授权
-     */
     fun checkPermission(): Boolean {
         return try {
             if (!isShizukuAvailable()) {
@@ -44,25 +32,14 @@ object ShizukuStarter {
         }
     }
 
-    /**
-     * 请求 Shizuku 权限
-     */
     fun requestPermission() {
         if (isShizukuAvailable() && Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             if (Shizuku.shouldShowRequestPermissionRationale()) {
-                // 用户之前拒绝过，可再次请求
             }
             Shizuku.requestPermission(1001)
         }
     }
 
-    /**
-     * 执行 shell 命令
-     * 
-     * @param command 要执行的命令
-     * @param onOutput 输出回调（逐行）
-     * @return 命令退出码（0表示成功，-1表示失败）
-     */
     suspend fun executeCommand(
         command: String,
         onOutput: (String) -> Unit
@@ -83,9 +60,6 @@ object ShizukuStarter {
         }
     }
 
-    /**
-     * 通过 Binder 执行命令
-     */
     private fun executeCommandDirectly(command: String, onOutput: (String) -> Unit): Int {
         return try {
             val binder = Shizuku.getBinder()
@@ -104,13 +78,6 @@ object ShizukuStarter {
         }
     }
     
-    /**
-     * 创建远程进程
-     * 
-     * 调用 IShizukuService.newProcess (transaction code 8)
-     * 
-     * @return IRemoteProcess 的 IBinder
-     */
     private fun createProcessViaTransact(
         shizukuBinder: IBinder,
         command: String
@@ -121,8 +88,8 @@ object ShizukuStarter {
         return try {
             data.writeInterfaceToken("moe.shizuku.server.IShizukuService")
             data.writeStringArray(arrayOf("sh", "-c", command))
-            data.writeStringArray(null) // 环境变量
-            data.writeString(null) // 工作目录
+            data.writeStringArray(null)
+            data.writeString(null)
             
             val success = shizukuBinder.transact(8, data, reply, 0)
             if (!success) {
@@ -139,19 +106,8 @@ object ShizukuStarter {
         }
     }
     
-    /**
-     * 读取进程输出并等待完成
-     * 
-     * 自动探测 IRemoteProcess 的 transaction codes:
-     * - getInputStream: 尝试 code 2-6
-     * - getErrorStream: 尝试 code 3-7
-     * - destroy: code 1
-     * 
-     * @return 从命令输出中提取的退出码
-     */
     private fun readProcessViaTransact(processBinder: IBinder, onOutput: (String) -> Unit): Int {
         return try {
-            // 获取 stdout
             var inputStream: ParcelFileDescriptor? = null
             for (code in 2..6) {
                 inputStream = getStreamViaTransact(processBinder, code)
@@ -160,7 +116,6 @@ object ShizukuStarter {
                 }
             }
             
-            // 获取 stderr
             var errorStream: ParcelFileDescriptor? = null
             for (code in 3..7) {
                 if (code == 2 || code == 3 || code == 4 || code == 5 || code == 6) continue
@@ -172,7 +127,6 @@ object ShizukuStarter {
             
             var lastOutputLine = ""
             
-            // 读取标准输出
             val outputThread = Thread {
                 if (inputStream != null) {
                     try {
@@ -191,7 +145,6 @@ object ShizukuStarter {
                 }
             }
             
-            // 读取错误输出
             val errorThread = Thread {
                 if (errorStream != null) {
                     try {
@@ -212,11 +165,9 @@ object ShizukuStarter {
             outputThread.start()
             errorThread.start()
             
-            // 等待输出完成
             outputThread.join(3000)
             errorThread.join(3000)
             
-            // 从输出中提取退出码（格式: "退出码 0"）
             var actualExitCode = 0
             if (lastOutputLine.contains("退出码")) {
                 try {
@@ -225,15 +176,12 @@ object ShizukuStarter {
                         actualExitCode = match.groupValues[1].toInt()
                     }
                 } catch (e: Exception) {
-                    // 使用默认值 0
                 }
             }
             
-            // 销毁进程
             try {
                 destroyViaTransact(processBinder)
             } catch (e: Exception) {
-                // 忽略
             }
             
             actualExitCode
@@ -242,11 +190,6 @@ object ShizukuStarter {
         }
     }
     
-    /**
-     * 获取进程流（stdout/stderr）
-     * 
-     * @return ParcelFileDescriptor 用于读取流数据
-     */
     private fun getStreamViaTransact(processBinder: IBinder, transactionCode: Int): ParcelFileDescriptor? {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -270,11 +213,6 @@ object ShizukuStarter {
         }
     }
     
-    /**
-     * 销毁远程进程
-     * 
-     * 调用 IRemoteProcess.destroy (transaction code 1)
-     */
     private fun destroyViaTransact(processBinder: IBinder) {
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
@@ -284,7 +222,6 @@ object ShizukuStarter {
             processBinder.transact(1, data, reply, 0)
             reply.readException()
         } catch (e: Exception) {
-            // 忽略
         } finally {
             data.recycle()
             reply.recycle()

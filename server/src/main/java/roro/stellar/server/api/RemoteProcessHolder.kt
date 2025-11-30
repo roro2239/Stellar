@@ -11,46 +11,14 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
 
-/**
- * 远程进程持有者
- * Remote Process Holder
- *
- *
- * 功能说明 Features：
- *
- *  * 封装Process为AIDL接口 - Wraps Process as AIDL interface
- *  * 提供跨进程的进程控制能力 - Provides cross-process process control
- *  * 管理进程的输入输出流 - Manages process I/O streams
- *  * 监听客户端死亡并自动清理 - Monitors client death and auto cleanup
- *
- *
- *
- * 工作原理 How It Works：
- *
- *  * 将Process的InputStream/OutputStream转换为ParcelFileDescriptor - Converts Process I/O streams to ParcelFileDescriptor
- *  * 通过Binder传递文件描述符到客户端 - Passes file descriptors to client via Binder
- *  * 当客户端死亡时自动销毁进程 - Auto destroys process when client dies
- *
- */
 class RemoteProcessHolder(
-    /** 本地进程对象 Local process object  */
     private val process: Process, token: IBinder?
 ) : IRemoteProcess.Stub() {
-    /** 进程输入流的文件描述符 Input stream file descriptor  */
     private var `in`: ParcelFileDescriptor? = null
 
-    /** 进程输出流的文件描述符 Output stream file descriptor  */
     private var out: ParcelFileDescriptor? = null
 
-    /**
-     * 构造远程进程持有者
-     * Construct remote process holder
-     *
-     * @param process 要包装的进程
-     * @param token 客户端Binder令牌（用于监听客户端死亡）
-     */
     init {
-        // 监听客户端死亡，自动清理进程
         if (token != null) {
             try {
                 val deathRecipient = DeathRecipient {
@@ -70,10 +38,6 @@ class RemoteProcessHolder(
         }
     }
 
-    /**
-     * 获取进程的标准输出流（用于写入数据到进程）
-     * Get process standard output stream (for writing to process)
-     */
     override fun getOutputStream(): ParcelFileDescriptor? {
         if (out == null) {
             try {
@@ -85,10 +49,6 @@ class RemoteProcessHolder(
         return out
     }
 
-    /**
-     * 获取进程的标准输入流（用于读取进程输出）
-     * Get process standard input stream (for reading process output)
-     */
     override fun getInputStream(): ParcelFileDescriptor? {
         if (`in` == null) {
             try {
@@ -100,10 +60,6 @@ class RemoteProcessHolder(
         return `in`
     }
 
-    /**
-     * 获取进程的错误流
-     * Get process error stream
-     */
     override fun getErrorStream(): ParcelFileDescriptor? {
         try {
             return ParcelFileDescriptorUtil.pipeFrom(process.errorStream)
@@ -112,12 +68,6 @@ class RemoteProcessHolder(
         }
     }
 
-    /**
-     * 等待进程结束
-     * Wait for process to finish
-     *
-     * @return 进程退出码
-     */
     override fun waitFor(): Int {
         try {
             return process.waitFor()
@@ -126,31 +76,14 @@ class RemoteProcessHolder(
         }
     }
 
-    /**
-     * 获取进程退出码
-     * Get process exit value
-     *
-     * @return 退出码
-     * @throws IllegalThreadStateException 如果进程尚未结束
-     */
     override fun exitValue(): Int {
         return process.exitValue()
     }
 
-    /**
-     * 销毁进程
-     * Destroy process
-     */
     override fun destroy() {
         process.destroy()
     }
 
-    /**
-     * 检查进程是否存活
-     * Check if process is alive
-     *
-     * @return true表示进程仍在运行
-     */
     @Throws(RemoteException::class)
     override fun alive(): Boolean {
         try {
@@ -161,14 +94,6 @@ class RemoteProcessHolder(
         }
     }
 
-    /**
-     * 等待进程结束（带超时）
-     * Wait for process to finish (with timeout)
-     *
-     * @param timeout 超时时间
-     * @param unitName 时间单位名称
-     * @return true表示进程在超时前结束
-     */
     @Throws(RemoteException::class)
     override fun waitForTimeout(timeout: Long, unitName: String?): Boolean {
         val unit = TimeUnit.valueOf(unitName!!)

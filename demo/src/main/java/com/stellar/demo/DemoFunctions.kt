@@ -8,23 +8,12 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.concurrent.thread
 
-/**
- * Stellar API 功能演示集合
- * 
- * 提供各种 Stellar API 的使用示例
- */
 object DemoFunctions {
 
-    /** 日志接口 */
     fun interface Logger {
         fun log(message: String)
     }
 
-    // ========== 基础功能 ==========
-
-    /**
-     * 获取 Stellar 服务基本信息
-     */
     @Suppress("UNUSED_PARAMETER")
     fun getBasicInfo(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -58,9 +47,6 @@ object DemoFunctions {
         }
     }
 
-    /**
-     * 获取版本信息（包括 Manager 应用版本）
-     */
     @Suppress("UNUSED_PARAMETER")
     fun getVersionInfo(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -68,7 +54,6 @@ object DemoFunctions {
         try {
             logger.log("━━━ 版本信息 ━━━")
             
-            // 服务API版本
             val apiVersion = Stellar.version
             logger.log("服务 API 版本: $apiVersion")
             
@@ -77,7 +62,6 @@ object DemoFunctions {
             
             logger.log("")
             
-            // Manager应用版本信息（新增功能）
             val versionName = Stellar.versionName ?: "unknown"
             logger.log("Manager 版本名称: $versionName")
             
@@ -90,14 +74,12 @@ object DemoFunctions {
             
             logger.log("")
             
-            // 服务端补丁版本
             val patchVersion = Stellar.serverPatchVersion
             logger.log("服务补丁版本: $patchVersion")
             
             logger.log("")
             logger.log("━━━━━━━━━━━━━━━━")
             
-            // 版本兼容性检查
             if (apiVersion < latestVersion) {
                 logger.log("⚠ 服务版本较旧，建议更新 Manager")
             } else if (apiVersion == latestVersion) {
@@ -113,9 +95,6 @@ object DemoFunctions {
         }
     }
 
-    /**
-     * 检查 Stellar 权限
-     */
     @Suppress("UNUSED_PARAMETER")
     fun checkPermission(context: Context, logger: Logger) {
         if (!Stellar.pingBinder()) {
@@ -143,11 +122,6 @@ object DemoFunctions {
         }
     }
 
-    // ========== 进程执行 ==========
-
-    /**
-     * 运行 ls 命令
-     */
     @Suppress("UNUSED_PARAMETER")
     fun runLsCommand(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -188,9 +162,6 @@ object DemoFunctions {
         }
     }
 
-    /**
-     * 运行 ps 命令
-     */
     @Suppress("UNUSED_PARAMETER")
     fun runPsCommand(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -231,9 +202,6 @@ object DemoFunctions {
         }
     }
 
-    /**
-     * 运行 getprop 命令
-     */
     @Suppress("UNUSED_PARAMETER")
     fun runGetPropCommand(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -267,11 +235,6 @@ object DemoFunctions {
         }
     }
 
-    // ========== 系统属性 ==========
-
-    /**
-     * 读取设备属性
-     */
     @Suppress("UNUSED_PARAMETER")
     fun readDeviceProperties(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -304,9 +267,6 @@ object DemoFunctions {
         }
     }
 
-    /**
-     * 读取调试属性
-     */
     @Suppress("UNUSED_PARAMETER")
     fun readDebugProperties(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -333,11 +293,6 @@ object DemoFunctions {
         }
     }
 
-    // ========== 高级功能 ==========
-
-    /**
-     * 检查远程权限
-     */
     @Suppress("UNUSED_PARAMETER")
     fun checkRemotePermissions(context: Context, logger: Logger) {
         if (!checkReady(logger)) return
@@ -366,11 +321,6 @@ object DemoFunctions {
         }
     }
 
-    // ========== 辅助方法 ==========
-
-    /**
-     * 检查服务是否就绪
-     */
     private fun checkReady(logger: Logger): Boolean {
         if (!Stellar.pingBinder()) {
             logger.log("✗ 服务未运行")

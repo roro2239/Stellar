@@ -9,7 +9,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.StellarDemo">
 
-        <!-- Stellar Provider - 用于接收来自 Stellar 服务的 Binder -->
         <provider
             android:name="roro.stellar.StellarProvider"
             android:authorities="${applicationId}.stellar"

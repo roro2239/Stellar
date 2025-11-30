@@ -32,9 +32,6 @@ object UpdateUtils {
     private const val BASE_URL = "https://gitee.com/api/v5/repos/lovelmxa/stellar-service/contents/"
     private const val ACCESS_TOKEN = "538b3ffc6d4e462525e80850122a455e"
     
-    /**
-     * 从Gitee获取更新信息
-     */
     suspend fun checkUpdate(): AppUpdate? = withContext(Dispatchers.IO) {
         try {
             val url = "${BASE_URL}update/update.json?access_token=$ACCESS_TOKEN"
@@ -55,18 +52,15 @@ object UpdateUtils {
                 return@withContext null
             }
             
-            // 提取base64编码的content字段
             val base64Content = extractBase64Content(responseBody)
             if (base64Content == null) {
                 Log.e(TAG, "提取base64内容失败")
                 return@withContext null
             }
             
-            // 解码base64
             val decodedContent = String(Base64.decode(base64Content, Base64.DEFAULT))
             Log.d(TAG, "解码后的更新信息: $decodedContent")
             
-            // 解析JSON内容
             val versionCode = Regex(""""version_code"\s*:\s*(\d+)""").find(decodedContent)?.groupValues?.get(1)?.toIntOrNull()
             val downloadUrl = Regex(""""url"\s*:\s*"([^"]+)"""").find(decodedContent)?.groupValues?.get(1)
             
@@ -82,9 +76,6 @@ object UpdateUtils {
         }
     }
     
-    /**
-     * 提取Gitee API响应中的base64 content字段
-     */
     private fun extractBase64Content(responseBody: String): String? {
         return try {
             val startIndex = responseBody.indexOf("\"content\":\"") + 11
@@ -100,9 +91,6 @@ object UpdateUtils {
         }
     }
     
-    /**
-     * 下载并安装APK
-     */
     suspend fun downloadAndInstall(
         context: Context,
         downloadUrl: String,
@@ -140,7 +128,6 @@ object UpdateUtils {
                 return@withContext
             }
             
-            // 保存文件
             response.body.let { responseBody ->
                 val totalBytes = responseBody?.contentLength()
                 var downloadedBytes = 0L
@@ -183,16 +170,10 @@ object UpdateUtils {
         }
     }
     
-    /**
-     * 检查是否有安装权限
-     */
     fun hasInstallPermission(context: Context): Boolean {
         return context.packageManager.canRequestPackageInstalls()
     }
     
-    /**
-     * 跳转到安装权限设置页面
-     */
     fun requestInstallPermission(context: Context) {
         try {
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
@@ -207,12 +188,8 @@ object UpdateUtils {
         }
     }
     
-    /**
-     * 安装APK
-     */
     private fun installApk(context: Context, apkFile: File) {
         try {
-            // 检查安装权限
             if (!hasInstallPermission(context)) {
                 Log.w(TAG, "没有安装权限，跳转设置页面")
                 requestInstallPermission(context)
