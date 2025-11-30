@@ -10,6 +10,7 @@ import rikka.hidden.compat.ActivityManagerApis
 import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.adapter.ProcessObserverAdapter
 import rikka.hidden.compat.adapter.UidObserverAdapter
+import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.util.Logger
 
@@ -36,12 +37,8 @@ import roro.stellar.server.util.Logger
  */
 object BinderSender {
     private val LOGGER = Logger("BinderSender")
-
-    /** API权限 API permission  */
-    private const val PERMISSION = "roro.stellar.manager.permission.API_V1"
-
     /** Stellar服务实例 Stellar service instance  */
-    private var sStellarService: StellarService? = null
+    private var stellarService: StellarService? = null
 
     /**
      * 发送Binder到指定UID的应用
@@ -66,14 +63,17 @@ object BinderSender {
                 PackageManager.GET_PERMISSIONS.toLong(),
                 userId
             )
-            if (pi == null || pi.requestedPermissions == null) continue
+            if (pi == null || pi.applicationInfo == null || pi.applicationInfo!!.metaData == null) continue
 
             // 检查是否为Manager应用
             if (pi.packageName == MANAGER_APPLICATION_ID) {
-                StellarService.sendBinderToManger(sStellarService, userId)
-            } else if ((pi.requestedPermissions as Array<out String?>).contains(PERMISSION)) {
-                StellarService.sendBinderToUserApp(sStellarService, packageName, userId)
+                StellarService.sendBinderToManger(stellarService, userId)
+            } else if (pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",")
+                    .contains("stellar")
+            ) {
+                StellarService.sendBinderToUserApp(stellarService, packageName, userId)
             }
+
             return
         }
     }
@@ -85,7 +85,7 @@ object BinderSender {
      * @param stellarService Stellar服务实例
      */
     fun register(stellarService: StellarService?) {
-        sStellarService = stellarService
+        BinderSender.stellarService = stellarService
 
         // 注册进程观察者
         try {

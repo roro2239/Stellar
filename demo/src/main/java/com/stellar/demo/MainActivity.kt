@@ -74,7 +74,7 @@ import roro.stellar.StellarHelper
 
 /**
  * Stellar API Demo - 简洁现代化设计
- * 
+ *
  * 功能特性：
  * - 实时服务状态监控
  * - 直接使用 Stellar API
@@ -84,9 +84,11 @@ import roro.stellar.StellarHelper
 class MainActivity : ComponentActivity() {
 
     private var serviceStatus by mutableStateOf(ServiceStatus.CHECKING)
+    private var startFollowServerPermission by mutableStateOf(false)
+    private var startFollowServerOnBootPermission by mutableStateOf(false)
     private var serviceInfo by mutableStateOf<StellarHelper.ServiceInfo?>(null)
     private var logText by mutableStateOf("")
-    
+
     // 服务状态枚举
     enum class ServiceStatus(
         val title: String,
@@ -111,32 +113,62 @@ class MainActivity : ComponentActivity() {
         serviceInfo = null
     }
 
-    private val permissionResultListener = Stellar.OnRequestPermissionResultListener { _, allowed, _ ->
-        if (allowed) {
-            log("✓ 权限已授予")
-            Toast.makeText(this, "权限已授予", Toast.LENGTH_SHORT).show()
-            checkStatus()
-        } else {
-            log("✗ 权限被拒绝")
-            Toast.makeText(this, "权限被拒绝", Toast.LENGTH_SHORT).show()
-            serviceStatus = ServiceStatus.NO_PERMISSION
+    private val permissionResultListener =
+        Stellar.OnRequestPermissionResultListener { requestCode, allowed, onetime ->
+            if (allowed) {
+                log("✓ 权限已授予")
+                Toast.makeText(
+                    this, "${
+                        when (requestCode) {
+                            1001 -> "Stellar"
+                            1002 -> "跟随 Stellar 启动"
+                            1003 -> "开机跟随 Stellar 启动"
+                            else -> "未知"
+                        }
+                    } 权限已授予, ${if (onetime) "仅一次" else "永久"}", Toast.LENGTH_SHORT
+                ).show()
+                checkStatus()
+            } else {
+                log("✗ 权限被拒绝")
+                Toast.makeText(
+                    this, "${
+                        when (requestCode) {
+                            1001 -> {
+                                serviceStatus = ServiceStatus.NO_PERMISSION
+                                "Stellar"
+                            }
+
+                            1002 -> {
+                                startFollowServerPermission = false
+                                "跟随 Stellar 启动"
+                            }
+
+                            1003 -> {
+                                startFollowServerOnBootPermission = false
+                                "开机跟随 Stellar 启动"
+                            }
+
+                            else -> "未知"
+                        }
+                    } 权限被拒绝, ${if (onetime) "仅一次" else "永久"}", Toast.LENGTH_SHORT
+                ).show()
+            }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 添加监听器
         Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
         Stellar.addBinderDeadListener(binderDeadListener)
         Stellar.addRequestPermissionResultListener(permissionResultListener)
-        
+
         log("=== Stellar API Demo ===")
         log("欢迎使用 Stellar API 演示应用\n")
-        
+
         // 初始状态检查
         checkStatus()
-        
+
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -162,12 +194,12 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainScreen() {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-        
+
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 LargeTopAppBar(
-                    title = { 
+                    title = {
                         Column {
                             Text("Stellar API Demo")
                             Text(
@@ -197,19 +229,19 @@ class MainActivity : ComponentActivity() {
                 item {
                     StatusCard()
                 }
-                
+
                 // 功能分类
                 val categories = getDemoCategories()
                 categories.forEach { category ->
                     item {
                         CategoryHeader(category.name, category.icon)
                     }
-                    
+
                     items(category.actions) { action ->
                         ActionCard(action)
                     }
                 }
-                
+
                 // 日志卡片
                 item {
                     LogCard()
@@ -236,7 +268,7 @@ class MainActivity : ComponentActivity() {
                         tint = serviceStatus.color,
                         modifier = Modifier.size(32.dp)
                     )
-                    
+
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "服务状态",
@@ -251,15 +283,15 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-                
+
                 serviceInfo?.let { info ->
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     InfoRow("UID", info.uid.toString())
                     InfoRow("API 版本", info.version.toString())
-                    
+
                     // 显示Manager版本信息（仅在服务就绪时）
                     if (serviceStatus == ServiceStatus.READY) {
                         val managerVersionInfo = remember(serviceStatus) {
@@ -277,23 +309,25 @@ class MainActivity : ComponentActivity() {
                                 null
                             }
                         }
-                        
+
                         managerVersionInfo?.let { version ->
                             InfoRow("Manager 版本", version)
                         }
                     }
-                    
-                    InfoRow("运行模式", when {
-                        info.isRoot -> "Root"
-                        info.isAdb -> "ADB"
-                        else -> "其他"
-                    })
+
+                    InfoRow(
+                        "运行模式", when {
+                            info.isRoot -> "Root"
+                            info.isAdb -> "ADB"
+                            else -> "其他"
+                        }
+                    )
                     InfoRow("SELinux", info.seLinuxContext ?: "")
                 }
-                
+
                 if (serviceStatus != ServiceStatus.READY && serviceStatus != ServiceStatus.CHECKING) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Button(
                         onClick = { handleStatusAction() },
                         modifier = Modifier.fillMaxWidth()
@@ -309,12 +343,54 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(when (serviceStatus) {
-                            ServiceStatus.NOT_INSTALLED -> "请安装管理器"
-                            ServiceStatus.NOT_RUNNING -> "打开 Stellar"
-                            ServiceStatus.NO_PERMISSION -> "请求权限"
-                            else -> "检查状态"
-                        })
+                        Text(
+                            when (serviceStatus) {
+                                ServiceStatus.NOT_INSTALLED -> "请安装管理器"
+                                ServiceStatus.NOT_RUNNING -> "打开 Stellar"
+                                ServiceStatus.NO_PERMISSION -> "请求权限"
+                                else -> "检查状态"
+                            }
+                        )
+                    }
+                }
+
+                if (serviceStatus == ServiceStatus.READY) {
+                    if (!startFollowServerPermission) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                Stellar.requestPermission("follow_stellar_startup", 1002)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.VpnKey,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("请求跟随 Stellar 启动权限")
+                        }
+                    }
+
+                    if (!startFollowServerOnBootPermission) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                Stellar.requestPermission("follow_stellar_startup_on_boot", 1003)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.VpnKey,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("请求开机跟随 Stellar 启动权限")
+                        }
                     }
                 }
             }
@@ -391,9 +467,9 @@ class MainActivity : ComponentActivity() {
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = action.title,
@@ -408,7 +484,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-                
+
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
@@ -446,14 +522,14 @@ class MainActivity : ComponentActivity() {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     IconButton(onClick = { clearLog() }) {
                         Icon(Icons.Default.Delete, "清空日志")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -462,7 +538,7 @@ class MainActivity : ComponentActivity() {
                     shape = MaterialTheme.shapes.medium
                 ) {
                     val scrollState = rememberScrollState()
-                    
+
                     Text(
                         text = logText.ifEmpty { "日志输出将显示在这里...\n\n运行上面的功能来查看输出" },
                         modifier = Modifier
@@ -471,12 +547,12 @@ class MainActivity : ComponentActivity() {
                             .padding(12.dp),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
-                        color = if (logText.isEmpty()) 
+                        color = if (logText.isEmpty())
                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        else 
+                        else
                             MaterialTheme.colorScheme.onSurface
                     )
-                    
+
                     LaunchedEffect(logText) {
                         scrollState.animateScrollTo(scrollState.maxValue)
                     }
@@ -487,7 +563,7 @@ class MainActivity : ComponentActivity() {
 
     private fun checkStatus() {
         serviceStatus = ServiceStatus.CHECKING
-        
+
         // 检查管理器是否安装
         val managerInstalled = StellarHelper.isManagerInstalled(this)
         if (!managerInstalled) {
@@ -496,7 +572,7 @@ class MainActivity : ComponentActivity() {
             log("✗ Stellar 管理器应用未安装")
             return
         }
-        
+
         // 检查服务是否运行
         val serviceRunning = Stellar.pingBinder()
         if (!serviceRunning) {
@@ -505,10 +581,10 @@ class MainActivity : ComponentActivity() {
             log("✗ Stellar 服务未运行")
             return
         }
-        
+
         // 获取服务信息
         serviceInfo = StellarHelper.serviceInfo
-        
+
         // 检查权限
         val permissionGranted = Stellar.checkSelfPermission()
         if (!permissionGranted) {
@@ -516,10 +592,14 @@ class MainActivity : ComponentActivity() {
             log("✗ 权限未授予")
             return
         }
-        
+
         // 一切就绪
         serviceStatus = ServiceStatus.READY
         log("✓ Stellar 已就绪，可以使用所有功能")
+
+        startFollowServerPermission = Stellar.checkSelfPermission("follow_stellar_startup")
+        startFollowServerOnBootPermission =
+            Stellar.checkSelfPermission("follow_stellar_startup_on_boot")
     }
 
     private fun handleStatusAction() {
@@ -528,19 +608,22 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "请先安装 Stellar 管理器", Toast.LENGTH_SHORT).show()
                 log("✗ 请先安装 Stellar 管理器")
             }
+
             ServiceStatus.NOT_RUNNING -> {
                 StellarHelper.openManager(this)
                 log("已打开 Stellar 管理器")
             }
+
             ServiceStatus.NO_PERMISSION -> {
                 try {
                     log("正在请求权限...")
-                    Stellar.requestPermission(1001)
+                    Stellar.requestPermission(requestCode = 1001)
                 } catch (e: Exception) {
                     log("✗ 请求权限失败: ${e.message}")
                     Toast.makeText(this, "请求失败", Toast.LENGTH_SHORT).show()
                 }
             }
+
             else -> checkStatus()
         }
     }
@@ -560,7 +643,7 @@ class MainActivity : ComponentActivity() {
 
     private fun getDemoCategories(): List<DemoCategory> {
         val logger = DemoFunctions.Logger { message -> log(message) }
-        
+
         return listOf(
             DemoCategory(
                 name = "基础功能",
@@ -571,13 +654,13 @@ class MainActivity : ComponentActivity() {
                         "版本、UID、SELinux 上下文",
                         Icons.Default.Info
                     ) { DemoFunctions.getBasicInfo(this@MainActivity, logger) },
-                    
+
                     DemoAction(
                         "获取版本信息",
                         "Manager版本名称、版本代码",
                         Icons.Default.Info
                     ) { DemoFunctions.getVersionInfo(this@MainActivity, logger) },
-                    
+
                     DemoAction(
                         "检查权限状态",
                         "验证当前应用权限",
@@ -585,7 +668,7 @@ class MainActivity : ComponentActivity() {
                     ) { DemoFunctions.checkPermission(this@MainActivity, logger) }
                 )
             ),
-            
+
             DemoCategory(
                 name = "进程执行",
                 icon = Icons.Default.Terminal,
@@ -595,13 +678,13 @@ class MainActivity : ComponentActivity() {
                         "执行 ls -la /sdcard",
                         Icons.Default.Folder
                     ) { DemoFunctions.runLsCommand(this@MainActivity, logger) },
-                    
+
                     DemoAction(
                         "查看进程",
                         "执行 ps -A",
                         Icons.Default.Memory
                     ) { DemoFunctions.runPsCommand(this@MainActivity, logger) },
-                    
+
                     DemoAction(
                         "获取系统属性",
                         "执行 getprop",
@@ -609,7 +692,7 @@ class MainActivity : ComponentActivity() {
                     ) { DemoFunctions.runGetPropCommand(this@MainActivity, logger) }
                 )
             ),
-            
+
             DemoCategory(
                 name = "系统属性",
                 icon = Icons.Default.PhoneAndroid,
@@ -619,7 +702,7 @@ class MainActivity : ComponentActivity() {
                         "品牌、型号、Android 版本",
                         Icons.Default.Smartphone
                     ) { DemoFunctions.readDeviceProperties(this@MainActivity, logger) },
-                    
+
                     DemoAction(
                         "读取调试属性",
                         "ro.debuggable 等",
@@ -627,7 +710,7 @@ class MainActivity : ComponentActivity() {
                     ) { DemoFunctions.readDebugProperties(this@MainActivity, logger) }
                 )
             ),
-            
+
             DemoCategory(
                 name = "高级功能",
                 icon = Icons.Default.Extension,

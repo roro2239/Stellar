@@ -43,17 +43,18 @@ open class ClientRecord
     /** 客户端回调接口 Client callback interface  */
     val client: IStellarApplication,
     /** 客户端包名 Client package name  */
-    val packageName: String?,
+    val packageName: String,
     /** 客户端API版本 Client API version  */
     val apiVersion: Int
 ) {
+
+    val lastDenyTimeMap: MutableMap<String, Long> = mutableMapOf()
+
     /** 是否已授权 Whether authorized  */
-    var allowed: Boolean = false
+    val allowedMap: MutableMap<String, Boolean> = mutableMapOf()
 
     /** 是否为一次性授权 Whether one-time authorization  */
-    var onetime: Boolean = false
-
-    var lastDenyTime: Long = 0
+    val onetimeMap: MutableMap<String, Boolean> = mutableMapOf()
 
     /**
      * 分发权限请求结果到客户端
@@ -62,11 +63,11 @@ open class ClientRecord
      * @param requestCode 请求码
      * @param allowed 是否允许
      */
-    fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean) {
+    fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean, permission: String = "stellar") {
         val reply = Bundle()
         reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
         reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
-        if (!allowed) lastDenyTime = System.currentTimeMillis()
+        if (!allowed) lastDenyTimeMap[permission] = System.currentTimeMillis()
         try {
             client.dispatchRequestPermissionResult(requestCode, reply)
         } catch (e: Throwable) {
