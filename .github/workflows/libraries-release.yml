@@ -107,9 +107,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          common/build/outputs/aar/*-release.aar
           server/build/outputs/aar/*-release.aar
-          server-shared/build/outputs/aar/*-release.aar
           starter/build/outputs/aar/*-release.aar
           api/build/outputs/aar/*-release.aar
           aidl/build/outputs/aar/*-release.aar
@@ -121,9 +119,7 @@ jobs:
           ## 库文件发布版本 ${{ steps.version.outputs.version }}
           
           包含以下库模块的 Release 版本：
-          - common（公共库）
-          - server（服务器组件）
-          - server-shared（服务器共享库）
+          - server（服务组件）
           - starter（启动器）
           - api（API 模块）
           - aidl（AIDL 接口）
