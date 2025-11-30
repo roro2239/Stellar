@@ -37,7 +37,6 @@ import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.Stellar
-import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
     
@@ -56,21 +55,6 @@ class MainActivity : ComponentActivity() {
 
     private val homeModel by viewModels<HomeViewModel>()
     private val appsModel by appsViewModel()
-    
-    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-        if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
-            if (grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Shizuku权限已授予", Toast.LENGTH_SHORT).show()
-                homeModel.reload()
-            } else {
-                Toast.makeText(this, "Shizuku权限被拒绝", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    
-    companion object {
-        private const val SHIZUKU_PERMISSION_REQUEST_CODE = 1001
-    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,12 +75,6 @@ class MainActivity : ComponentActivity() {
 
         Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
         Stellar.addBinderDeadListener(binderDeadListener)
-        
-        try {
-            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
         
         checkServerStatus()
         
@@ -121,12 +99,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         Stellar.removeBinderReceivedListener(binderReceivedListener)
         Stellar.removeBinderDeadListener(binderDeadListener)
-        
-        try {
-            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }
 
