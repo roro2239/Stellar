@@ -57,10 +57,7 @@ jobs:
           
     - name: 构建所有库 Release 版本
       run: |
-        ./gradlew :common:assembleRelease --stacktrace --no-daemon
         ./gradlew :server:assembleRelease --stacktrace --no-daemon
-        ./gradlew :server-shared:assembleRelease --stacktrace --no-daemon
-        ./gradlew :starter:assembleRelease --stacktrace --no-daemon
         ./gradlew :api:assembleRelease --stacktrace --no-daemon
         ./gradlew :aidl:assembleRelease --stacktrace --no-daemon
         ./gradlew :provider:assembleRelease --stacktrace --no-daemon
@@ -84,10 +81,7 @@ jobs:
       with:
         name: libraries-release-${{ steps.version.outputs.version }}
         path: |
-          common/build/outputs/aar/*-release.aar
           server/build/outputs/aar/*-release.aar
-          server-shared/build/outputs/aar/*-release.aar
-          starter/build/outputs/aar/*-release.aar
           api/build/outputs/aar/*-release.aar
           aidl/build/outputs/aar/*-release.aar
           provider/build/outputs/aar/*-release.aar
@@ -108,7 +102,6 @@ jobs:
       with:
         files: |
           server/build/outputs/aar/*-release.aar
-          starter/build/outputs/aar/*-release.aar
           api/build/outputs/aar/*-release.aar
           aidl/build/outputs/aar/*-release.aar
           provider/build/outputs/aar/*-release.aar
@@ -120,7 +113,6 @@ jobs:
           
           包含以下库模块的 Release 版本：
           - server（服务组件）
-          - starter（启动器）
           - api（API 模块）
           - aidl（AIDL 接口）
           - provider（提供者）
