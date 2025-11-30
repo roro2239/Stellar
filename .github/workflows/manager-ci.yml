@@ -5,7 +5,6 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'manager/**'
-      - 'common/**'
       - 'server/**'
       - 'api/**'
       - '*.gradle'
