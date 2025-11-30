@@ -16,6 +16,7 @@ import roro.stellar.Stellar.addBinderDeadListener
 import roro.stellar.Stellar.addBinderReceivedListener
 import roro.stellar.Stellar.addBinderReceivedListenerSticky
 import roro.stellar.Stellar.addRequestPermissionResultListener
+import roro.stellar.Stellar.removeRequestPermissionResultListener
 import roro.stellar.Stellar.requestPermission
 import java.util.Objects
 
@@ -613,39 +614,45 @@ object Stellar {
         }
     }
 
+    val supportedPermissions: Array<String>
+        get() =
+            try {
+                requireService().supportedPermissions
+            } catch (e: RemoteException) {
+                throw rethrowAsRuntimeException(e)
+            }
+
     /**
-     * Request permission.
+     * 请求 Stellar 的某项权限。
      *
      *
-     * Different from runtime permission, you need to add a listener to receive
-     * the result.
+     * 与运行时权限不同，你需要一个监听器来接收授权结果。
      *
-     * @param requestCode Application specific request code to match with a result
-     * reported to [OnRequestPermissionResultListener.onRequestPermissionResult].
-     * @see .addRequestPermissionResultListener
-     * @see .removeRequestPermissionResultListener
+     * @param permission
+     * @param requestCode 用于匹配报告给 [OnRequestPermissionResultListener.onRequestPermissionResult] 的结果的应用程序特定请求代码。
+     * @see [addRequestPermissionResultListener]
+     * @see [removeRequestPermissionResultListener]
      */
-    fun requestPermission(requestCode: Int) {
+    fun requestPermission(permission: String = "stellar", requestCode: Int) {
         try {
-            requireService().requestPermission(requestCode)
+            requireService().requestPermission(permission, requestCode)
         } catch (e: RemoteException) {
             throw rethrowAsRuntimeException(e)
         }
     }
 
     /**
-     * Check if self has permission.
+     * 检查自身是否有 Stellar 的某项权限。
      *
+     * @param permission
      * @return [Boolean]
      */
-    fun checkSelfPermission(): Boolean {
-        if (permissionGranted) return true
-        permissionGranted = try {
-            requireService().checkSelfPermission()
+    fun checkSelfPermission(permission: String = "stellar"): Boolean {
+        return try {
+            requireService().checkSelfPermission(permission)
         } catch (_: RemoteException) {
             false
         }
-        return permissionGranted
     }
 
     /**
@@ -679,7 +686,7 @@ object Stellar {
         requestUid: Int,
         requestPid: Int,
         requestCode: Int,
-        data: Bundle
+        data: Bundle,
     ) {
         try {
             requireService().dispatchPermissionConfirmationResult(
@@ -694,18 +701,18 @@ object Stellar {
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-    fun getFlagsForUid(uid: Int): Int {
+    fun getFlagForUid(uid: Int, permission: String): Int {
         try {
-            return requireService().getFlagsForUid(uid)
+            return requireService().getFlagForUid(uid, permission)
         } catch (e: RemoteException) {
             throw rethrowAsRuntimeException(e)
         }
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-    fun updateFlagsForUid(uid: Int, flag: Int) {
+    fun updateFlagForUid(uid: Int, permission: String, flag: Int) {
         try {
-            requireService().updateFlagsForUid(uid, flag)
+            requireService().updateFlagForUid(uid, permission, flag)
         } catch (e: RemoteException) {
             throw rethrowAsRuntimeException(e)
         }
