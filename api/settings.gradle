@@ -85,4 +85,3 @@ include ':aidl'         // AIDL接口定义
 include ':shared'       // 共享代码
 include ':api'          // 核心API
 include ':provider'     // ContentProvider实现
-include ':server-shared' // 服务端共享代码

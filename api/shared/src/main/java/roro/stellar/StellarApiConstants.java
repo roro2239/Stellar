@@ -1,5 +1,7 @@
 package roro.stellar;
 
+import java.util.Objects;
+
 /**
  * Stellar API常量定义
  * Stellar API Constants Definition
@@ -22,6 +24,17 @@ public class StellarApiConstants {
     
     /** 服务端补丁版本号 Server patch version */
     public static final int SERVER_PATCH_VERSION = 0;
+
+    public static final String PERMISSION_KEY = "roro.stellar.permissions";
+    public static final String[] PERMISSIONS = {
+            "stellar",
+            "follow_stellar_startup",
+            "follow_stellar_startup_on_boot"
+    };
+
+    public static Boolean isRuntimePermission(String permission) {
+        return Objects.equals(permission, "stellar") || permission.endsWith(":runtime");
+    }
 
     // ============================================
     // Binder常量 Binder Constants
@@ -64,6 +77,9 @@ public class StellarApiConstants {
     
     /** Bundle键：权限是否为一次性 Bundle key: permission is one-time */
     public static final String REQUEST_PERMISSION_REPLY_IS_ONETIME = "stellar:request-permission-reply-is-onetime";
+
+    /** Bundle键：权限 */
+    public static final String REQUEST_PERMISSION_REPLY_PERMISSION = "stellar:request-permission-reply-permission";
 
     // ============================================
     // 附加应用相关常量 Attach Application Constants

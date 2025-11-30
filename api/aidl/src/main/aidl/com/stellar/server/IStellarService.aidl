@@ -74,20 +74,6 @@ interface IStellarService {
     int checkPermission(String permission) = 4;
 
     /**
-     * 检查调用者是否已授权
-     * Check if caller is authorized
-     * @return true表示已授权
-     */
-    boolean checkSelfPermission() = 15;
-
-    /**
-     * 请求权限授权
-     * Request permission authorization
-     * @param requestCode 请求码，用于匹配回调结果
-     */
-    void requestPermission(int requestCode) = 14;
-
-    /**
      * 是否应该显示权限请求说明
      * Whether should show permission request rationale
      * @return true表示应该显示说明
@@ -146,7 +132,7 @@ interface IStellarService {
      * @param application 应用回调接口
      * @param args 附加参数
      */
-    void attachApplication(in IStellarApplication application,in Bundle args) = 17;
+    void attachApplication(in IStellarApplication application, in Bundle args) = 17;
 
     // ============================================
     // 内部管理方法 Internal Management (仅供管理器使用)
@@ -165,15 +151,18 @@ interface IStellarService {
     oneway void dispatchPermissionConfirmationResult(int requestUid, int requestPid, int requestCode, in Bundle data) = 104;
 
     /**
-     * 获取UID的标志位（管理器内部使用）
-     * Get flags for UID (internal use)
+     * 获取UID的权限标志（管理器内部使用）
+     * Get permission flag for UID (internal use)
      */
-    int getFlagsForUid(int uid) = 105;
+    int getFlagForUid(int uid, String permission) = 105;
 
     /**
-     * 更新UID的标志位（管理器内部使用）
-     * Update flags for UID (internal use)
+     * 更新UID的权限标志（管理器内部使用）
+     * Update permission flag for UID (internal use)
      */
-    void updateFlagsForUid(int uid, int flag) = 106;
- }
+    void updateFlagForUid(int uid, String permission, int flag) = 106;
 
+    String[] getSupportedPermissions() = 110;
+    boolean checkSelfPermission(String permission) = 111;
+    void requestPermission(String permission, int requestCode) = 112;
+}

@@ -90,7 +90,7 @@ class AppsViewModel(context: Context) : ViewModel() {
                 for (pi in AuthorizationManager.getPackages()) {
                     list.add(pi)
                     // 统计已授权的应用数量
-                    if (Stellar.getFlagsForUid(pi.applicationInfo!!.uid) == AuthorizationManager.FLAG_GRANTED) count++
+                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == AuthorizationManager.FLAG_GRANTED) count++
                 }
                 
                 // 更新LiveData

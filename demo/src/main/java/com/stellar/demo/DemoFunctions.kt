@@ -377,6 +377,7 @@ object DemoFunctions {
             return false
         }
 
+
         if (!Stellar.checkSelfPermission()) {
             logger.log("✗ 权限未授予")
             return false

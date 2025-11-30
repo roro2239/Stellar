@@ -7,24 +7,23 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
- 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -55,9 +54,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -245,7 +244,7 @@ fun AppsScreen(
                             var flag by remember {
                                 mutableIntStateOf(
                                     try {
-                                        Stellar.getFlagsForUid(packageInfo.applicationInfo!!.uid)
+                                        Stellar.getFlagForUid(packageInfo.applicationInfo!!.uid, "stellar")
                                     } catch (e: Exception) {
                                         LOGGER.w("获取应用授权状态异常", tr = e)
                                         AuthorizationManager.FLAG_ASK
@@ -259,7 +258,7 @@ fun AppsScreen(
                                     try {
                                         val uid = packageInfo.applicationInfo!!.uid
                                         flag = newFlag
-                                        Stellar.updateFlagsForUid(uid, newFlag)
+                                        Stellar.updateFlagForUid(uid, "stellar", newFlag)
                                         appsViewModel.load(true)
                                     } catch (_: SecurityException) {
                                         showPermissionError = true

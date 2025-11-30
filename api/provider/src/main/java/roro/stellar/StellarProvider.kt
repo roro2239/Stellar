@@ -222,8 +222,6 @@ open class StellarProvider : ContentProvider() {
 
         private const val EXTRA_BINDER = "roro.stellar.manager.intent.extra.BINDER"
 
-        const val PERMISSION: String = "roro.stellar.manager.permission.API_V1"
-
         const val MANAGER_APPLICATION_ID: String = "roro.stellar.manager"
 
         private var enableMultiProcess = false
