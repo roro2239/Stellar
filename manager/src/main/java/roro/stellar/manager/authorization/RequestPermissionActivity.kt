@@ -40,8 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import roro.stellar.Stellar
+import roro.stellar.StellarApiConstants
 import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED
 import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME
+import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION
 import roro.stellar.manager.R
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.StellarTheme
@@ -58,11 +60,13 @@ class RequestPermissionActivity : ComponentActivity() {
         requestPid: Int,
         requestCode: Int,
         allowed: Boolean,
-        onetime: Boolean
+        onetime: Boolean,
+        permission: String
     ) {
         val data = Bundle()
         data.putBoolean(REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
         data.putBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
+        data.putString(REQUEST_PERMISSION_REPLY_PERMISSION, permission)
         try {
             Stellar.dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data)
         } catch (e: Throwable) {
@@ -118,6 +122,7 @@ class RequestPermissionActivity : ComponentActivity() {
         val pid = intent.getIntExtra("pid", -1)
         val denyOnce = intent.getBooleanExtra("denyOnce", true)
         val requestCode = intent.getIntExtra("requestCode", -1)
+        val permission = intent.getStringExtra("permission") ?: "stellar"
 
         @Suppress("DEPRECATION")
         val ai = intent.getParcelableExtra<ApplicationInfo>("applicationInfo")
@@ -126,7 +131,7 @@ class RequestPermissionActivity : ComponentActivity() {
             return
         }
         if (!checkSelfPermission()) {
-            setResult(uid, pid, requestCode, allowed = false, onetime = true)
+            setResult(uid, pid, requestCode, allowed = false, onetime = true, permission)
             return
         }
 
@@ -142,9 +147,10 @@ class RequestPermissionActivity : ComponentActivity() {
                     appName = label,
                     denyOnce = denyOnce,
                     onResult = { allowed, onetime ->
-                        setResult(uid, pid, requestCode, allowed = allowed, onetime = onetime)
+                        setResult(uid, pid, requestCode, allowed = allowed, onetime = onetime, permission)
                         finish()
-                    }
+                    },
+                    permission = permission
                 )
             }
         }
@@ -155,16 +161,15 @@ class RequestPermissionActivity : ComponentActivity() {
 fun PermissionRequestDialog(
     appName: String,
     denyOnce: Boolean,
-    onResult: (allowed: Boolean, onetime: Boolean) -> Unit
+    onResult: (allowed: Boolean, onetime: Boolean) -> Unit,
+    permission: String = "stellar"
 ) {
     Dialog(
         onDismissRequest = {
             onResult(false, true)
         },
         properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = false,
-            dismissOnBackPress = false
+            usePlatformDefaultWidth = false
         )
     ) {
         Surface(
@@ -218,7 +223,14 @@ fun PermissionRequestDialog(
                         ) {
                             append(appName)
                         }
-                        append(" 使用 Stellar 吗？")
+                        append(
+                            when (permission) {
+                                "stellar" -> " 使用 Stellar 吗？"
+                                "follow_stellar_startup" -> " 每次都跟随 Stellar 一起启动吗？"
+                                "follow_stellar_startup_on_boot" -> " 开机时每次都跟随 Stellar 一起启动吗？"
+                                else -> " 使用 $permission 吗？"
+                            }
+                        )
                     }
                     Text(
                         text = text,
@@ -260,30 +272,32 @@ fun PermissionRequestDialog(
                         }
                     }
 
-                    // 允许一次
-                    Card(
-                        onClick = {
-                            onResult(true, true)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = AppShape.shapes.buttonSmall14,
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "仅此一次",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontWeight = FontWeight.Bold
+                    if (StellarApiConstants.isRuntimePermission(permission)) {
+                        // 允许一次
+                        Card(
+                            onClick = {
+                                onResult(true, true)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = AppShape.shapes.buttonSmall14,
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "仅此一次",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 

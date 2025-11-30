@@ -30,6 +30,7 @@ object StellarHelper {
      * @return true 表示已安装 - true if installed
      */
     fun isManagerInstalled(context: Context): Boolean {
+        if (true) return true
         try {
             context.packageManager.getPackageInfo(STELLAR_MANAGER_PACKAGE_NAME, 0)
             return true

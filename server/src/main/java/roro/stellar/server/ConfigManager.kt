@@ -6,10 +6,12 @@ import android.util.AtomicFile
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import rikka.hidden.compat.PackageManagerApis
-import rikka.hidden.compat.PermissionManagerApis
 import rikka.hidden.compat.UserManagerApis
-import roro.stellar.server.ServerConstants.PERMISSION
+import roro.stellar.StellarApiConstants.PERMISSIONS
+import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ktx.workerHandler
+import roro.stellar.server.util.Logger
+import roro.stellar.server.util.UserHandleCompat
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -18,27 +20,27 @@ import java.io.IOException
 import java.io.InputStreamReader
 
 /**
- * Stellar配置管理器
- * Stellar Configuration Manager
+ * 配置管理器抽象类
+ * Configuration Manager Abstract Class
  *
  *
  * 功能说明 Features：
  *
- *  * 管理应用权限配置的读写 - Manages app permission configuration read/write
- *  * 支持延迟写入优化性能 - Supports delayed write for performance
- *  * 自动同步系统权限状态 - Auto syncs system permission status
- *  * 监听APK变化并更新配置 - Monitors APK changes and updates config
+ *  * 管理客户端应用的权限配置 - Manages permission configuration for client apps
+ *  * 提供配置的查询、更新和删除接口 - Provides query, update and delete interfaces for configuration
+ *  * 支持按UID管理多个包的权限 - Supports managing permissions for multiple packages by UID
  *
  *
  *
- * 配置存储 Configuration Storage：
+ * 权限标志 Permission Flags：
  *
- *  * 使用JSON格式存储 - Uses JSON format for storage
- *  * 使用AtomicFile保证原子性 - Uses AtomicFile for atomicity
- *  * 支持配置版本升级 - Supports configuration version upgrade
+ *  * FLAG_ALLOWED - 已授权标志
+ *  * FLAG_DENIED - 已拒绝标志
+ *  * MASK_PERMISSION - 权限掩码（包含允许和拒绝）
  *
  */
-class StellarConfigManager : ConfigManager() {
+class ConfigManager {
+
     private val mWriteRunner: Runnable = Runnable { write(config) }
 
     private val config: StellarConfig
@@ -48,77 +50,91 @@ class StellarConfigManager : ConfigManager() {
 
         var changed = false
 
-        for (entry in ArrayList<StellarConfig.PackageEntry>(config.packages)) {
+        for (entry in LinkedHashMap(config.packages)) {
 
-            val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.uid)
+            val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
             if (packages.isEmpty()) {
-                LOGGER.i("remove config for uid %d since it has gone", entry.uid)
-                config.packages.remove(entry)
+                LOGGER.i("remove config for uid %d since it has gone", entry.key)
+                config.packages.remove(entry.key)
                 changed = true
                 continue
             }
 
-            var packagesChanged = true
+            var needRemoving = true
 
-            for (packageName in entry.packages) {
+            for (packageName in entry.value.packages) {
                 if (packages.contains(packageName)) {
-                    packagesChanged = false
+                    needRemoving = false
                     break
                 }
             }
 
-            val rawSize = entry.packages.size
-            val s = LinkedHashSet(entry.packages)
-            entry.packages.clear()
-            entry.packages.addAll(s)
-            val shrunkSize = entry.packages.size
+            val rawSize = entry.value.packages.size
+            val s = LinkedHashSet(entry.value.packages)
+            entry.value.packages.clear()
+            entry.value.packages.addAll(s)
+            val shrunkSize = entry.value.packages.size
             if (shrunkSize < rawSize) {
                 LOGGER.w("entry.packages has duplicate! Shrunk. (%d -> %d)", rawSize, shrunkSize)
             }
 
-            if (packagesChanged) {
-                LOGGER.i("remove config for uid %d since the packages for it changed", entry.uid)
-                config.packages.remove(entry)
+            if (needRemoving) {
+                LOGGER.i("remove config for uid %d since the packages for it changed", entry.key)
+                config.packages.remove(entry.key)
                 changed = true
             }
         }
 
         for (userId in UserManagerApis.getUserIdsNoThrow()) {
             for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                PackageManager.GET_PERMISSIONS.toLong(),
+                PackageManager.GET_META_DATA.toLong(),
                 userId
             )) {
                 if (
                     pi == null ||
                     pi.applicationInfo == null ||
-                    pi.requestedPermissions == null ||
-                    !(pi.requestedPermissions as Array<out String?>).contains(PERMISSION)
+                    pi.applicationInfo!!.metaData == null ||
+                    !pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",").contains("stellar")
                 ) {
                     continue
                 }
 
                 val uid = pi.applicationInfo!!.uid
-                val flag: Int
-                try {
-                    flag = when (PermissionManagerApis.checkPermission(
-                        PERMISSION,
-                        uid
-                    )) {
-                        PackageManager.PERMISSION_GRANTED -> FLAG_GRANTED
-                        PackageManager.PERMISSION_DENIED -> FLAG_DENIED
-                        else -> FLAG_ASK
-                    }
-                } catch (_: Throwable) {
-                    LOGGER.w("checkPermission")
-                    continue
-                }
 
-                val packages = ArrayList<String?>()
+                val packages = ArrayList<String>()
                 packages.add(pi.packageName)
 
-                updateLocked(uid, packages, flag)
+                updateLocked(uid, packages)
                 changed = true
             }
+        }
+
+        for (entry in LinkedHashMap(config.packages)) {
+            val permissions = LinkedHashSet<String>()
+            val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
+            for (packageName in packages) {
+                val applicationInfo = PackageManagerApis.getApplicationInfoNoThrow(
+                    packageName, PackageManager.GET_META_DATA.toLong(),
+                    UserHandleCompat.getUserId(entry.key)
+                ) ?: continue
+                for (permission in applicationInfo.metaData.getString(PERMISSION_KEY, "").split(",")) {
+                    if (PERMISSIONS.contains(permission)) {
+                        permissions.add(permission)
+                    }
+                }
+            }
+            val packageEntry = findLocked(entry.key)!!
+            for (permission in entry.value.permissions) {
+                if (!permissions.contains(permission.key)) {
+                    packageEntry.permissions.remove(permission.key)
+                }
+            }
+            for (permission in permissions) {
+                if (packageEntry.permissions[permission] == null) {
+                    packageEntry.permissions[permission] = FLAG_ASK
+                }
+            }
+            scheduleWriteLocked()
         }
 
         if (changed) {
@@ -138,30 +154,24 @@ class StellarConfigManager : ConfigManager() {
     }
 
     private fun findLocked(uid: Int): StellarConfig.PackageEntry? {
-        for (entry in config.packages) {
-            if (uid == entry.uid) {
-                return entry
-            }
-        }
-        return null
+        return config.packages[uid]
     }
 
-    override fun find(uid: Int): StellarConfig.PackageEntry? {
+    fun find(uid: Int): StellarConfig.PackageEntry? {
         synchronized(this) {
             return findLocked(uid)
         }
     }
 
-    private fun updateLocked(uid: Int, packages: MutableList<String?>?, newFlag: Int) {
+    private fun updateLocked(
+        uid: Int,
+        packages: MutableList<String>?
+    ) {
         var entry = findLocked(uid)
         if (entry == null) {
-            entry = StellarConfig.PackageEntry(uid, newFlag)
-            config.packages.add(entry)
-        } else {
-            if (newFlag == entry.flag) {
-                return
-            }
-            entry.flag = newFlag
+            entry = StellarConfig.PackageEntry()
+            entry.permissions["stellar"] = FLAG_ASK
+            config.packages[uid] = entry
         }
         if (packages != null) {
             for (packageName in packages) {
@@ -174,25 +184,45 @@ class StellarConfigManager : ConfigManager() {
         scheduleWriteLocked()
     }
 
-    override fun update(uid: Int, packages: MutableList<String?>?, newFlag: Int) {
+    fun update(
+        uid: Int,
+        packages: MutableList<String>?
+    ) {
         synchronized(this) {
-            updateLocked(uid, packages, newFlag)
+            updateLocked(uid, packages)
+        }
+    }
+
+    private fun updatePermissionLocked(uid: Int, permission: String, newFlag: Int) {
+        findLocked(uid)?.let { it.permissions[permission] = newFlag }
+        scheduleWriteLocked()
+    }
+
+    fun updatePermission(uid: Int, permission: String, newFlag: Int) {
+        synchronized(this) {
+            updatePermissionLocked(uid, permission, newFlag)
         }
     }
 
     private fun removeLocked(uid: Int) {
-        val entry = findLocked(uid) ?: return
-        config.packages.remove(entry)
+        config.packages.remove(uid)
         scheduleWriteLocked()
     }
 
-    override fun remove(uid: Int) {
+    fun remove(uid: Int) {
         synchronized(this) {
             removeLocked(uid)
         }
     }
 
     companion object {
+        @JvmStatic
+        private val LOGGER: Logger = Logger("ConfigManager")
+
+        const val FLAG_ASK: Int = 0
+        const val FLAG_GRANTED: Int = 1
+        const val FLAG_DENIED: Int = 2
+
         /** JSON反序列化器 JSON deserializer  */
         private val GSON_IN: Gson = GsonBuilder()
             .create()
@@ -203,7 +233,7 @@ class StellarConfigManager : ConfigManager() {
             .create()
 
         /** 延迟写入时间（毫秒） Delayed write time in milliseconds  */
-        private const val WRITE_DELAY = (10 * 1000).toLong()
+        private const val WRITE_DELAY = (1 * 1000).toLong()
 
         private val FILE = File("/data/user_de/0/com.android.shell/stellar.json")
         private val ATOMIC_FILE = AtomicFile(FILE)

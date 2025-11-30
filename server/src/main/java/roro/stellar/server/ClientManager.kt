@@ -40,7 +40,7 @@ import java.util.Collections
  *
  * @param <ConfigMgr> 配置管理器类型
 </ConfigMgr> */
-open class ClientManager<ConfigMgr : ConfigManager>
+open class ClientManager
 /**
  * 构造客户端管理器
  * Construct client manager
@@ -48,7 +48,7 @@ open class ClientManager<ConfigMgr : ConfigManager>
  * @param configManager 配置管理器实例
  */(
     /** 配置管理器 Configuration manager  */
-    val configManager: ConfigMgr
+    val configManager: ConfigManager
 ) {
     /**
      * 获取配置管理器
@@ -125,7 +125,7 @@ open class ClientManager<ConfigMgr : ConfigManager>
             LOGGER.w("Caller (uid %d, pid %d) is not an attached client", callingUid, callingPid)
             throw IllegalStateException("非已连接的客户端")
         }
-        if (requiresPermission && !clientRecord.allowed) {
+        if (requiresPermission && clientRecord.allowedMap["stellar"] != true) {
             throw SecurityException("调用者没有权限")
         }
         return clientRecord
@@ -155,15 +155,17 @@ open class ClientManager<ConfigMgr : ConfigManager>
         uid: Int,
         pid: Int,
         client: IStellarApplication,
-        packageName: String?,
+        packageName: String,
         apiVersion: Int
     ): ClientRecord? {
         val clientRecord = ClientRecord(uid, pid, client, packageName, apiVersion)
 
         // 从配置中读取权限状态
         val entry = configManager.find(uid)
-        if (entry != null && entry.isAllowed) {
-            clientRecord.allowed = true
+        if (entry != null) {
+            for (permission in entry.permissions) {
+                clientRecord.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
+            }
         }
 
         // 监听客户端进程死亡
