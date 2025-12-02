@@ -240,30 +240,11 @@ fun AppsScreen(
                             key = { index -> "${packages[index].packageName}_${packages[index].applicationInfo?.uid}" }
                         ) { index ->
                             val packageInfo = packages[index]
-                            var flag by remember {
-                                mutableIntStateOf(
-                                    try {
-                                        Stellar.getFlagForUid(packageInfo.applicationInfo!!.uid, "stellar")
-                                    } catch (e: Exception) {
-                                        LOGGER.w("获取应用授权状态异常", tr = e)
-                                        AuthorizationManager.FLAG_ASK
-                                    }
-                                )
-                            }
                             AppListItem(
                                 packageInfo = packageInfo,
-                                flag = flag,
-                                onUpdateFlag = { newFlag ->
-                                    try {
-                                        val uid = packageInfo.applicationInfo!!.uid
-                                        flag = newFlag
-                                        Stellar.updateFlagForUid(uid, "stellar", newFlag)
-                                        appsViewModel.load(true)
-                                    } catch (_: SecurityException) {
-                                        showPermissionError = true
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
+                                flag = AuthorizationManager.FLAG_ASK,
+                                onUpdateFlag = { _ ->
+                                    appsViewModel.load(true)
                                 }
                             )
                         }
@@ -316,7 +297,6 @@ fun AppListItem(
         }
     }
 
-
     val iconPainter = remember(ai) {
         try {
             val drawable = ai.loadIcon(pm)
@@ -325,6 +305,39 @@ fun AppListItem(
         } catch (_: Exception) {
             null
         }
+    }
+
+    var stellarFlag by remember {
+        mutableIntStateOf(
+            try {
+                Stellar.getFlagForUid(uid, "stellar")
+            } catch (e: Exception) {
+                LOGGER.w("获取应用授权状态异常", tr = e)
+                AuthorizationManager.FLAG_ASK
+            }
+        )
+    }
+
+    var followStartupFlag by remember {
+        mutableIntStateOf(
+            try {
+                Stellar.getFlagForUid(uid, "follow_stellar_startup")
+            } catch (e: Exception) {
+                LOGGER.w("获取跟随启动权限状态异常", tr = e)
+                AuthorizationManager.FLAG_ASK
+            }
+        )
+    }
+
+    var followStartupOnBootFlag by remember {
+        mutableIntStateOf(
+            try {
+                Stellar.getFlagForUid(uid, "follow_stellar_startup_on_boot")
+            } catch (e: Exception) {
+                LOGGER.w("获取开机跟随启动权限状态异常", tr = e)
+                AuthorizationManager.FLAG_ASK
+            }
+        )
     }
 
     var expanded by remember { mutableStateOf(false) }
@@ -341,7 +354,6 @@ fun AppListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-
                 .run { this }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -383,7 +395,7 @@ fun AppListItem(
             }
 
             Text(
-                text = when (flag) {
+                text = when (stellarFlag) {
                     AuthorizationManager.FLAG_ASK -> "询问"
                     AuthorizationManager.FLAG_GRANTED -> "允许"
                     AuthorizationManager.FLAG_DENIED -> "拒绝"
@@ -402,20 +414,93 @@ fun AppListItem(
                 modifier = Modifier.rotate(rotation).size(24.dp)
             )
         }
-        
 
         AnimatedVisibility(visible = expanded) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                PermissionSegmentSelector(
-                    currentFlag = flag,
-                    onFlagChange = onUpdateFlag
+                PermissionItem(
+                    title = "基础权限",
+                    subtitle = "使用 Stellar 功能",
+                    currentFlag = stellarFlag,
+                    onFlagChange = { newFlag ->
+                        try {
+                            stellarFlag = newFlag
+                            Stellar.updateFlagForUid(uid, "stellar", newFlag)
+                            onUpdateFlag(newFlag)
+                        } catch (e: Exception) {
+                            LOGGER.e("更新权限失败", tr = e)
+                        }
+                    }
+                )
+
+                PermissionItem(
+                    title = "跟随启动",
+                    subtitle = "随 Stellar 一起启动",
+                    currentFlag = followStartupFlag,
+                    onFlagChange = { newFlag ->
+                        try {
+                            followStartupFlag = newFlag
+                            Stellar.updateFlagForUid(uid, "follow_stellar_startup", newFlag)
+                        } catch (e: Exception) {
+                            LOGGER.e("更新跟随启动权限失败", tr = e)
+                        }
+                    }
+                )
+
+                PermissionItem(
+                    title = "开机启动",
+                    subtitle = "开机时随 Stellar 启动",
+                    currentFlag = followStartupOnBootFlag,
+                    onFlagChange = { newFlag ->
+                        try {
+                            followStartupOnBootFlag = newFlag
+                            Stellar.updateFlagForUid(uid, "follow_stellar_startup_on_boot", newFlag)
+                        } catch (e: Exception) {
+                            LOGGER.e("更新开机跟随启动权限失败", tr = e)
+                        }
+                    }
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PermissionItem(
+    title: String,
+    subtitle: String,
+    currentFlag: Int,
+    onFlagChange: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+            )
+        }
+
+        PermissionSegmentSelector(
+            currentFlag = currentFlag,
+            onFlagChange = onFlagChange
+        )
     }
 }
 
