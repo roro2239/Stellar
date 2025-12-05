@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.Resource
 import roro.stellar.manager.model.ServiceStatus
-import roro.stellar.manager.utils.Logger.Companion.LOGGER
+import roro.stellar.manager.util.Logger.Companion.LOGGER
 
 class HomeViewModel : ViewModel() {
 

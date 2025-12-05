@@ -1,53 +1,31 @@
-/**
- * Stellar API核心模块构建配置
- * Stellar API Core Module Build Configuration
- * 
- * 功能说明：
- * - Stellar的主要API接口实现
- * - 提供客户端调用的高级API
- * - 封装AIDL通信细节，提供易用的Java API
- * 
- * 核心类：
- * - Stellar: 主API类，提供所有核心功能
- * - StellarHelper: 辅助工具类，提供便捷的检查和打开管理器等功能
- * - StellarBinderWrapper: Binder包装器，用于远程调用
- * - StellarSystemProperties: 系统属性访问
- * - SystemServiceHelper: 系统服务访问辅助类
- */
-
 plugins {
     id('com.android.library')
-    id 'org.jetbrains.kotlin.android'// Android库插件
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
     namespace 'roro.stellar.api'
     buildFeatures {
-        buildConfig false                   // 不生成BuildConfig
+        buildConfig false
     }
     buildTypes {
         release {
-            minifyEnabled false             // 不启用混淆
+            minifyEnabled false
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = '11'
+    kotlin {
+        jvmToolchain(21)
     }
 }
 
-// ============================================
-// 依赖项配置 Dependencies Configuration
-// ============================================
 dependencies {
-    // API暴露的依赖（会传递给使用者）
-    api project(':aidl')                    // AIDL接口
-    api project(':shared')                  // 共享模块
+    api project(':aidl')
+    api project(':shared')
 
-    // AndroidX注解支持
     implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.core:core-ktx:1.17.0'
 }

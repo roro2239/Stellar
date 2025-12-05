@@ -9,8 +9,8 @@ android {
     buildFeatures {
         buildConfig = false
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        jvmToolchain(21)
     }
 }
 dependencies {

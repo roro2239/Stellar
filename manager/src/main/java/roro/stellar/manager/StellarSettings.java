@@ -11,7 +11,7 @@ import androidx.annotation.NonNull;
 
 import java.lang.annotation.Retention;
 
-import roro.stellar.manager.utils.EmptySharedPreferencesImpl;
+import roro.stellar.manager.util.EmptySharedPreferencesImpl;
 
 public class StellarSettings {
 
