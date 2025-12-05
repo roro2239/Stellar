@@ -32,8 +32,8 @@ import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppSpacing
-import roro.stellar.manager.utils.EnvironmentUtils
-import roro.stellar.manager.utils.UserHandleCompat
+import roro.stellar.manager.util.EnvironmentUtils
+import roro.stellar.manager.util.UserHandleCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

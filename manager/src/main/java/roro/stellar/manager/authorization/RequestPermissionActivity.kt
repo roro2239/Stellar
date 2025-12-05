@@ -40,7 +40,7 @@ import roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION
 import roro.stellar.manager.R
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.StellarTheme
-import roro.stellar.manager.utils.Logger.Companion.LOGGER
+import roro.stellar.manager.util.Logger.Companion.LOGGER
 import roro.stellar.server.ktx.workerHandler
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit

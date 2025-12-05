@@ -1,37 +1,22 @@
-/**
- * Stellar Shared模块构建配置
- * Stellar Shared Module Build Configuration
- * 
- * 功能说明：
- * - 提供API的共享代码和工具类
- * - 在客户端和服务端之间共享的通用实现
- * - 包含常量定义和辅助类
- */
-
 plugins {
-    id('com.android.library')               // Android库插件
+    id('com.android.library')
 }
 
 android {
     namespace 'roro.stellar.shared'
     buildTypes {
         release {
-            minifyEnabled false             // 不启用混淆
+            minifyEnabled false
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
 }
 
-// ============================================
-// 依赖项配置 Dependencies Configuration
-// ============================================
 dependencies {
-    // AIDL接口依赖
     implementation project(':aidl')
 
-    // AndroidX注解支持
     implementation 'androidx.annotation:annotation:1.9.1'
 }

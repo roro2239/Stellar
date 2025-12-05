@@ -1,4 +1,4 @@
-package roro.stellar.manager.utils
+package roro.stellar.manager.util
 
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
