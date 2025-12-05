@@ -9,6 +9,7 @@ import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.UserManagerApis
 import roro.stellar.StellarApiConstants.PERMISSIONS
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
+import roro.stellar.server.StellarConfig.PackageEntry
 import roro.stellar.server.ktx.workerHandler
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.UserHandleCompat
@@ -24,6 +25,8 @@ class ConfigManager {
     private val mWriteRunner: Runnable = Runnable { write(config) }
 
     private val config: StellarConfig
+    val packages: MutableMap<Int, PackageEntry>
+        get() = LinkedHashMap(config.packages)
 
     init {
         this.config = load()
