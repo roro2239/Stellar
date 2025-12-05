@@ -29,7 +29,7 @@ object BinderSender {
         for (packageName in packages) {
             val pi = PackageManagerApis.getPackageInfoNoThrow(
                 packageName,
-                PackageManager.GET_PERMISSIONS.toLong(),
+                PackageManager.GET_META_DATA.toLong(),
                 userId
             )
             if (pi == null || pi.applicationInfo == null || pi.applicationInfo!!.metaData == null) continue

@@ -137,6 +137,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+<!--        <meta-data-->
+<!--            android:name="roro.stellar.permissions"-->
+<!--            android:value="stellar" />-->
     </application>
 
 </manifest>
