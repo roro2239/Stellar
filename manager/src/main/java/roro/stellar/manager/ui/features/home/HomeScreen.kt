@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cable
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,7 +28,6 @@ import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.management.AppsViewModel
 import roro.stellar.manager.ui.components.ModernActionCard
-import roro.stellar.manager.ui.components.ModernSettingCard
 import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
@@ -54,7 +51,6 @@ fun HomeScreen(
     grantedCountResource?.data ?: 0
     
     val isRunning = serviceStatus?.isRunning ?: false
-    val hasPermission = serviceStatus?.permission ?: false
     val isRoot = serviceStatus?.uid == 0
     val isPrimaryUser = UserHandleCompat.myUserId() == 0
     val hasRoot = EnvironmentUtils.isRooted()
@@ -94,21 +90,6 @@ fun HomeScreen(
                         showStopDialog = true
                     }
                 )
-            }
-
-            if (isRunning && !hasPermission) {
-                item {
-                    ModernSettingCard(
-                        icon = Icons.Default.Lock,
-                        title = "权限受限",
-                        subtitle = "Stellar 没有足够的权限",
-                        onClick = null,
-                        showArrow = false,
-                        iconBackgroundColor = MaterialTheme.colorScheme.errorContainer,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        cardBackgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                    )
-                }
             }
 
             if (isPrimaryUser) {

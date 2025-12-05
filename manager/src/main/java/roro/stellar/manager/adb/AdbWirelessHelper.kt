@@ -115,7 +115,7 @@ class AdbWirelessHelper {
         commandOutput: StringBuilder,
         onOutput: (String) -> Unit
     ): Boolean {
-        if (newPort < 1 || newPort > 65535) {
+        if (newPort !in 1..65535) {
             Log.w(AppConstants.TAG, "无效的TCP/IP端口: $newPort")
             return false
         }
@@ -169,7 +169,7 @@ class AdbWirelessHelper {
 
                 val key = try {
                     AdbKey(
-                        PreferenceAdbKeyStore(StellarSettings.getPreferences()), "Stellar"
+                        PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar"
                     )
                 } catch (e: Throwable) {
                     Log.e(AppConstants.TAG, "ADB密钥错误", e)

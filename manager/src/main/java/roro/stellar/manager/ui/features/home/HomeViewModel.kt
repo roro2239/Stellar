@@ -1,6 +1,5 @@
 package roro.stellar.manager.ui.features.home
 
-import android.content.pm.PackageManager
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -35,11 +34,8 @@ class HomeViewModel : ViewModel() {
                 null
             }
         } else null
-        
-        val permissionTest =
-            Stellar.checkRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS") == PackageManager.PERMISSION_GRANTED
 
-        return ServiceStatus(uid, apiVersion, patchVersion, seContext, permissionTest)
+        return ServiceStatus(uid, apiVersion, patchVersion, seContext)
     }
 
     fun reload() {

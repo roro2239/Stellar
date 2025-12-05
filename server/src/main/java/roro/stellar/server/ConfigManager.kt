@@ -74,7 +74,9 @@ class ConfigManager {
                     pi == null ||
                     pi.applicationInfo == null ||
                     pi.applicationInfo!!.metaData == null ||
-                    !pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",").contains("stellar")
+                    !pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",")
+                        .contains("stellar") ||
+                    pi.packageName == ServerConstants.MANAGER_APPLICATION_ID
                 ) {
                     continue
                 }
@@ -97,7 +99,8 @@ class ConfigManager {
                     packageName, PackageManager.GET_META_DATA.toLong(),
                     UserHandleCompat.getUserId(entry.key)
                 ) ?: continue
-                for (permission in applicationInfo.metaData.getString(PERMISSION_KEY, "").split(",")) {
+                for (permission in (applicationInfo.metaData?.getString(PERMISSION_KEY, "")
+                    ?: "").split(",")) {
                     if (PERMISSIONS.contains(permission)) {
                         permissions.add(permission)
                     }

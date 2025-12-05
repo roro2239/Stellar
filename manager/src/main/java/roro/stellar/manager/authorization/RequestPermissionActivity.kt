@@ -1,7 +1,6 @@
 package roro.stellar.manager.authorization
 
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,18 +10,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,21 +67,6 @@ class RequestPermissionActivity : ComponentActivity() {
         }
     }
 
-    private fun checkSelfPermission(): Boolean {
-        val permission =
-            Stellar.checkRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS") == PackageManager.PERMISSION_GRANTED
-        if (permission) return true
-
-        setContent {
-            StellarTheme {
-                PermissionDeniedDialog(
-                    onDismiss = { finish() }
-                )
-            }
-        }
-        return false
-    }
-
     private fun waitForBinder(): Boolean {
         val countDownLatch = CountDownLatch(1)
 
@@ -128,10 +106,6 @@ class RequestPermissionActivity : ComponentActivity() {
         val ai = intent.getParcelableExtra<ApplicationInfo>("applicationInfo")
         if (uid == -1 || pid == -1 || ai == null) {
             finish()
-            return
-        }
-        if (!checkSelfPermission()) {
-            setResult(uid, pid, requestCode, allowed = false, onetime = true, permission)
             return
         }
 
@@ -332,97 +306,3 @@ fun PermissionRequestDialog(
         }
     }
 }
-
-@Composable
-fun PermissionDeniedDialog(
-    onDismiss: () -> Unit
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .wrapContentHeight(),
-            shape = AppShape.shapes.cardMedium24,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Stellar 图标
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(AppShape.shapes.iconMedium18)
-                        .background(MaterialTheme.colorScheme.errorContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.stellar_icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
-
-                // 标题和内容
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "权限受限",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Text(
-                        text = "您的设备制造商很可能限制了 adb 的权限。",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // 确定按钮
-                ElevatedCard(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShape.shapes.buttonSmall14,
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "确定",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
