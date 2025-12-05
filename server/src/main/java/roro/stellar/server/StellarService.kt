@@ -11,7 +11,6 @@ import android.ddm.DdmHandleAppName
 import android.os.Binder
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
@@ -39,7 +38,8 @@ import roro.stellar.server.BinderSender.register
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.api.IContentProviderUtils.callCompat
 import roro.stellar.server.api.RemoteProcessHolder
-import roro.stellar.server.util.HandlerUtil
+import roro.stellar.server.ext.FollowStellarStartupExt
+import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.OsUtils
 import roro.stellar.server.util.UserHandleCompat.getAppId
@@ -55,7 +55,6 @@ class StellarService : IStellarService.Stub() {
     private val managerAppId: Int
 
     init {
-        HandlerUtil.mainHandler = Handler(Looper.myLooper()!!)
 
         LOGGER.i("正在启动 Stellar 服务...")
 
@@ -80,9 +79,10 @@ class StellarService : IStellarService.Stub() {
 
         register(this)
 
-        HandlerUtil.mainHandler.post {
+        mainHandler.post {
             sendBinderToClient()
             sendBinderToManager()
+            FollowStellarStartupExt.schedule(configManager)
         }
     }
 
@@ -740,7 +740,6 @@ class StellarService : IStellarService.Stub() {
             sendBinderToUserApp(binder, MANAGER_APPLICATION_ID, userId)
         }
 
-        @JvmOverloads
         fun sendBinderToUserApp(
             binder: Binder?,
             packageName: String?,
