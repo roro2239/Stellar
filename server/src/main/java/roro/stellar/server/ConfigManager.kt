@@ -34,6 +34,7 @@ class ConfigManager {
 
             val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
             if (packages.isEmpty()) {
+                LOGGER.i("remove config for uid %d since it has gone", entry.key)
                 config.packages.remove(entry.key)
                 changed = true
                 continue
@@ -54,12 +55,11 @@ class ConfigManager {
             entry.value.packages.addAll(s)
             val shrunkSize = entry.value.packages.size
             if (shrunkSize < rawSize) {
-                val s1 = LinkedHashSet(entry.value.packages)
-                entry.value.packages.clear()
-                entry.value.packages.addAll(s1)
+                LOGGER.w("entry.packages has duplicate! Shrunk. (%d -> %d)", rawSize, shrunkSize)
             }
 
             if (needRemoving) {
+                LOGGER.i("remove config for uid %d since the packages for it changed", entry.key)
                 config.packages.remove(entry.key)
                 changed = true
             }
