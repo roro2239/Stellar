@@ -15,12 +15,12 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.utils.EnvironmentUtils
-import roro.stellar.Stellar
+import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 
 class SelfStarterService : Service(), LifecycleOwner {

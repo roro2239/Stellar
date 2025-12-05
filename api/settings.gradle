@@ -1,75 +1,47 @@
-/**
- * Stellar API 项目设置文件
- * Stellar API Project Settings File
- * 
- * 功能说明：
- * - 配置API子模块的构建环境
- * - 定义依赖仓库和版本管理
- * - 声明所有API相关子模块
- */
-
-// ============================================
-// 插件管理 Plugin Management
-// ============================================
 pluginManagement {
-    // 插件仓库配置
     repositories {
-        google()        // Google官方仓库
-        mavenCentral()  // Maven中央仓库
-        mavenLocal()    // 本地Maven仓库
+        google()
+        mavenCentral()
+        mavenLocal()
     }
     // 插件版本声明
     plugins {
-        id("com.android.application") version "8.10.0"               // Android应用插件
-        id("com.android.library") version "8.10.0"                   // Android库插件
-        id("org.jetbrains.kotlin.android") version "2.2.0"          // Kotlin Android插件
-        id("dev.rikka.tools.autoresconfig") version "1.2.2"          // 自动资源配置工具
-        id("dev.rikka.tools.materialthemebuilder") version "1.5.1"   // Material主题构建器
-        id("dev.rikka.tools.refine") version "4.4.0"                 // Refine反射工具
+        id("com.android.application") version "8.10.0"
+        id("com.android.library") version "8.10.0"
+        id("org.jetbrains.kotlin.android") version "2.2.0"
+        id("dev.rikka.tools.autoresconfig") version "1.2.2"
+        id("dev.rikka.tools.materialthemebuilder") version "1.5.1"
+        id("dev.rikka.tools.refine") version "4.4.0"
     }
 }
 
-// ============================================
-// Android设置插件 Android Settings Plugin
-// ============================================
 plugins {
     id("com.android.settings") version "8.10.0"
 }
 
-// ============================================
-// Android通用配置 Android Common Configuration
-// ============================================
 android {
-    compileSdk = 36                 // 编译SDK版本 - Android 15
-    minSdk = 24                     // 最低支持Android 7.0
-    targetSdk = 36                  // 目标SDK版本 - Android 15
-    ndkVersion = "29.0.13113456"    // NDK版本
-    buildToolsVersion = "36.0.0"    // 构建工具版本
+    compileSdk = 36
+    minSdk = 24
+    targetSdk = 36
+    ndkVersion = "29.0.13113456"
+    buildToolsVersion = "36.0.0"
 }
 
-// ============================================
-// 依赖解析管理 Dependency Resolution Management
-// ============================================
 dependencyResolutionManagement {
-    // 禁止项目级仓库，统一在此处管理
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    
-    // 依赖仓库配置
+
     repositories {
-        google()        // Google官方仓库
-        mavenCentral()  // Maven中央仓库
-        mavenLocal()    // 本地Maven仓库
+        google()
+        mavenCentral()
+        mavenLocal()
     }
-    
-    // 版本目录 - 统一管理依赖版本
+
     versionCatalogs {
         libs {
-            // Hidden API相关库（用于访问Android隐藏API）
             version('hidden-api', '4.3.3')
             library('hidden-compat', 'dev.rikka.hidden', 'compat').versionRef('hidden-api')
             library('hidden-stub', 'dev.rikka.hidden', 'stub').versionRef('hidden-api')
 
-            // Refine库（用于反射优化）
             version('refine', '4.4.0')
             library('refine-runtime', 'dev.rikka.tools.refine', 'runtime').versionRef('refine')
             library('refine-annotation', 'dev.rikka.tools.refine', 'annotation').versionRef('refine')
@@ -78,10 +50,7 @@ dependencyResolutionManagement {
     }
 }
 
-// ============================================
-// API子模块声明 API Submodules
-// ============================================
-include ':aidl'         // AIDL接口定义
-include ':shared'       // 共享代码
-include ':api'          // 核心API
-include ':provider'     // ContentProvider实现
+include ':aidl'
+include ':shared'
+include ':api'
+include ':provider'

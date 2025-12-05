@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.topjohnwu.superuser.Shell
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import roro.stellar.manager.compat.BuildUtils.atLeast30
-import roro.stellar.manager.utils.Logger.Companion.LOGGER
+import roro.stellar.manager.util.Logger.Companion.LOGGER
 
 lateinit var application: StellarApplication
 
