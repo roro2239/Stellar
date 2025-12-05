@@ -139,11 +139,11 @@ class ConfigManager {
         workerHandler.postDelayed(mWriteRunner, WRITE_DELAY)
     }
 
-    private fun findLocked(uid: Int): StellarConfig.PackageEntry? {
+    private fun findLocked(uid: Int): PackageEntry? {
         return config.packages[uid]
     }
 
-    fun find(uid: Int): StellarConfig.PackageEntry? {
+    fun find(uid: Int): PackageEntry? {
         synchronized(this) {
             return findLocked(uid)
         }
@@ -155,7 +155,7 @@ class ConfigManager {
     ) {
         var entry = findLocked(uid)
         if (entry == null) {
-            entry = StellarConfig.PackageEntry()
+            entry = PackageEntry()
             entry.permissions["stellar"] = FLAG_ASK
             config.packages[uid] = entry
         }

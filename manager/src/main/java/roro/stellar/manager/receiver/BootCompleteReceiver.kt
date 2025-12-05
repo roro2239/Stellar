@@ -12,13 +12,13 @@ import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.ui.features.starter.SelfStarterService
 import roro.stellar.manager.ui.features.starter.Starter
-import roro.stellar.manager.utils.UserHandleCompat
-import roro.stellar.Stellar
+import roro.stellar.manager.util.UserHandleCompat
 
 class BootCompleteReceiver : BroadcastReceiver() {
     private val adbWirelessHelper = AdbWirelessHelper()

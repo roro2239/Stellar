@@ -1,19 +1,6 @@
-/**
- * API模块版本定义文件
- * API Module Version Definition
- * 
- * 功能说明：
- * - 定义API的版本号
- * - 使用语义化版本控制（Semantic Versioning）
- */
-
 ext {
-    // API主版本号 - 不兼容的API更改
     api_version_major = 1
-    // API次版本号 - 向后兼容的功能性新增
     api_version_minor = 0
-    // API修订号 - 向后兼容的问题修正
     api_version_patch = 0
-    // 完整版本名称
     api_version_name = "${api_version_major}.${api_version_minor}.${api_version_patch}"
 }

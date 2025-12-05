@@ -33,7 +33,7 @@
     public static *** d(...);
 }
 
--assumenosideeffects class roro.stellar.manager.utils.Logger {
+-assumenosideeffects class roro.stellar.manager.util.Logger {
     public *** d(...);
 }
 

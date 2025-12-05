@@ -1,4 +1,4 @@
-package roro.stellar.manager.utils
+package roro.stellar.manager.util
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -8,7 +8,14 @@ import android.graphics.drawable.AdaptiveIconDrawable
 import android.os.Build
 import android.widget.ImageView
 import androidx.collection.LruCache
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.zhanghai.android.appiconloader.AppIconLoader
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.BuildUtils

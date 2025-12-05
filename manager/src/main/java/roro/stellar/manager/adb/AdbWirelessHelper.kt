@@ -104,9 +104,6 @@ class AdbWirelessHelper {
         context.startActivity(intent)
     }
 
-
-
-
     private fun changeTcpipPortIfNeeded(
         host: String,
         port: Int,
