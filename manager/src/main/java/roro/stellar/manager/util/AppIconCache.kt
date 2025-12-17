@@ -116,7 +116,7 @@ object AppIconCache : CoroutineScope {
                 view.setImageBitmap(bitmap)
             } else {
                 if (Build.VERSION.SDK_INT >= 26) {
-                    view.setImageResource(R.drawable.ic_default_app_icon)
+                    view.setImageResource(R.drawable.stellar_icon)
                 } else {
                     view.setImageDrawable(null)
                 }
