@@ -136,25 +136,29 @@ open class StellarProvider : ContentProvider() {
      * @param extras 包含Binder的Bundle
      */
     private fun handleSendBinder(extras: Bundle) {
+        Log.i(TAG, "handleSendBinder called, current binder: ${Stellar.binder}, pingBinder: ${pingBinder()}")
+
         if (pingBinder()) {
-            Log.d(TAG, "sendBinder is called when already a living binder")
+            Log.w(TAG, "sendBinder is called when already a living binder, ignoring")
             return
         }
 
         val container = extras.getParcelable<BinderContainer?>(EXTRA_BINDER)
         if (container != null && container.binder != null) {
-            Log.d(TAG, "binder received")
+            Log.i(TAG, "binder received from server, setting up connection")
 
             onBinderReceived(container.binder, context!!.packageName)
 
             if (enableMultiProcess) {
-                Log.d(TAG, "broadcast binder")
+                Log.d(TAG, "broadcast binder to other processes")
 
                 val intent = Intent(ACTION_BINDER_RECEIVED)
                     .putExtra(EXTRA_BINDER, container)
                     .setPackage(context!!.packageName)
                 context!!.sendBroadcast(intent)
             }
+        } else {
+            Log.e(TAG, "binder container is null or binder is null")
         }
     }
 
