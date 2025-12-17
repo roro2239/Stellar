@@ -272,41 +272,6 @@ fun AdbPairingTutorialScreen(
                 description = "在通知中心的 Stellar 通知中输入系统显示的配对码",
                 enabled = hasNotificationPermission
             )
-            
-            if (isColorOS) {
-                TimelineStep(
-                    isFirst = false,
-                    isLast = false,
-                    title = "ColorOS 设备注意",
-                    icon = Icons.Default.Warning,
-                    isCompleted = false,
-                    description = "ColorOS 会限制 ADB 权限，请在开发者设置中找到并开启「禁止权限监控」选项",
-                    enabled = true,
-                    isWarning = true
-                ) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            }
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: ActivityNotFoundException) {
-                                Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = AppShape.shapes.buttonMedium,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("打开开发者选项", modifier = Modifier.padding(vertical = 4.dp))
-                    }
-                }
-            }
 
             TimelineStep(
                 isFirst = false,

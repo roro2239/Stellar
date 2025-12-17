@@ -1,28 +1,10 @@
-/**
- * Stellar API 构建配置文件
- * Stellar API Build Configuration
- * 
- * 功能说明：
- * - 配置API库的构建
- * - 设置文档生成
- */
-
-// 应用版本定义文件
 apply from: 'manifest.gradle'
 
-// ============================================
-// 全局项目配置 Global Project Configuration
-// ============================================
 allprojects {
     tasks.withType(Javadoc) {
-        // 禁用Javadoc的严格检查，避免构建失败
         options.addStringOption('Xdoclint:none', '-quiet')
     }
 }
-
-// ============================================
-// 清理任务 Clean Task
-// ============================================
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
