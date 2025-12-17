@@ -93,11 +93,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
+        android.util.Log.i("StellarDemo", "=== Binder 接收回调触发 ===")
         log("✓ Stellar 服务已连接")
         checkStatus()
     }
 
     private val binderDeadListener = Stellar.OnBinderDeadListener {
+        android.util.Log.w("StellarDemo", "=== Binder 死亡回调触发 ===")
         log("✗ Stellar 服务已断开")
         serviceStatus = ServiceStatus.NOT_RUNNING
         serviceInfo = null
@@ -148,6 +150,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        android.util.Log.i("StellarDemo", "=== MainActivity onCreate 开始 ===")
+        android.util.Log.i("StellarDemo", "当前 Binder 状态: ${Stellar.binder}")
+        android.util.Log.i("StellarDemo", "pingBinder: ${Stellar.pingBinder()}")
+
         Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
         Stellar.addBinderDeadListener(binderDeadListener)
         Stellar.addRequestPermissionResultListener(permissionResultListener)
@@ -155,6 +161,7 @@ class MainActivity : ComponentActivity() {
         log("=== Stellar API Demo ===")
         log("欢迎使用 Stellar API 演示应用\n")
 
+        android.util.Log.i("StellarDemo", "开始检查服务状态")
         checkStatus()
 
         setContent {
@@ -544,9 +551,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkStatus() {
+        android.util.Log.i("StellarDemo", "=== checkStatus 开始 ===")
         serviceStatus = ServiceStatus.CHECKING
 
         val managerInstalled = StellarHelper.isManagerInstalled(this)
+        android.util.Log.i("StellarDemo", "管理器已安装: $managerInstalled")
         if (!managerInstalled) {
             serviceStatus = ServiceStatus.NOT_INSTALLED
             serviceInfo = null
@@ -554,17 +563,25 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        android.util.Log.i("StellarDemo", "检查 Binder 状态...")
+        android.util.Log.i("StellarDemo", "Stellar.binder = ${Stellar.binder}")
         val serviceRunning = Stellar.pingBinder()
+        android.util.Log.i("StellarDemo", "pingBinder() 返回: $serviceRunning")
+
         if (!serviceRunning) {
             serviceStatus = ServiceStatus.NOT_RUNNING
             serviceInfo = null
             log("✗ Stellar 服务未运行")
+            android.util.Log.w("StellarDemo", "服务未运行，Binder 为 null 或已死亡")
             return
         }
 
+        android.util.Log.i("StellarDemo", "服务正在运行，获取服务信息...")
         serviceInfo = StellarHelper.serviceInfo
+        android.util.Log.i("StellarDemo", "服务信息: $serviceInfo")
 
         val permissionGranted = Stellar.checkSelfPermission()
+        android.util.Log.i("StellarDemo", "权限已授予: $permissionGranted")
         if (!permissionGranted) {
             serviceStatus = ServiceStatus.NO_PERMISSION
             log("✗ 权限未授予")
@@ -573,6 +590,7 @@ class MainActivity : ComponentActivity() {
 
         serviceStatus = ServiceStatus.READY
         log("✓ Stellar 已就绪，可以使用所有功能")
+        android.util.Log.i("StellarDemo", "=== 服务已就绪 ===")
 
         startFollowServerPermission = Stellar.checkSelfPermission("follow_stellar_startup")
         startFollowServerOnBootPermission =

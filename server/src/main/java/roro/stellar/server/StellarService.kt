@@ -139,7 +139,9 @@ class StellarService : IStellarService.Stub() {
             throw SecurityException("请求包 $requestPackageName 不属于 uid $callingUid")
         }
 
-        if (clientManager.findClient(callingUid, callingPid) == null) {
+        val existingClient = clientManager.findClient(callingUid, callingPid)
+        if (existingClient == null) {
+            LOGGER.i("创建新客户端记录: uid=%d, pid=%d, package=%s", callingUid, callingPid, requestPackageName)
             synchronized(this) {
                 clientRecord = clientManager.addClient(
                     callingUid,
@@ -153,9 +155,12 @@ class StellarService : IStellarService.Stub() {
                 LOGGER.w("添加客户端失败")
                 return
             }
+        } else {
+            LOGGER.i("使用已存在的客户端记录: uid=%d, pid=%d, package=%s", callingUid, callingPid, requestPackageName)
+            clientRecord = existingClient
         }
 
-        LOGGER.d("attachApplication: %s %d %d", requestPackageName, callingUid, callingPid)
+        LOGGER.i("attachApplication 完成: %s %d %d", requestPackageName, callingUid, callingPid)
 
         val reply = Bundle()
         reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_UID, OsUtils.uid)
@@ -172,9 +177,13 @@ class StellarService : IStellarService.Stub() {
             StellarApiConstants.SERVER_PATCH_VERSION
         )
         if (!isManager) {
+            val permissionGranted = clientRecord?.allowedMap["stellar"] ?: false
+            LOGGER.i("权限状态检查: uid=%d, pid=%d, package=%s, granted=%s, allowedMap=%s",
+                callingUid, callingPid, requestPackageName, permissionGranted,
+                clientRecord?.allowedMap?.toString() ?: "null")
             reply.putBoolean(
                 StellarApiConstants.BIND_APPLICATION_PERMISSION_GRANTED,
-                clientRecord?.allowedMap["stellar"] ?: false
+                permissionGranted
             )
             reply.putBoolean(
                 StellarApiConstants.BIND_APPLICATION_SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE,

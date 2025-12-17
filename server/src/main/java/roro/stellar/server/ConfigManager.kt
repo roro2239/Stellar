@@ -149,6 +149,65 @@ class ConfigManager {
         }
     }
 
+    fun findOldConfigByPackageName(currentUid: Int, packageName: String): Pair<Int, PackageEntry>? {
+        synchronized(this) {
+            for ((uid, entry) in config.packages) {
+                if (uid == currentUid) {
+                    continue
+                }
+                if (entry.packages.contains(packageName)) {
+                    return Pair(uid, entry)
+                }
+            }
+            return null
+        }
+    }
+
+    fun createConfigWithAllPermissions(uid: Int, packageName: String) {
+        synchronized(this) {
+            val userId = UserHandleCompat.getUserId(uid)
+            val applicationInfo = PackageManagerApis.getApplicationInfoNoThrow(
+                packageName,
+                PackageManager.GET_META_DATA.toLong(),
+                userId
+            )
+
+            if (applicationInfo == null) {
+                LOGGER.w("无法获取应用信息: %s, 使用默认权限", packageName)
+                val packages = mutableListOf(packageName)
+                updateLocked(uid, packages)
+                return
+            }
+
+            val declaredPermissions = LinkedHashSet<String>()
+            val metaDataPermissions = applicationInfo.metaData?.getString(PERMISSION_KEY, "") ?: ""
+            for (permission in metaDataPermissions.split(",")) {
+                if (PERMISSIONS.contains(permission)) {
+                    declaredPermissions.add(permission)
+                }
+            }
+
+            LOGGER.i("应用 %s 声明的权限: %s", packageName, declaredPermissions.toString())
+
+            val entry = PackageEntry()
+            entry.packages.add(packageName)
+
+            for (permission in declaredPermissions) {
+                entry.permissions[permission] = FLAG_ASK
+            }
+
+            if (entry.permissions.isEmpty()) {
+                entry.permissions["stellar"] = FLAG_ASK
+            }
+
+            config.packages[uid] = entry
+            scheduleWriteLocked()
+
+            LOGGER.i("已创建配置: uid=%d, package=%s, permissions=%s",
+                uid, packageName, entry.permissions.toString())
+        }
+    }
+
     private fun updateLocked(
         uid: Int,
         packages: MutableList<String>?
