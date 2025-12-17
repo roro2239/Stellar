@@ -21,9 +21,12 @@ object BinderSender {
     @Throws(RemoteException::class)
     private fun sendBinder(uid: Int, pid: Int) {
         val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
-        if (packages.isEmpty()) return
+        if (packages.isEmpty()) {
+            LOGGER.w("sendBinder: uid %d 没有关联的包名", uid)
+            return
+        }
 
-        LOGGER.d("sendBinder to uid %d: packages=%s", uid, TextUtils.join(", ", packages))
+        LOGGER.i("sendBinder to uid %d, pid %d: packages=%s", uid, pid, TextUtils.join(", ", packages))
 
         val userId = uid / 100000
         for (packageName in packages) {
@@ -32,18 +35,40 @@ object BinderSender {
                 PackageManager.GET_META_DATA.toLong(),
                 userId
             )
-            if (pi == null || pi.applicationInfo == null || pi.applicationInfo!!.metaData == null) continue
 
-            if (pi.packageName == MANAGER_APPLICATION_ID) {
-                StellarService.sendBinderToManger(stellarService, userId)
-            } else if (pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",")
-                    .contains("stellar")
-            ) {
-                StellarService.sendBinderToUserApp(stellarService, packageName, userId)
+            if (pi == null) {
+                LOGGER.w("sendBinder: 无法获取包信息: %s", packageName)
+                continue
             }
 
-            return
+            if (pi.applicationInfo == null) {
+                LOGGER.w("sendBinder: applicationInfo 为 null: %s", packageName)
+                continue
+            }
+
+            if (pi.packageName == MANAGER_APPLICATION_ID) {
+                LOGGER.i("sendBinder: 发送 Binder 到管理器: %s", packageName)
+                StellarService.sendBinderToManger(stellarService, userId)
+                return
+            }
+
+            // 检查 metaData 是否包含 stellar 权限
+            val metaData = pi.applicationInfo!!.metaData
+            if (metaData != null) {
+                val permissions = metaData.getString(PERMISSION_KEY, "")
+                if (permissions.split(",").contains("stellar")) {
+                    LOGGER.i("sendBinder: 发送 Binder 到用户应用: %s (通过 metaData)", packageName)
+                    StellarService.sendBinderToUserApp(stellarService, packageName, userId)
+                    return
+                } else {
+                    LOGGER.d("sendBinder: 包 %s 的 metaData 不包含 stellar 权限: %s", packageName, permissions)
+                }
+            } else {
+                LOGGER.w("sendBinder: 包 %s 的 metaData 为 null，跳过", packageName)
+            }
         }
+
+        LOGGER.w("sendBinder: uid %d 的所有包都不满足条件，未发送 Binder", uid)
     }
 
     fun register(stellarService: StellarService?) {
@@ -131,14 +156,14 @@ object BinderSender {
     private class UidObserver : UidObserverAdapter() {
         @Throws(RemoteException::class)
         override fun onUidActive(uid: Int) {
-            LOGGER.d("onUidCachedChanged: uid=%d", uid)
+            LOGGER.i("onUidActive: uid=%d", uid)
 
             uidStarts(uid)
         }
 
         @Throws(RemoteException::class)
         override fun onUidCachedChanged(uid: Int, cached: Boolean) {
-            LOGGER.d("onUidCachedChanged: uid=%d, cached=%s", uid, cached.toString())
+            LOGGER.i("onUidCachedChanged: uid=%d, cached=%s", uid, cached.toString())
 
             if (!cached) {
                 uidStarts(uid)
@@ -147,14 +172,14 @@ object BinderSender {
 
         @Throws(RemoteException::class)
         override fun onUidIdle(uid: Int, disabled: Boolean) {
-            LOGGER.d("onUidIdle: uid=%d, disabled=%s", uid, disabled.toString())
+            LOGGER.i("onUidIdle: uid=%d, disabled=%s", uid, disabled.toString())
 
             uidStarts(uid)
         }
 
         @Throws(RemoteException::class)
         override fun onUidGone(uid: Int, disabled: Boolean) {
-            LOGGER.d("onUidGone: uid=%d, disabled=%s", uid, disabled.toString())
+            LOGGER.i("onUidGone: uid=%d, disabled=%s - 应用已卸载或进程已终止", uid, disabled.toString())
 
             uidGone(uid)
         }

@@ -63,17 +63,49 @@ open class ClientManager(
         packageName: String,
         apiVersion: Int
     ): ClientRecord? {
-        val clientRecord = ClientRecord(uid, pid, client, packageName, apiVersion)
-
-        val entry = configManager.find(uid)
-        if (entry != null) {
-            for (permission in entry.permissions) {
-                clientRecord.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
+        val oldClients = findClients(uid)
+        if (oldClients.isNotEmpty()) {
+            LOGGER.w("发现 uid=%d 存在 %d 个旧客户端记录，正在清理", uid, oldClients.size)
+            for (oldClient in oldClients) {
+                LOGGER.i("清理旧客户端: uid=%d, pid=%d, package=%s",
+                    oldClient.uid, oldClient.pid, oldClient.packageName)
+                clientRecords.remove(oldClient)
             }
         }
 
+        val clientRecord = ClientRecord(uid, pid, client, packageName, apiVersion)
+
+        val oldConfig = configManager.findOldConfigByPackageName(uid, packageName)
+        if (oldConfig != null) {
+            val (oldUid, _) = oldConfig
+            LOGGER.i("检测到应用重装: %s 的 UID 从 %d 变为 %d，删除旧配置并创建新配置", packageName, oldUid, uid)
+            configManager.remove(oldUid)
+        }
+
+        var entry = configManager.find(uid)
+        if (entry == null) {
+            LOGGER.i("为新 UID 创建配置: uid=%d, package=%s", uid, packageName)
+            configManager.createConfigWithAllPermissions(uid, packageName)
+            entry = configManager.find(uid)
+        }
+
+        LOGGER.i("addClient: uid=%d, pid=%d, package=%s, configEntry=%s",
+            uid, pid, packageName, if (entry != null) "found" else "null")
+        if (entry != null) {
+            LOGGER.i("加载权限配置: uid=%d, permissions=%s", uid, entry.permissions.toString())
+            for (permission in entry.permissions) {
+                clientRecord.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
+            }
+        } else {
+            LOGGER.w("未找到 uid=%d 的配置条目，需要重新申请权限", uid)
+        }
+        LOGGER.i("客户端记录创建完成: uid=%d, allowedMap=%s", uid, clientRecord.allowedMap.toString())
+
         val binder = client.asBinder()
-        val deathRecipient = DeathRecipient { clientRecords.remove(clientRecord) }
+        val deathRecipient = DeathRecipient {
+            LOGGER.i("客户端死亡回调: uid=%d, pid=%d, package=%s", uid, pid, packageName)
+            clientRecords.remove(clientRecord)
+        }
         try {
             binder.linkToDeath(deathRecipient, 0)
         } catch (e: RemoteException) {
@@ -82,6 +114,7 @@ open class ClientManager(
         }
 
         clientRecords.add(clientRecord)
+        LOGGER.i("客户端记录已添加: uid=%d, pid=%d, 当前客户端总数=%d", uid, pid, clientRecords.size)
         return clientRecord
     }
 
