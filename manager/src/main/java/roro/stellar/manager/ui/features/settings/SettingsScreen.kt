@@ -91,6 +91,7 @@ import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.ui.theme.ThemeMode
 import roro.stellar.manager.ui.theme.ThemePreferences
+import roro.stellar.manager.util.PortBlacklistUtils
 import roro.stellar.manager.util.StellarSystemApis
 import kotlin.math.roundToInt
 
@@ -438,15 +439,20 @@ fun SettingsScreen(
                             onCheckedChange = { enabled ->
                                 tcpipPortEnabled = enabled
                                 
-                                // 如果开启开关且端口为空，自动生成随机端口
+                                // 如果开启开关且端口为空，自动生成随机端口（避开黑名单）
                                 if (enabled && tcpipPort.isEmpty()) {
-                                    val randomPort = 1000 + (0..8999).random()
-                                    tcpipPort = randomPort.toString()
-                                    preferences.edit {
-                                        putBoolean(TCPIP_PORT_ENABLED, enabled)
-                                        putString(TCPIP_PORT, tcpipPort)
+                                    val randomPort = PortBlacklistUtils.generateSafeRandomPort(1000, 9999, 100)
+                                    if (randomPort == -1) {
+                                        Toast.makeText(context, "无法生成安全端口，请手动设置", Toast.LENGTH_SHORT).show()
+                                        tcpipPortEnabled = false
+                                    } else {
+                                        tcpipPort = randomPort.toString()
+                                        preferences.edit {
+                                            putBoolean(TCPIP_PORT_ENABLED, enabled)
+                                            putString(TCPIP_PORT, tcpipPort)
+                                        }
+                                        Toast.makeText(context, "已自动生成安全端口 $tcpipPort", Toast.LENGTH_SHORT).show()
                                     }
-                                    Toast.makeText(context, "已自动生成端口 $tcpipPort", Toast.LENGTH_SHORT).show()
                                 } else {
                                     preferences.edit {
                                         putBoolean(TCPIP_PORT_ENABLED, enabled)
@@ -480,11 +486,28 @@ fun SettingsScreen(
                             
                             Button(
                                 onClick = {
-                                    // 如果输入框为空，自动生成随机端口
+                                    // 如果输入框为空，自动生成随机端口（避开黑名单）
                                     if (tcpipPort.isEmpty()) {
-                                        val randomPort = 1000 + (0..8999).random()
+                                        val randomPort = PortBlacklistUtils.generateSafeRandomPort(1000, 9999, 100)
+                                        if (randomPort == -1) {
+                                            Toast.makeText(context, "无法生成安全端口，请手动输入", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
                                         tcpipPort = randomPort.toString()
                                     }
+                                    
+                                    // 验证端口号
+                                    val port = tcpipPort.toIntOrNull()
+                                    if (port == null || port !in 1..65535) {
+                                        Toast.makeText(context, "端口号无效，请输入 1-65535 之间的数字", Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    
+                                    // 如果是黑名单端口，给出警告但允许设置（用户手动设置）
+                                    if (PortBlacklistUtils.isPortBlacklisted(port)) {
+                                        Toast.makeText(context, "警告：端口 $port 可能被恶意扫描，建议使用其他端口", Toast.LENGTH_LONG).show()
+                                    }
+                                    
                                     // 保存到偏好设置
                                     preferences.edit {
                                         putString(TCPIP_PORT, tcpipPort)
@@ -862,13 +885,6 @@ private fun showSecureSettingsPermissionDialog(context: Context, onResult: (Bool
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
-            .setNeutralButton("发送") { _, _ ->
-                var intent = Intent(Intent.ACTION_SEND)
-                intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, command)
-                intent = Intent.createChooser(intent, "发送")
-                context.startActivity(intent)
-            }
             .show()
     }
     

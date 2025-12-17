@@ -57,7 +57,11 @@ public class StellarSettings {
                 sPreferences.edit().putBoolean(TCPIP_PORT_ENABLED, true).apply();
             }
             if (!sPreferences.contains(TCPIP_PORT)) {
-                int randomPort = 1000 + (int) (Math.random() * 9000);
+                int randomPort = roro.stellar.manager.util.PortBlacklistUtils.INSTANCE.generateSafeRandomPort(1000, 9999, 100);
+                if (randomPort == -1) {
+                    // 如果无法生成安全端口，使用一个默认的安全端口
+                    randomPort = 8765;
+                }
                 sPreferences.edit().putString(TCPIP_PORT, String.valueOf(randomPort)).apply();
             }
         }
