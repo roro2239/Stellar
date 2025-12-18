@@ -15,9 +15,9 @@ afterEvaluate {
             release(MavenPublication) {
                 from components.release
 
-                groupId = 'com.github.rorostudio'
+                groupId = 'com.github.RORO2239'
                 artifactId = project.name
-                version = '1.0'
+                version = '1.0.0'
 
                 pom {
                     name = 'Stellar API'
