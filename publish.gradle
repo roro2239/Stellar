@@ -1,15 +1,19 @@
 apply plugin: 'maven-publish'
 
+android {
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
 afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
-                // 根据项目类型选择正确的 component
-                if (project.plugins.hasPlugin('com.android.library')) {
-                    from components.release
-                } else {
-                    from components.java
-                }
+                from components.release
 
                 groupId = 'com.github.rorostudio'
                 artifactId = project.name
