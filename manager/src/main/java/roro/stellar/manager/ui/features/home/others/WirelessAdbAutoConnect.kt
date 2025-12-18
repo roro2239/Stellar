@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -18,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.util.EnvironmentUtils
 
@@ -31,21 +33,36 @@ fun AdbAutoConnect(
     val viewModel: WirelessAdbViewModel = viewModel(
         factory = WirelessAdbViewModelFactory(context)
     )
-    
+
     val discoveredPort by viewModel.port.collectAsState()
-    val systemPort = remember { EnvironmentUtils.getAdbTcpPort() }
-    
-    LaunchedEffect(Unit) {
+    val systemPort = EnvironmentUtils.getAdbTcpPort()
+
+    LaunchedEffect(key1 = Unit) {
+        val cr = context.contentResolver
+        val preferences = StellarSettings.getPreferences()
+        val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+
+        val adbEnabled = try {
+            Settings.Global.getInt(cr, Settings.Global.ADB_ENABLED, 0) == 1
+        } catch (e: Exception) {
+            false
+        }
+
+        if (tcpipPortEnabled && !adbEnabled) {
+            Toast.makeText(context, "请先在开发者选项中启用 USB 调试", Toast.LENGTH_LONG).show()
+            onComplete()
+            return@LaunchedEffect
+        }
+
         if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED) {
             try {
-                val cr = context.contentResolver
                 Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
                 Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
                 Settings.Global.putLong(cr, "adb_allowed_connection_time", 0L)
             } catch (e: Exception) {
             }
         }
-        
+
         if (systemPort in 1..65535) {
             onStartConnection(systemPort)
             onComplete()
