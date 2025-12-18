@@ -21,10 +21,10 @@ jobs:
     - name: 检出代码
       uses: actions/checkout@v4
       
-    - name: 设置 JDK 17
+    - name: 设置 JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
         cache: gradle
         
