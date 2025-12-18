@@ -15,8 +15,8 @@ afterEvaluate {
             release(MavenPublication) {
                 from components.release
 
-                groupId = 'com.github.RORO2239'
-                artifactId = 'Stellar'
+                groupId = 'com.github.roro2239.stellar'
+                artifactId = project.name
                 version = '1.0.0'
 
                 pom {
