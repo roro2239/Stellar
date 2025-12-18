@@ -20,6 +20,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: 设置 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 接受 Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
+
       - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
 
