@@ -29,8 +29,6 @@ Stellar 是基于 Shizuku 的分支项目，是一个特权 API 框架，支持�
 
 ### 1. 添加依赖
 
-#### 方式一：使用 GitHub Packages（推荐）
-
 在 `settings.gradle` 中添加 Maven 仓库：
 
 ```gradle
@@ -85,19 +83,6 @@ set GITHUB_TOKEN=你的Personal_Access_Token
 ```bash
 export GITHUB_ACTOR=你的GitHub用户名
 export GITHUB_TOKEN=你的Personal_Access_Token
-```
-
-#### 方式二：使用本地模块
-
-如果你的项目是 Stellar 源码的一部分，可以直接引用本地模块：
-
-```gradle
-dependencies {
-    implementation project(':api')
-    implementation project(':provider')
-    implementation project(':aidl')
-    implementation project(':shared')
-}
 ```
 
 ### 2. 配置 AndroidManifest
