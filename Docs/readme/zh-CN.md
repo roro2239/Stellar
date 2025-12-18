@@ -1,5 +1,5 @@
 # Stellar
-
+![JitPack](https://img.shields.io/jitpack/version/com.github.RORO2239/Stellar)  
 一个无需 Root 使用更高权限的系统 API 的 App。
 
 ## 致谢与许可
