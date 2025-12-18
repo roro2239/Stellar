@@ -233,6 +233,12 @@ class AdbWirelessHelper {
                     port
                 }
 
+                if (!waitForAdbPortAvailable(host, finalPort, timeoutMs = 15000L)) {
+                    Log.w(AppConstants.TAG, "等待ADB端口${finalPort}可用超时")
+                    onError(Exception("等待ADB端口${finalPort}可用超时"))
+                    return@launch
+                }
+
                 var lastError: Throwable? = null
                 val maxRetries = 5
                 for (attempt in 1..maxRetries) {

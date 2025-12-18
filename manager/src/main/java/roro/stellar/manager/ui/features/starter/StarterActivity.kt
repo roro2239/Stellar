@@ -730,18 +730,59 @@ fun ErrorView(
             }
             else -> {
                 Button(
-                    onClick = onClose,
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val logText = buildString {
+                            appendLine("=== Stellar 启动错误报告 ===")
+                            appendLine()
+                            appendLine("错误类型: $errorTitle")
+                            appendLine("错误信息: $errorMessage")
+                            if (errorTip.isNotEmpty()) {
+                                appendLine("提示: $errorTip")
+                            }
+                            appendLine()
+                            appendLine("执行命令:")
+                            appendLine(command)
+                            appendLine()
+                            if (outputLines.isNotEmpty()) {
+                                appendLine("命令输出:")
+                                outputLines.forEach { line ->
+                                    appendLine(line)
+                                }
+                            }
+                            appendLine()
+                            appendLine("设备信息:")
+                            appendLine("Android 版本: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                            appendLine("设备型号: ${Build.MANUFACTURER} ${Build.MODEL}")
+                            appendLine("应用版本: ${context.packageManager.getPackageInfo(context.packageName, 0).versionName}")
+                        }
+                        val clip = android.content.ClipData.newPlainText("Stellar 错误日志", logText)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, "错误日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShape.shapes.buttonMedium,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
+                ) {
+                    Text(
+                        text = "复制错误日志",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onClose,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShape.shapes.buttonMedium
                 ) {
                     Text(
                         text = "返回",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
@@ -914,10 +955,37 @@ class StarterViewModel(
 
             Stellar.addBinderReceivedListener(listener)
 
-            delay(10000)
+            val maxWaitTime = 10000L
+            val checkInterval = 500L
+            var elapsed = 0L
+
+            while (elapsed < maxWaitTime && !binderReceived) {
+                delay(checkInterval)
+                elapsed += checkInterval
+
+                if (_outputLines.value.any { line ->
+                    line.contains("错误：") ||
+                    line.contains("Error:") ||
+                    line.contains("Exception") ||
+                    line.contains("FATAL")
+                }) {
+                    Stellar.removeBinderReceivedListener(listener)
+                    val errorLines = _outputLines.value.filter {
+                        it.contains("错误：") || it.contains("Error:")
+                    }
+                    val errorMsg = if (errorLines.isNotEmpty()) {
+                        errorLines.last().substringAfter("错误：").substringAfter("Error:").trim()
+                    } else {
+                        "服务启动失败，请查看日志了解详情"
+                    }
+                    setError(Exception(errorMsg))
+                    return@launch
+                }
+            }
+
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                setError(Exception("等待服务启动超时"))
+                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"))
             }
         }
     }

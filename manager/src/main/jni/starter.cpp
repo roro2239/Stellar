@@ -128,13 +128,13 @@ static void start_server(const char *path, const char *main_class, const char *p
             LOGD("子进程");
             setsid();
             chdir("/");
-            int fd = open("/dev/null", O_RDWR);
-            if (fd != -1) {
-                dup2(fd, STDIN_FILENO);
-                dup2(fd, STDOUT_FILENO);
-                dup2(fd, STDERR_FILENO);
-                if (fd > 2) close(fd);
+
+            int null_fd = open("/dev/null", O_RDWR);
+            if (null_fd != -1) {
+                dup2(null_fd, STDIN_FILENO);
+                if (null_fd > 2) close(null_fd);
             }
+
             run_server(path, main_class, process_name);
         }
         default: {
