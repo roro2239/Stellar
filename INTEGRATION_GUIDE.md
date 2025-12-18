@@ -29,20 +29,14 @@ Stellar 是基于 Shizuku 的分支项目，是一个特权 API 框架，支持�
 
 ### 1. 添加依赖
 
-在 `settings.gradle` 中添加 Maven 仓库：
+在 `settings.gradle` 中添加 JitPack 仓库：
 
 ```gradle
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://maven.pkg.github.com/RORO2239/Stellar")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
+        maven { url 'https://jitpack.io' }
     }
 }
 ```
@@ -51,38 +45,8 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.rorostudio:api:1.0'
-    implementation 'com.github.rorostudio:provider:1.0'
-    implementation 'com.github.rorostudio:aidl:1.0'
-    implementation 'com.github.rorostudio:shared:1.0'
+    implementation 'com.github.RORO2239:Stellar:api-v1.0'
 }
-```
-
-**配置 GitHub Token：**
-
-1. 访问 GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. 点击 "Generate new token (classic)"
-3. 勾选 `read:packages` 权限
-4. 生成并保存 token
-
-设置环境变量：
-
-**Windows (PowerShell):**
-```powershell
-$env:GITHUB_ACTOR="你的GitHub用户名"
-$env:GITHUB_TOKEN="你的Personal_Access_Token"
-```
-
-**Windows (CMD):**
-```cmd
-set GITHUB_ACTOR=你的GitHub用户名
-set GITHUB_TOKEN=你的Personal_Access_Token
-```
-
-**Linux/macOS:**
-```bash
-export GITHUB_ACTOR=你的GitHub用户名
-export GITHUB_TOKEN=你的Personal_Access_Token
 ```
 
 ### 2. 配置 AndroidManifest
@@ -526,10 +490,19 @@ Stellar 是基于 Shizuku 的分支项目，因此 API 设计高度相似，迁�
 // implementation 'dev.rikka.shizuku:provider:13.1.5'
 
 // 添加 Stellar 依赖
-implementation project(':api')
-implementation project(':provider')
-implementation project(':aidl')
-implementation project(':shared')
+implementation 'com.github.RORO2239:Stellar:api-v1.0'
+```
+
+同时在 `settings.gradle` 中添加 JitPack 仓库：
+
+```gradle
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
 ```
 
 #### 步骤 2：更新 AndroidManifest
