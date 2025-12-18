@@ -29,7 +29,67 @@ Stellar 是基于 Shizuku 的分支项目，是一个特权 API 框架，支持�
 
 ### 1. 添加依赖
 
-在你的 `build.gradle` 中添加 Stellar 模块依赖：
+#### 方式一：使用 GitHub Packages（推荐）
+
+在 `settings.gradle` 中添加 Maven 仓库：
+
+```gradle
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            url = uri("https://maven.pkg.github.com/RORO2239/Stellar")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+```
+
+在 `build.gradle` 中添加依赖：
+
+```gradle
+dependencies {
+    implementation 'com.github.rorostudio:api:1.0'
+    implementation 'com.github.rorostudio:provider:1.0'
+    implementation 'com.github.rorostudio:aidl:1.0'
+    implementation 'com.github.rorostudio:shared:1.0'
+}
+```
+
+**配置 GitHub Token：**
+
+1. 访问 GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. 点击 "Generate new token (classic)"
+3. 勾选 `read:packages` 权限
+4. 生成并保存 token
+
+设置环境变量：
+
+**Windows (PowerShell):**
+```powershell
+$env:GITHUB_ACTOR="你的GitHub用户名"
+$env:GITHUB_TOKEN="你的Personal_Access_Token"
+```
+
+**Windows (CMD):**
+```cmd
+set GITHUB_ACTOR=你的GitHub用户名
+set GITHUB_TOKEN=你的Personal_Access_Token
+```
+
+**Linux/macOS:**
+```bash
+export GITHUB_ACTOR=你的GitHub用户名
+export GITHUB_TOKEN=你的Personal_Access_Token
+```
+
+#### 方式二：使用本地模块
+
+如果你的项目是 Stellar 源码的一部分，可以直接引用本地模块：
 
 ```gradle
 dependencies {
@@ -39,8 +99,6 @@ dependencies {
     implementation project(':shared')
 }
 ```
-
-> **注意：** 如果你的项目不是 Stellar 源码的一部分，你需要将这些模块作为 AAR 或源码导入到你的项目中。
 
 ### 2. 配置 AndroidManifest
 
