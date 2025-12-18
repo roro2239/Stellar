@@ -197,12 +197,14 @@ fun HomeScreen(
     }
     
     if (triggerAdbAutoConnect && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
-            onStartConnection = { port ->
-                val helper = roro.stellar.manager.adb.AdbWirelessHelper()
-                helper.launchStarterActivity(context, "127.0.0.1", port)
-            },
-            onComplete = { triggerAdbAutoConnect = false }
-        )
+        androidx.compose.runtime.key(System.currentTimeMillis()) {
+            roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
+                onStartConnection = { port ->
+                    val helper = roro.stellar.manager.adb.AdbWirelessHelper()
+                    helper.launchStarterActivity(context, "127.0.0.1", port)
+                },
+                onComplete = { triggerAdbAutoConnect = false }
+            )
+        }
     }
 }

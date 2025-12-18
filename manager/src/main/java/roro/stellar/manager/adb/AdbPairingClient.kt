@@ -201,11 +201,14 @@ class AdbPairingClient(private val host: String, private val port: Int, private 
     }
 
     private fun setupTlsConnection() {
-        socket = Socket(host, port)
+        socket = Socket()
         socket.tcpNoDelay = true
+        socket.soTimeout = 30000
+        socket.connect(java.net.InetSocketAddress(host, port), 10000)
 
         val sslContext = key.sslContext
         val sslSocket = sslContext.socketFactory.createSocket(socket, host, port, true) as SSLSocket
+        sslSocket.soTimeout = 30000
         sslSocket.startHandshake()
         Log.d(TAG, "握手成功")
 
