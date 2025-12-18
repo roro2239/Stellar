@@ -12,10 +12,6 @@ public class UserHandleCompat {
         return uid / PER_USER_RANGE;
     }
 
-    public static int getAppId(int uid) {
-        return uid % PER_USER_RANGE;
-    }
-
     public static int myUserId() {
         return MY_USER_ID;
     }

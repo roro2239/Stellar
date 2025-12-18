@@ -28,20 +28,4 @@ object PortBlacklistUtils {
         }
         return -1
     }
-    
-    fun isPortValidAndSafe(port: Int, isManualInput: Boolean = false): Boolean {
-        if (port !in 1..65535) {
-            return false
-        }
-        
-        if (isManualInput) {
-            return true
-        }
-        
-        return !isPortBlacklisted(port)
-    }
-    
-    fun getBlacklistedPorts(): Set<Int> {
-        return BLACKLIST_PORTS.toSet()
-    }
 }
