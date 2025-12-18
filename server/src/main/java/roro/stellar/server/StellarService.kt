@@ -56,39 +56,74 @@ class StellarService : IStellarService.Stub() {
     private val managerAppId: Int
 
     init {
+        try {
+            LOGGER.i("正在启动 Stellar 服务...")
+            System.err.println("正在启动 Stellar 服务...")
 
-        LOGGER.i("正在启动 Stellar 服务...")
+            LOGGER.i("等待系统服务...")
+            System.err.println("等待系统服务...")
+            waitSystemService("package")
+            waitSystemService(Context.ACTIVITY_SERVICE)
+            waitSystemService(Context.USER_SERVICE)
+            waitSystemService(Context.APP_OPS_SERVICE)
 
-        waitSystemService("package")
-        waitSystemService(Context.ACTIVITY_SERVICE)
-        waitSystemService(Context.USER_SERVICE)
-        waitSystemService(Context.APP_OPS_SERVICE)
-
-        val ai = managerApplicationInfo ?: exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
-
-        managerAppId = ai.uid
-
-        configManager = ConfigManager()
-        clientManager = ClientManager(configManager)
-
-        start(ai.sourceDir) {
-            LOGGER.w("检测到管理器应用文件变化，检查应用状态...")
-            if (managerApplicationInfo == null) {
-                LOGGER.w("用户 0 中的管理器应用已卸载，正在退出...")
+            LOGGER.i("获取管理器应用信息...")
+            System.err.println("获取管理器应用信息...")
+            val ai = managerApplicationInfo
+            if (ai == null) {
+                System.err.println("错误：无法获取管理器应用信息")
                 exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
-            } else {
-                LOGGER.i("管理器应用仍然存在，继续运行")
             }
-        }
-        
-        registerPackageRemovedReceiver(ai)
 
-        register(this)
+            managerAppId = ai.uid
+            LOGGER.i("管理器应用 UID: $managerAppId")
+            System.err.println("管理器应用 UID: $managerAppId")
 
-        mainHandler.post {
-            sendBinderToClient()
-            sendBinderToManager()
-            FollowStellarStartupExt.schedule(configManager)
+            LOGGER.i("初始化配置管理器...")
+            System.err.println("初始化配置管理器...")
+            configManager = ConfigManager()
+            clientManager = ClientManager(configManager)
+
+            LOGGER.i("启动文件监听...")
+            System.err.println("启动文件监听...")
+            start(ai.sourceDir) {
+                LOGGER.w("检测到管理器应用文件变化，检查应用状态...")
+                if (managerApplicationInfo == null) {
+                    LOGGER.w("用户 0 中的管理器应用已卸载，正在退出...")
+                    exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
+                } else {
+                    LOGGER.i("管理器应用仍然存在，继续运行")
+                }
+            }
+
+            LOGGER.i("注册包移除监听...")
+            System.err.println("注册包移除监听...")
+            registerPackageRemovedReceiver(ai)
+
+            LOGGER.i("注册 Binder...")
+            System.err.println("注册 Binder...")
+            register(this)
+
+            LOGGER.i("发送 Binder 到客户端...")
+            System.err.println("发送 Binder 到客户端...")
+            mainHandler.post {
+                try {
+                    sendBinderToClient()
+                    sendBinderToManager()
+                    FollowStellarStartupExt.schedule(configManager)
+                    LOGGER.i("Stellar 服务启动完成")
+                    System.err.println("Stellar 服务启动完成")
+                } catch (e: Throwable) {
+                    LOGGER.e(e, "发送 Binder 失败")
+                    System.err.println("错误：发送 Binder 失败: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        } catch (e: Throwable) {
+            LOGGER.e(e, "Stellar 服务初始化失败")
+            System.err.println("错误：Stellar 服务初始化失败: ${e.message}")
+            e.printStackTrace()
+            exitProcess(1)
         }
     }
 

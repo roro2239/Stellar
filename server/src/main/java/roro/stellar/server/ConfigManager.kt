@@ -110,10 +110,14 @@ class ConfigManager {
                 }
             }
             val packageEntry = findLocked(entry.key)!!
+            val permissionsToRemove = mutableListOf<String>()
             for (permission in entry.value.permissions) {
                 if (!permissions.contains(permission.key)) {
-                    packageEntry.permissions.remove(permission.key)
+                    permissionsToRemove.add(permission.key)
                 }
+            }
+            for (permissionKey in permissionsToRemove) {
+                packageEntry.permissions.remove(permissionKey)
             }
             for (permission in permissions) {
                 if (packageEntry.permissions[permission] == null) {
