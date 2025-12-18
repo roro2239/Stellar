@@ -45,7 +45,8 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.RORO2239:Stellar:api-v1.0'
+    implementation 'com.github.roro2239.stellar:api:1.0.0'
+    implementation 'com.github.roro2239.stellar:provider:1.0.0'
 }
 ```
 
@@ -490,7 +491,8 @@ Stellar 是基于 Shizuku 的分支项目，因此 API 设计高度相似，迁�
 // implementation 'dev.rikka.shizuku:provider:13.1.5'
 
 // 添加 Stellar 依赖
-implementation 'com.github.RORO2239:Stellar:api-v1.0'
+implementation 'com.github.roro2239.stellar:api:1.0.0'
+implementation 'com.github.roro2239.stellar:provider:1.0.0'
 ```
 
 同时在 `settings.gradle` 中添加 JitPack 仓库：
