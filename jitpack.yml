@@ -1,4 +1,4 @@
 jdk:
   - openjdk21
 install:
-  - ./gradlew :aidl:publishToMavenLocal :shared:publishToMavenLocal :api:publishToMavenLocal :provider:publishToMavenLocal -x :manager:build -x :server:build -x :demo:build
+  - ./gradlew :aidl:publishToMavenLocal :shared:publishToMavenLocal :api:publishToMavenLocal :provider:publishToMavenLocal

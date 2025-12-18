@@ -46,9 +46,12 @@ dependencyResolutionManagement {
     }
 }
 
-include ':server'
-include ':manager'
-include ':demo'
+// Only include app modules when not building on JitPack
+if (System.getenv("JITPACK") != "true") {
+    include ':server'
+    include ':manager'
+    include ':demo'
+}
 def root = "api"
 
 def propFile = file('local.properties')
