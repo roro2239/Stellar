@@ -18,3 +18,5 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 }
+
+apply from: rootProject.file('publish.gradle')

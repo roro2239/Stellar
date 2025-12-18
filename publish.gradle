@@ -1,0 +1,52 @@
+apply plugin: 'maven-publish'
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.github.rorostudio'
+                artifactId = project.name
+                version = '1.0'
+
+                pom {
+                    name = 'Stellar API'
+                    description = 'Stellar privileged API framework based on Shizuku'
+                    url = 'https://github.com/RoRoStudio/Stellar'
+
+                    licenses {
+                        license {
+                            name = 'GNU General Public License v3.0'
+                            url = 'https://www.gnu.org/licenses/gpl-3.0.html'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'rorostudio'
+                            name = 'RoRo Studio'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:git://github.com/RoRoStudio/Stellar.git'
+                        developerConnection = 'scm:git:ssh://github.com/RoRoStudio/Stellar.git'
+                        url = 'https://github.com/RoRoStudio/Stellar'
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/RoRoStudio/Stellar")
+                credentials {
+                    username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                    password = project.findProperty("gpr.token") ?: System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+}
