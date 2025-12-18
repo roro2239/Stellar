@@ -894,23 +894,67 @@ private fun showSecureSettingsPermissionDialog(context: Context, onResult: (Bool
         }
         .setNegativeButton("手动", click)
         .setPositiveButton("自动") { _, _ ->
-            Log.i(StellarSettings.NAME, "Grant manager WRITE_SECURE_SETTINGS permission")
-            try {
-                StellarSystemApis.grantRuntimePermission(
-                    BuildConfig.APPLICATION_ID,
-                    Manifest.permission.WRITE_SECURE_SETTINGS,
-                    0
-                )
-                onResult(true)
-            } catch (e: SecurityException) {
-                Log.e(StellarSettings.NAME, "Failed to grant permission automatically", e)
-                Toast.makeText(
-                    context,
-                    "自动授权失败，请使用手动方式",
-                    Toast.LENGTH_LONG
-                ).show()
-                onResult(false)
-            }
+            Thread {
+                try {
+                    StellarSystemApis.grantRuntimePermission(
+                        BuildConfig.APPLICATION_ID,
+                        Manifest.permission.WRITE_SECURE_SETTINGS,
+                        0
+                    )
+
+                    Thread.sleep(500)
+
+                    val hasPermission = try {
+                        context.packageManager.checkPermission(
+                            Manifest.permission.WRITE_SECURE_SETTINGS,
+                            BuildConfig.APPLICATION_ID
+                        ) == PackageManager.PERMISSION_GRANTED
+                    } catch (e: Exception) {
+                        false
+                    }
+
+                    (context as? android.app.Activity)?.runOnUiThread {
+                        if (hasPermission) {
+                            Toast.makeText(
+                                context,
+                                "授权成功",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onResult(true)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "授权失败：权限未生效\n\n请使用手动方式授权",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            onResult(false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    val errorMsg = e.message?.let { msg ->
+                        when {
+                            msg.contains("GRANT_RUNTIME_PERMISSIONS", ignoreCase = true) ->
+                                "服务进程没有授权权限"
+                            msg.contains("Unknown permission", ignoreCase = true) ->
+                                "未知权限"
+                            msg.contains("not found", ignoreCase = true) ->
+                                "权限未找到"
+                            msg.contains("Operation not permitted", ignoreCase = true) ->
+                                "操作不被允许"
+                            else -> msg
+                        }
+                    } ?: "未知错误"
+
+                    (context as? android.app.Activity)?.runOnUiThread {
+                        Toast.makeText(
+                            context,
+                            "自动授权失败：$errorMsg\n\n请使用手动方式授权",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        onResult(false)
+                    }
+                }
+            }.start()
         }
     } else {
         dialog.setNegativeButton("取消") { _, _ -> 
