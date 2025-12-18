@@ -22,7 +22,7 @@ afterEvaluate {
                 pom {
                     name = 'Stellar API'
                     description = 'Stellar privileged API framework based on Shizuku'
-                    url = 'https://github.com/yangFenTuoZi/Stellar'
+                    url = 'https://github.com/RORO2239/Stellar'
 
                     licenses {
                         license {
@@ -39,9 +39,9 @@ afterEvaluate {
                     }
 
                     scm {
-                        connection = 'scm:git:git://github.com/yangFenTuoZi/Stellar.git'
-                        developerConnection = 'scm:git:ssh://github.com/yangFenTuoZi/Stellar.git'
-                        url = 'https://github.com/yangFenTuoZi/Stellar'
+                        connection = 'scm:git:git://github.com/RORO2239/Stellar.git'
+                        developerConnection = 'scm:git:ssh://github.com/RORO2239/Stellar.git'
+                        url = 'https://github.com/RORO2239/Stellar'
                     }
                 }
             }
@@ -50,7 +50,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/yangFenTuoZi/Stellar")
+                url = uri("https://maven.pkg.github.com/RORO2239/Stellar")
                 credentials {
                     username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
                     password = project.findProperty("gpr.token") ?: System.getenv("GITHUB_TOKEN")
