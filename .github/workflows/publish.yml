@@ -1,15 +1,11 @@
-name: Publish to GitHub Packages
+name: Publish to JitPack
 
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +25,8 @@ jobs:
       - name: 授予 gradlew 执行权限
         run: chmod +x gradlew
 
-      - name: 发布到 GitHub Packages
-        run: ./gradlew publish
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 构建项目
+        run: ./gradlew build --stacktrace
+
+      - name: 验证 JitPack 构建
+        run: ./gradlew install --stacktrace
