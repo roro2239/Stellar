@@ -189,42 +189,125 @@ class AdbPairingService : Service() {
     }
 
     private fun handleResult(success: Boolean, exception: Throwable?) {
-        if (success) {
-            Log.i(tag, "配对成功")
-            stopForeground(STOP_FOREGROUND_REMOVE)
+        retryHandler.post {
+            if (success) {
+                Log.i(tag, "配对成功")
 
-            val title = "配对成功"
-            val text = "您现在可以启动 Stellar 服务了。"
+                val preferences = StellarSettings.getPreferences()
+                val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+                val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
 
-            getSystemService(NotificationManager::class.java).notify(
-                notificationId,
-                Notification.Builder(this, notificationChannel)
+                if (tcpipPortEnabled && currentPort.isNullOrEmpty()) {
+                    val systemPort = roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
+                    if (systemPort in 1..65535) {
+                        preferences.edit()
+                            .putString(StellarSettings.TCPIP_PORT, systemPort.toString())
+                            .apply()
+                        Log.i(tag, "自动设置 TCP 端口: $systemPort")
+                    }
+                }
+
+                val title = "配对成功，正在启动服务..."
+                val text = "请稍候"
+
+                val successNotification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
                     .setContentTitle(title)
                     .setContentText(text)
+                    .setOngoing(false)
                     .build()
-            )
-            
-            stopSearch()
-            stopSelf()
-        } else {
-            val title = "配对失败，正在重试..."
-            val text = "请稍候，将自动返回输入界面"
-            
-            Log.i(tag, "配对失败，正在重试")
-            
-            getSystemService(NotificationManager::class.java).notify(
-                notificationId,
-                Notification.Builder(this, notificationChannel)
+
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        startForeground(notificationId, successNotification,
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                    } else {
+                        startForeground(notificationId, successNotification)
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "更新前台通知失败", e)
+                }
+
+                retryHandler.postDelayed({
+                    val port = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
+                        ?: roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
+
+                    if (port in 1..65535) {
+                        val intent = Intent(this, roro.stellar.manager.ui.features.starter.StarterActivity::class.java).apply {
+                            putExtra(roro.stellar.manager.ui.features.starter.StarterActivity.EXTRA_IS_ROOT, false)
+                            putExtra(roro.stellar.manager.ui.features.starter.StarterActivity.EXTRA_HOST, "127.0.0.1")
+                            putExtra(roro.stellar.manager.ui.features.starter.StarterActivity.EXTRA_PORT, port)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+
+                        val pendingIntent = PendingIntent.getActivity(
+                            this,
+                            0,
+                            intent,
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                            else
+                                PendingIntent.FLAG_UPDATE_CURRENT
+                        )
+
+                        val launchNotification = Notification.Builder(this, notificationChannel)
+                            .setSmallIcon(R.drawable.stellar_icon)
+                            .setContentTitle("配对成功")
+                            .setContentText("点击启动 Stellar 服务")
+                            .setContentIntent(pendingIntent)
+                            .setAutoCancel(true)
+                            .build()
+
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        getSystemService(NotificationManager::class.java).notify(
+                            notificationId,
+                            launchNotification
+                        )
+                    } else {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    }
+
+                    stopSearch()
+                    stopSelf()
+                }, 500)
+            } else {
+                val title = "配对失败，正在重试..."
+                val text = "请稍候，将自动返回输入界面"
+
+                Log.i(tag, "配对失败，正在重试")
+
+                val failureNotification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
                     .setContentTitle(title)
                     .setContentText(text)
+                    .setOngoing(true)
                     .build()
-            )
-            
-            retryHandler.postDelayed({
-                getSystemService(NotificationManager::class.java).notify(notificationId, createManualInputNotification(discoveredPort))
-            }, 300)
+
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        startForeground(notificationId, failureNotification,
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                    } else {
+                        startForeground(notificationId, failureNotification)
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "更新前台通知失败", e)
+                }
+
+                retryHandler.postDelayed({
+                    val retryNotification = createManualInputNotification(discoveredPort)
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            startForeground(notificationId, retryNotification,
+                                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                        } else {
+                            startForeground(notificationId, retryNotification)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(tag, "更新前台通知失败", e)
+                    }
+                }, 2000)
+            }
         }
     }
 
