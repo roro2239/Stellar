@@ -128,6 +128,10 @@ class AdbWirelessHelper {
                 onOutput(commandOutput.toString())
             }
 
+            if (flag) {
+                Thread.sleep(500)
+            }
+
             return flag
         }
     }
@@ -137,18 +141,23 @@ class AdbWirelessHelper {
         port: Int,
         timeoutMs: Long = 15000L
     ): Boolean {
-        val intervalMs = 300L
+        val intervalMs = 500L
         var elapsed = 0L
+        Log.d(AppConstants.TAG, "等待 ADB 端口 ${host}:${port} 可用...")
         while (elapsed < timeoutMs) {
             try {
-                Socket(host, port).use {
+                Socket(host, port).use { socket ->
+                    socket.soTimeout = 2000
+                    Log.i(AppConstants.TAG, "ADB 端口 ${host}:${port} 已可用")
                     return true
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.v(AppConstants.TAG, "端口 ${port} 尚未就绪 (已等待 ${elapsed}ms): ${e.message}")
                 Thread.sleep(intervalMs)
                 elapsed += intervalMs
             }
         }
+        Log.w(AppConstants.TAG, "等待 ADB 端口 ${host}:${port} 超时")
         return false
     }
 
@@ -206,7 +215,8 @@ class AdbWirelessHelper {
                     )
                 ) {
                     Log.i(AppConstants.TAG, "ADB端口从${port}切换到${newPort}，等待新端口可用...")
-                    if (!waitForAdbPortAvailable(host, newPort)) {
+                    delay(2000)
+                    if (!waitForAdbPortAvailable(host, newPort, timeoutMs = 20000L)) {
                         Log.w(
                             AppConstants.TAG,
                             "等待ADB在新端口${newPort}上监听超时"
@@ -214,6 +224,7 @@ class AdbWirelessHelper {
                         onError(Exception("等待ADB在新端口${newPort}上监听超时"))
                         return@launch
                     }
+                    delay(500)
                     newPort
                 } else {
                     if (newPort == port && newPort > 0) {
@@ -222,25 +233,41 @@ class AdbWirelessHelper {
                     port
                 }
 
-                AdbClient(host, finalPort, key).use { client ->
+                var lastError: Throwable? = null
+                val maxRetries = 5
+                for (attempt in 1..maxRetries) {
                     try {
-                        client.connect()
-                        Log.i(
-                            AppConstants.TAG,
-                            "ADB已连接到${host}:${finalPort}。正在执行启动命令..."
-                        )
+                        AdbClient(host, finalPort, key).use { client ->
+                            client.connect()
+                            Log.i(
+                                AppConstants.TAG,
+                                "ADB已连接到${host}:${finalPort}。正在执行启动命令..."
+                            )
 
-                        client.shellCommand(Starter.internalCommand) { output ->
-                            val outputString = String(output)
-                            commandOutput.append(outputString)
-                            onOutput(outputString)
-                            Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
+                            client.shellCommand(Starter.internalCommand) { output ->
+                                val outputString = String(output)
+                                commandOutput.append(outputString)
+                                onOutput(outputString)
+                                Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
+                            }
                         }
+                        lastError = null
+                        break
                     } catch (e: Throwable) {
-                        Log.e(AppConstants.TAG, "ADB连接/命令执行时出错", e)
-                        onError(e)
-                        return@launch
+                        lastError = e
+                        Log.w(AppConstants.TAG, "ADB连接尝试 $attempt/$maxRetries 失败: ${e.message}")
+                        if (attempt < maxRetries) {
+                            val delayTime = 1000L * attempt
+                            Log.d(AppConstants.TAG, "等待 ${delayTime}ms 后重试...")
+                            delay(delayTime)
+                        }
                     }
+                }
+
+                if (lastError != null) {
+                    Log.e(AppConstants.TAG, "ADB连接/命令执行失败，已重试 $maxRetries 次", lastError)
+                    onError(lastError)
+                    return@launch
                 }
 
                 Log.i(AppConstants.TAG, "通过ADB启动Stellar成功完成")
