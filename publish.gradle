@@ -16,7 +16,7 @@ afterEvaluate {
                 from components.release
 
                 groupId = 'com.github.RORO2239'
-                artifactId = project.name
+                artifactId = 'Stellar'
                 version = '1.0.0'
 
                 pom {
