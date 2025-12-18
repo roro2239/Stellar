@@ -44,6 +44,7 @@ import roro.stellar.server.util.Logger
 import roro.stellar.server.util.OsUtils
 import roro.stellar.server.util.UserHandleCompat.getAppId
 import roro.stellar.server.util.UserHandleCompat.getUserId
+import android.os.FileObserver
 import java.io.File
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -71,11 +72,16 @@ class StellarService : IStellarService.Stub() {
         clientManager = ClientManager(configManager)
 
         start(ai.sourceDir) {
+            LOGGER.w("检测到管理器应用文件变化，检查应用状态...")
             if (managerApplicationInfo == null) {
                 LOGGER.w("用户 0 中的管理器应用已卸载，正在退出...")
                 exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
+            } else {
+                LOGGER.i("管理器应用仍然存在，继续运行")
             }
         }
+        
+        registerPackageRemovedReceiver(ai)
 
         register(this)
 
@@ -710,6 +716,55 @@ class StellarService : IStellarService.Stub() {
 
     fun sendBinderToManager() {
         sendBinderToManger(this)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun registerPackageRemovedReceiver(ai: ApplicationInfo) {
+        val externalDataDir = File("/storage/emulated/0/Android/data/$MANAGER_APPLICATION_ID")
+        LOGGER.i("外部存储目录状态: exists=${externalDataDir.exists()}, path=${externalDataDir.absolutePath}")
+        
+        if (externalDataDir.exists()) {
+            val dirObserver = object : FileObserver(
+                externalDataDir.absolutePath,
+                FileObserver.ALL_EVENTS
+            ) {
+                override fun onEvent(event: Int, path: String?) {
+                    LOGGER.w("外部存储目录事件: event=${eventToString(event)}, path=$path, exists=${externalDataDir.exists()}")
+                    
+                    if (event and FileObserver.DELETE_SELF != 0 || event and FileObserver.MOVED_FROM != 0) {
+                        if (!externalDataDir.exists()) {
+                            LOGGER.w("管理器应用外部存储目录已被删除，正在退出...")
+                            exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
+                        }
+                    }
+                }
+            }
+            dirObserver.startWatching()
+            LOGGER.i("已开始监听外部存储目录（所有事件）")
+        } else {
+            LOGGER.w("外部存储目录不存在，将在下次启动时创建")
+        }
+        
+        mainHandler.postDelayed({
+            LOGGER.i("5秒后检查: 外部存储目录 exists=${externalDataDir.exists()}, 应用信息=${managerApplicationInfo != null}")
+        }, 5000)
+    }
+    
+    private fun eventToString(event: Int): String {
+        val events = mutableListOf<String>()
+        if (event and FileObserver.ACCESS != 0) events.add("ACCESS")
+        if (event and FileObserver.MODIFY != 0) events.add("MODIFY")
+        if (event and FileObserver.ATTRIB != 0) events.add("ATTRIB")
+        if (event and FileObserver.CLOSE_WRITE != 0) events.add("CLOSE_WRITE")
+        if (event and FileObserver.CLOSE_NOWRITE != 0) events.add("CLOSE_NOWRITE")
+        if (event and FileObserver.OPEN != 0) events.add("OPEN")
+        if (event and FileObserver.MOVED_FROM != 0) events.add("MOVED_FROM")
+        if (event and FileObserver.MOVED_TO != 0) events.add("MOVED_TO")
+        if (event and FileObserver.CREATE != 0) events.add("CREATE")
+        if (event and FileObserver.DELETE != 0) events.add("DELETE")
+        if (event and FileObserver.DELETE_SELF != 0) events.add("DELETE_SELF")
+        if (event and FileObserver.MOVE_SELF != 0) events.add("MOVE_SELF")
+        return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
     }
 
     companion object {
