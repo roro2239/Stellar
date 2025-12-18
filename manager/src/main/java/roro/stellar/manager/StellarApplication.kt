@@ -37,5 +37,24 @@ class StellarApplication : Application() {
         super.onCreate()
         application = this
         init(this)
+        createMarkerDirectory()
+    }
+
+    private fun createMarkerDirectory() {
+        try {
+            val markerDir = getExternalFilesDir(null)
+            if (markerDir != null) {
+                if (!markerDir.exists()) {
+                    markerDir.mkdirs()
+                }
+                val markerFile = java.io.File(markerDir, ".stellar_marker")
+                if (!markerFile.exists()) {
+                    markerFile.createNewFile()
+                }
+                LOGGER.i("已创建 Stellar 标记目录: ${markerDir.absolutePath}")
+            }
+        } catch (e: Exception) {
+            LOGGER.w("创建标记目录失败: ${e.message}")
+        }
     }
 }
