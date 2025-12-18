@@ -4,7 +4,12 @@ afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
-                from components.release
+                // 根据项目类型选择正确的 component
+                if (project.plugins.hasPlugin('com.android.library')) {
+                    from components.release
+                } else {
+                    from components.java
+                }
 
                 groupId = 'com.github.rorostudio'
                 artifactId = project.name
