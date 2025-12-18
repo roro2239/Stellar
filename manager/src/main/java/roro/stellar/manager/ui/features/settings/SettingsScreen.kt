@@ -895,12 +895,22 @@ private fun showSecureSettingsPermissionDialog(context: Context, onResult: (Bool
         .setNegativeButton("手动", click)
         .setPositiveButton("自动") { _, _ ->
             Log.i(StellarSettings.NAME, "Grant manager WRITE_SECURE_SETTINGS permission")
-            StellarSystemApis.grantRuntimePermission(
-                BuildConfig.APPLICATION_ID,
-                Manifest.permission.WRITE_SECURE_SETTINGS,
-                0
-            )
-            onResult(true)
+            try {
+                StellarSystemApis.grantRuntimePermission(
+                    BuildConfig.APPLICATION_ID,
+                    Manifest.permission.WRITE_SECURE_SETTINGS,
+                    0
+                )
+                onResult(true)
+            } catch (e: SecurityException) {
+                Log.e(StellarSettings.NAME, "Failed to grant permission automatically", e)
+                Toast.makeText(
+                    context,
+                    "自动授权失败，请使用手动方式",
+                    Toast.LENGTH_LONG
+                ).show()
+                onResult(false)
+            }
         }
     } else {
         dialog.setNegativeButton("取消") { _, _ -> 

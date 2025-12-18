@@ -82,21 +82,23 @@ object StellarSystemApis {
 
     fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
         if (!Stellar.pingBinder()) {
-            return
+            throw SecurityException("Stellar service is not available")
         }
         try {
-            PermissionManagerApis.grantRuntimePermission(packageName, permissionName, userId)
+            Stellar.grantRuntimePermission(packageName, permissionName, userId)
         } catch (tr: RemoteException) {
             throw RuntimeException(tr.message, tr)
+        } catch (e: SecurityException) {
+            throw SecurityException("Failed to grant permission: ${e.message}", e)
         }
     }
 
     fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
         if (!Stellar.pingBinder()) {
-            return
+            throw SecurityException("Stellar service is not available")
         }
         try {
-            PermissionManagerApis.revokeRuntimePermission(packageName, permissionName, userId)
+            Stellar.revokeRuntimePermission(packageName, permissionName, userId)
         } catch (tr: RemoteException) {
             throw RuntimeException(tr.message, tr)
         }

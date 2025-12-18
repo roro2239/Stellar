@@ -678,6 +678,40 @@ object Stellar {
         }
     }
 
+    /**
+     * 授予运行时权限
+     * Grant runtime permission to an application
+     *
+     * @param packageName 应用包名
+     * @param permissionName 权限名称
+     * @param userId 用户ID
+     * @throws RemoteException 远程调用异常
+     */
+    fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        try {
+            requireService().grantRuntimePermission(packageName, permissionName, userId)
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
+    /**
+     * 撤销运行时权限
+     * Revoke runtime permission from an application
+     *
+     * @param packageName 应用包名
+     * @param permissionName 权限名称
+     * @param userId 用户ID
+     * @throws RemoteException 远程调用异常
+     */
+    fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        try {
+            requireService().revokeRuntimePermission(packageName, permissionName, userId)
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
     fun interface OnBinderReceivedListener {
         fun onBinderReceived()
     }

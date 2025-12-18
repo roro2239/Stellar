@@ -67,4 +67,10 @@ interface IStellarService {
     // 更新 UID 的权限标志
     void updateFlagForUid(int uid, String permission, int flag) = 106;
 
+    // 授予运行时权限
+    void grantRuntimePermission(String packageName, String permissionName, int userId) = 107;
+
+    // 撤销运行时权限
+    void revokeRuntimePermission(String packageName, String permissionName, int userId) = 108;
+
 }
