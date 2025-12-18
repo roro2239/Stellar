@@ -12,11 +12,14 @@ import rikka.hidden.compat.adapter.ProcessObserverAdapter
 import rikka.hidden.compat.adapter.UidObserverAdapter
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
+import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.util.Logger
+import kotlin.system.exitProcess
 
 object BinderSender {
     private val LOGGER = Logger("BinderSender")
     private var stellarService: StellarService? = null
+    private var initialManagerUid: Int = -1
 
     @Throws(RemoteException::class)
     private fun sendBinder(uid: Int, pid: Int) {
@@ -73,6 +76,12 @@ object BinderSender {
 
     fun register(stellarService: StellarService?) {
         BinderSender.stellarService = stellarService
+        
+        val ai = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+        if (ai != null) {
+            initialManagerUid = ai.uid
+            LOGGER.i("初始管理器 UID: $initialManagerUid")
+        }
 
         try {
             ActivityManagerApis.registerProcessObserver(ProcessObserver())
@@ -182,6 +191,19 @@ object BinderSender {
             LOGGER.i("onUidGone: uid=%d, disabled=%s - 应用已卸载或进程已终止", uid, disabled.toString())
 
             uidGone(uid)
+            
+            if (stellarService?.checkCallerManagerPermission(uid) == true) {
+                LOGGER.w("检测到管理器应用 UID gone，检查应用是否被卸载...")
+                mainHandler.postDelayed({
+                    val ai = PackageManagerApis.getApplicationInfoNoThrow(ServerConstants.MANAGER_APPLICATION_ID, 0, 0)
+                    if (ai == null) {
+                        LOGGER.w("管理器应用已被卸载，正在退出...")
+                        exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
+                    } else {
+                        LOGGER.i("管理器应用仍然存在，可能只是进程终止")
+                    }
+                }, 2000)
+            }
         }
 
         @Throws(RemoteException::class)
@@ -193,6 +215,14 @@ object BinderSender {
                 }
                 UID_LIST.add(uid)
                 LOGGER.v("Uid %d starts", uid)
+            }
+            
+            if (initialManagerUid != -1) {
+                val ai = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+                if (ai != null && ai.uid != initialManagerUid) {
+                    LOGGER.w("检测到管理器 UID 变化: $initialManagerUid -> ${ai.uid}，正在退出...")
+                    exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
+                }
             }
 
             sendBinder(uid, -1)

@@ -43,7 +43,7 @@ object ApkChangedObservers {
 }
 
 @Suppress("DEPRECATION")
-class ApkChangedObserver(private val path: String) : FileObserver(path, DELETE) {
+class ApkChangedObserver(private val path: String) : FileObserver(path, DELETE or DELETE_SELF or MOVED_FROM) {
 
     private val listeners = mutableSetOf<ApkChangedListener>()
 
@@ -62,13 +62,15 @@ class ApkChangedObserver(private val path: String) : FileObserver(path, DELETE) 
     override fun onEvent(event: Int, path: String?) {
         Log.d("StellarServer", "onEvent: ${eventToString(event)} $path")
 
-        if ((event and 0x00008000) != 0 || path == null) {
+        if ((event and 0x00008000) != 0) {
             return
         }
 
-        if (path == "base.apk") {
-            stopWatching()
-            ArrayList(listeners).forEach { it.onApkChanged() }
+        if (path == "base.apk" || path == null) {
+            if (event and DELETE == DELETE || event and DELETE_SELF == DELETE_SELF || event and MOVED_FROM == MOVED_FROM) {
+                stopWatching()
+                ArrayList(listeners).forEach { it.onApkChanged() }
+            }
         }
     }
 
