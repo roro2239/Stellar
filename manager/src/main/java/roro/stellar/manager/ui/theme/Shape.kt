@@ -7,7 +7,6 @@ import roro.stellar.manager.ui.components.G2RoundedCorners.g2
 
 @Immutable
 data class AppShapes(
-    val iconExtraLarge: ContinuousRoundedRectangle = ContinuousRoundedRectangle(40.dp, continuity = g2),
     val iconLarge: ContinuousRoundedRectangle = ContinuousRoundedRectangle(32.dp, continuity = g2),
     val cardLarge: ContinuousRoundedRectangle = ContinuousRoundedRectangle(24.dp, continuity = g2),
     val cardMedium24: ContinuousRoundedRectangle = ContinuousRoundedRectangle(24.dp, continuity = g2),
