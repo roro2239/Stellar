@@ -71,7 +71,7 @@ jobs:
 dependencyResolutionManagement {
     repositories {
         maven {
-            url = uri("https://maven.pkg.github.com/RoRoStudio/Stellar")
+            url = uri("https://maven.pkg.github.com/RORO2239/Stellar")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
@@ -83,6 +83,19 @@ dependencyResolutionManagement {
 
 在本地开发时，设置环境变量：
 
+**Windows (PowerShell):**
+```powershell
+$env:GITHUB_ACTOR="你的GitHub用户名"
+$env:GITHUB_TOKEN="你的Personal_Access_Token"
+```
+
+**Windows (CMD):**
+```cmd
+set GITHUB_ACTOR=你的GitHub用户名
+set GITHUB_TOKEN=你的Personal_Access_Token
+```
+
+**Linux/macOS:**
 ```bash
 export GITHUB_ACTOR=你的GitHub用户名
 export GITHUB_TOKEN=你的Personal_Access_Token
@@ -116,7 +129,7 @@ version = '1.0'
 发布成功后，可以在以下位置查看：
 
 - GitHub 仓库页面 → Packages
-- 或访问：https://github.com/RoRoStudio/Stellar/packages
+- 或访问：https://github.com/RORO2239/Stellar/packages
 
 ## 常见问题
 
