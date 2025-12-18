@@ -348,6 +348,28 @@ class StellarService : IStellarService.Stub() {
         configManager.updatePermission(uid, permission, newFlag)
     }
 
+    @Throws(RemoteException::class)
+    override fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        try {
+            PermissionManagerApis.grantRuntimePermission(packageName, permissionName, userId)
+            LOGGER.i("已授予权限: $packageName - $permissionName (用户 $userId)")
+        } catch (e: Exception) {
+            LOGGER.w("授予权限失败: ${e.message}")
+            throw RemoteException("Failed to grant permission: ${e.message}")
+        }
+    }
+
+    @Throws(RemoteException::class)
+    override fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        try {
+            PermissionManagerApis.revokeRuntimePermission(packageName, permissionName, userId)
+            LOGGER.i("已撤销权限: $packageName - $permissionName (用户 $userId)")
+        } catch (e: Exception) {
+            LOGGER.w("撤销权限失败: ${e.message}")
+            throw RemoteException("Failed to revoke permission: ${e.message}")
+        }
+    }
+
     private fun onPermissionRevoked(packageName: String?) {
     }
 
