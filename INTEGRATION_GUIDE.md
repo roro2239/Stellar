@@ -45,9 +45,11 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.roro2239:Stellar:1.0.0'
+    implementation 'com.github.roro2239.stellar:<版本号>'
 }
 ```
+
+> 将 `<版本号>` 替换为 [![JitPack](https://img.shields.io/jitpack/version/com.github.RORO2239/Stellar)](https://jitpack.io/#roro2239/Stellar) 显示的最新版本号
 
 ### 2. 配置 AndroidManifest
 
