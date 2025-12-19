@@ -1,2 +1,0 @@
-# Stellar
-Another Shizuku impl
