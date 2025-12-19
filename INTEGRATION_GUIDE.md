@@ -45,8 +45,7 @@ dependencyResolutionManagement {
 
 ```gradle
 dependencies {
-    implementation 'com.github.roro2239.stellar:api:1.0.0'
-    implementation 'com.github.roro2239.stellar:provider:1.0.0'
+    implementation 'com.github.roro2239:Stellar:1.0.0'
 }
 ```
 
