@@ -93,9 +93,9 @@ class WirelessAdbViewModel(private val context: Context) : ViewModel() {
     private var adbMdns: AdbMdns? = null
     
     fun startDiscovery() {
-        adbMdns = AdbMdns(context, AdbMdns.TLS_CONNECT) { port ->
+        adbMdns = AdbMdns(context, AdbMdns.TLS_CONNECT, androidx.lifecycle.Observer { port ->
             _port.value = port
-        }
+        }, onTimeout = null)
         adbMdns?.start()
     }
     
