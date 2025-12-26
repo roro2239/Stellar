@@ -17,9 +17,10 @@ import java.util.concurrent.Executors
 
 @RequiresApi(Build.VERSION_CODES.R)
 class AdbMdns(
-    context: Context, 
+    context: Context,
     private val serviceType: String,
-    private val observer: Observer<Int>
+    private val observer: Observer<Int>,
+    private val onTimeout: (() -> Unit)? = null
 ) {
 
     private var registered = false
@@ -29,20 +30,56 @@ class AdbMdns(
     private val nsdManager: NsdManager = context.getSystemService(NsdManager::class.java)
     
     private val executor = Executors.newSingleThreadExecutor()
-    
+
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    private var startTime: Long = 0
+
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            if (running) {
+                val elapsedTime = System.currentTimeMillis() - startTime
+                if (elapsedTime >= TIMEOUT_MILLIS) {
+                    Log.v(TAG, "搜索超时，自动停止")
+                    stop()
+                    onTimeout?.invoke()
+                    return
+                }
+
+                if (registered) {
+                    Log.v(TAG, "定期刷新服务发现")
+                    try {
+                        nsdManager.stopServiceDiscovery(listener)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "停止服务发现失败", e)
+                    }
+                    registered = false
+                }
+
+                mainHandler.postDelayed({
+                    if (running && !registered) {
+                        nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
+                    }
+                }, 50)
+                mainHandler.postDelayed(this, 50)
+            }
+        }
+    }
 
     fun start() {
         if (running) return
         running = true
+        startTime = System.currentTimeMillis()
         if (!registered) {
             nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
+            mainHandler.postDelayed(refreshRunnable, 50)
         }
     }
 
     fun stop() {
         if (!running) return
         running = false
+        mainHandler.removeCallbacks(refreshRunnable)
         if (registered) {
             try {
                 nsdManager.stopServiceDiscovery(listener)
@@ -160,6 +197,8 @@ class AdbMdns(
         const val TLS_CONNECT = "_adb-tls-connect._tcp"
         const val TLS_PAIRING = "_adb-tls-pairing._tcp"
         const val TAG = "AdbMdns"
+        const val REFRESH_INTERVAL_MILLIS = 500L
+        const val TIMEOUT_MILLIS = 3 * 60 * 1000L // 3分钟
     }
 }
 
