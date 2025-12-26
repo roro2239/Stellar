@@ -70,7 +70,7 @@ class SelfStarterService : Service(), LifecycleOwner {
             portLive.observeForever(portObserver)
 
             if (adbMdns == null) {
-                adbMdns = AdbMdns(context = this, serviceType = AdbMdns.TLS_CONNECT, observer = portObserver)
+                adbMdns = AdbMdns(context = this, serviceType = AdbMdns.TLS_CONNECT, observer = portObserver, onTimeout = null)
             }
             adbMdns?.start()
         } else {
