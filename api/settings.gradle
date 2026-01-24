@@ -4,7 +4,6 @@ pluginManagement {
         mavenCentral()
         mavenLocal()
     }
-    // 插件版本声明
     plugins {
         id("com.android.application") version "8.10.0"
         id("com.android.library") version "8.10.0"

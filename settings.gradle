@@ -4,7 +4,7 @@ pluginManagement {
         mavenLocal()
         mavenCentral()
     }
-    
+
     plugins {
         id("com.android.application") version "8.10.1"
         id("com.android.library") version "8.10.1"
@@ -18,7 +18,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    
+
     repositories {
         google()
         mavenLocal()
@@ -31,7 +31,7 @@ dependencyResolutionManagement {
             }
         }
     }
-    
+
     versionCatalogs {
         libs {
             version('hidden-api', '4.4.0')
@@ -46,7 +46,6 @@ dependencyResolutionManagement {
     }
 }
 
-// Only include app modules when not building on JitPack
 if (System.getenv("JITPACK") != "true") {
     include ':server'
     include ':manager'
@@ -80,3 +79,6 @@ project(':provider').projectDir = file("$root${File.separator}provider")
 
 include ':hidden-api-stub'
 project(':hidden-api-stub').projectDir = file("$root${File.separator}hidden-api-stub")
+
+include ':userservice'
+project(':userservice').projectDir = file("$root${File.separator}userservice")

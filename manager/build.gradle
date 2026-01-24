@@ -171,10 +171,9 @@ dependencies {
     implementation 'org.bouncycastle:bcpkix-jdk18on:1.80'
 
     implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
-    
+
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    
+
     implementation 'com.github.Kyant0:Capsule:2.1.0'
 }
 apply from: rootProject.file('signing.gradle')
-
