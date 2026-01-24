@@ -39,7 +39,6 @@ class UserServiceBinder(
     }
 
     private fun handleDestroy(reply: Parcel?) {
-        Log.i(TAG, "内置方法: destroy() 被调用，准备退出进程")
         reply?.writeNoException()
         Thread {
             Thread.sleep(100)

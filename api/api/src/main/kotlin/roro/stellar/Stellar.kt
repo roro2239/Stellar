@@ -513,6 +513,24 @@ object Stellar {
         }
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    fun getLogs(): List<String> {
+        try {
+            return requireService().logs
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    fun clearLogs() {
+        try {
+            requireService().clearLogs()
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
     fun interface OnBinderReceivedListener {
         fun onBinderReceived()
     }

@@ -22,8 +22,6 @@ object UserServiceStarter {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        Log.i(TAG, "UserServiceStarter main 被调用，参数: ${args.joinToString()}")
-
         if (Looper.getMainLooper() == null) {
             Looper.prepareMainLooper()
         }
