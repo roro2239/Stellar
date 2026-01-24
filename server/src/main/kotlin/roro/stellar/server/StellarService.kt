@@ -482,6 +482,10 @@ class StellarService : IStellarService.Stub() {
             return
         }
 
+        if (checkCallerManagerPermission(callingUid)) {
+            return
+        }
+
         val clientRecord = clientManager.findClient(callingUid, callingPid)
 
         if (clientRecord == null) {
@@ -608,6 +612,10 @@ class StellarService : IStellarService.Stub() {
         val callingPid = getCallingPid()
 
         if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
+            return true
+        }
+
+        if (checkCallerManagerPermission(callingUid)) {
             return true
         }
 

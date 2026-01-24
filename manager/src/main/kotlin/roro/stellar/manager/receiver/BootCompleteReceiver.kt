@@ -55,6 +55,14 @@ class BootCompleteReceiver : BroadcastReceiver() {
             return
         }
         Shell.cmd(Starter.internalCommand).exec()
+
+        // 执行自定义开机启动命令
+        val bootCommand = StellarSettings.getPreferences()
+            .getString(StellarSettings.BOOT_COMMAND, null)
+        if (!bootCommand.isNullOrBlank()) {
+            Log.i(AppConstants.TAG, "执行自定义开机启动命令: $bootCommand")
+            Shell.cmd(bootCommand).exec()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)

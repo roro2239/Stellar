@@ -4,9 +4,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class MainScreen(
@@ -29,6 +31,13 @@ enum class MainScreen(
         iconFilled = Icons.Filled.Apps
     ),
 
+    Terminal(
+        route = "terminal_graph",
+        label = "命令",
+        icon = Icons.Outlined.Terminal,
+        iconFilled = Icons.Filled.Terminal
+    ),
+
     Settings(
         route = "settings_graph",
         label = "设置",
@@ -47,6 +56,12 @@ enum class AppsScreen(
     val route: String
 ) {
     Home("apps")
+}
+
+enum class TerminalScreen(
+    val route: String
+) {
+    Home("terminal")
 }
 
 enum class SettingsScreen(
