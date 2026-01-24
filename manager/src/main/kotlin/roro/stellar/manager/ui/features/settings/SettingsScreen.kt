@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Subject
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
@@ -80,6 +81,7 @@ import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT_WIRELESS
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
+import roro.stellar.manager.StellarSettings.DROP_PRIVILEGES
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.ktx.isComponentEnabled
 import roro.stellar.manager.ktx.setComponentEnabled
@@ -135,6 +137,10 @@ fun SettingsScreen(
     
     var tcpipPortEnabled by remember {
         mutableStateOf(preferences.getBoolean(TCPIP_PORT_ENABLED, true))
+    }
+
+    var dropPrivileges by remember {
+        mutableStateOf(preferences.getBoolean(DROP_PRIVILEGES, false))
     }
     
     var currentThemeMode by remember { mutableStateOf(ThemePreferences.themeMode.value) }
@@ -296,6 +302,70 @@ fun SettingsScreen(
                                 KEEP_START_ON_BOOT,
                                 newValue || startOnBootWireless
                             )
+                        }
+                    )
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                shape = AppShape.shapes.cardMedium
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "降权激活",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Root 启动后降权到 shell 用户运行",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Switch(
+                        checked = dropPrivileges,
+                        onCheckedChange = { newValue ->
+                            dropPrivileges = newValue
+                            savePreference(DROP_PRIVILEGES, newValue)
                         }
                     )
                 }
