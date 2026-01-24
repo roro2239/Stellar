@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__acp__Bash",
+      "Edit",
+      "Bash(cd:*)"
+    ],
+    "deny": []
+  },
+  "alwaysThinkingEnabled": false
+}

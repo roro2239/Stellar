@@ -52,6 +52,7 @@ enum class AppsScreen(
 enum class SettingsScreen(
     val route: String
 ) {
-    Home("settings")
+    Home("settings"),
+    Logs("logs")
 }
 

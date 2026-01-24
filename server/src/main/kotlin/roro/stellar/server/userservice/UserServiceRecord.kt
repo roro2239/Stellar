@@ -77,8 +77,7 @@ class UserServiceRecord(
         }
         removed = true
 
-        LOGGER.i("停止服务: token=%s, package=%s, class=%s, servicePid=%d, serviceBinder=%s",
-            token, packageName, className, servicePid, serviceBinder)
+        LOGGER.i("停止服务: %s", className)
 
         serviceBinder?.let { binder ->
             try {
