@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -347,13 +348,14 @@ private fun LogItem(log: String) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
                 .padding(12.dp)
         ) {
             // 左侧级别指示条
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(40.dp)
+                    .fillMaxHeight()
                     .clip(AppShape.shapes.iconSmall)
                     .background(levelColor)
             )
