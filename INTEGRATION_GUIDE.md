@@ -308,6 +308,123 @@ val pm = IPackageManager.Stub.asInterface(StellarBinderWrapper(binder))
 // 现在可以使用特权 PackageManager API
 ```
 
+### 用户服务：`StellarUserService`
+
+用户服务允许你在 Stellar 服务进程中运行自定义的 Binder 服务，以特权身份执行操作。
+
+#### 核心方法
+
+```kotlin
+// 绑定用户服务
+StellarUserService.bindUserService(
+    args: UserServiceArgs,           // 服务参数配置
+    callback: ServiceCallback,       // 服务回调
+    handler: Handler? = mainHandler  // 回调执行的 Handler（可选）
+)
+
+// 解绑用户服务
+StellarUserService.unbindUserService(args: UserServiceArgs)
+
+// 获取已绑定的服务 Binder（如果存在且存活）
+StellarUserService.peekUserService(args: UserServiceArgs): IBinder?
+
+// 获取当前活跃的用户服务数量
+StellarUserService.getUserServiceCount(): Int
+```
+
+#### 服务回调接口
+
+```kotlin
+interface ServiceCallback {
+    // 服务连接成功
+    fun onServiceConnected(service: IBinder)
+
+    // 服务断开连接
+    fun onServiceDisconnected()
+
+    // 服务启动失败（可选实现）
+    fun onServiceStartFailed(errorCode: Int, message: String) {}
+}
+```
+
+### 用户服务参数：`UserServiceArgs`
+
+使用 Builder 模式配置用户服务参数：
+
+```kotlin
+val args = UserServiceArgs.Builder(MyUserService::class.java)
+    .processNameSuffix("myservice")  // 进程名后缀，默认 "userservice"
+    .debug(BuildConfig.DEBUG)        // 是否启用调试模式
+    .versionCode(BuildConfig.VERSION_CODE.toLong())  // 版本号
+    .tag("my-tag")                   // 可选标签
+    .serviceMode(ServiceMode.DAEMON) // 服务模式
+    .build()
+```
+
+#### 参数说明
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `className` | String | 必填 | 服务类的完整类名 |
+| `processNameSuffix` | String | `"userservice"` | 进程名后缀 |
+| `debug` | Boolean | `false` | 是否启用调试模式 |
+| `use32Bit` | Boolean | `false` | 是否使用 32 位进程 |
+| `versionCode` | Long | `0` | 服务版本号 |
+| `tag` | String? | `null` | 可选标签 |
+| `serviceMode` | ServiceMode | `ONE_TIME` | 服务运行模式 |
+| `useStandaloneDex` | Boolean | `false` | 是否使用独立 DEX |
+
+#### 独立 DEX 模式配置
+
+如果使用独立 DEX 模式（`useStandaloneDex = true`），需要在应用的 `build.gradle` 中引用 Stellar 提供的构建脚本：
+
+```gradle
+// 在 plugins 块之后添加
+apply from: project(':userservice').file('userservice-standalone.gradle')
+```
+
+该脚本会自动：
+1. 扫描项目中以 `UserService` 结尾的类（如 `DemoUserService`）
+2. 将这些类及其 AIDL 接口编译为独立的 DEX 文件
+3. 将 `service.dex` 打包到 APK 的 `userservice/` 目录中
+
+如果需要包含额外的类，可以通过扩展配置：
+
+```gradle
+stellarUserService {
+    extraClasses = ['com.example.MyHelper', 'com.example.MyUtils']
+}
+```
+
+**命名约定：** 用户服务类必须以 `UserService` 结尾（如 `MyUserService`），对应的 AIDL 接口应命名为 `IMyUserService`。
+
+### 服务模式：`ServiceMode`
+
+```kotlin
+enum class ServiceMode {
+    ONE_TIME,  // 一次性服务：客户端断开后服务自动停止
+    DAEMON     // 守护进程：服务持续运行，直到显式停止
+}
+```
+
+### 用户服务辅助类：`UserServiceHelper`
+
+提供与用户服务 Binder 交互的辅助方法：
+
+```kotlin
+// 销毁用户服务
+UserServiceHelper.destroy(binder: IBinder)
+
+// 检查服务是否存活
+UserServiceHelper.isAlive(binder: IBinder): Boolean
+
+// 获取服务进程的 UID
+UserServiceHelper.getUid(binder: IBinder): Int
+
+// 获取服务进程的 PID
+UserServiceHelper.getPid(binder: IBinder): Int
+```
+
 ---
 
 ## 代码示例
@@ -466,6 +583,151 @@ class FollowStellarStartup : BroadcastReceiver() {
 </receiver>
 ```
 
+### 示例 7：创建用户服务
+
+首先，定义 AIDL 接口：
+
+```aidl
+// src/main/aidl/com/example/IMyUserService.aidl
+package com.example;
+
+interface IMyUserService {
+    String executeCommand(String command) = 1;
+    String getSystemProperty(String name) = 2;
+}
+```
+
+然后，实现服务类：
+
+```kotlin
+// src/main/java/com/example/MyUserService.kt
+package com.example
+
+class MyUserService : IMyUserService.Stub() {
+
+    override fun executeCommand(command: String): String {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+            val reader = java.io.BufferedReader(
+                java.io.InputStreamReader(process.inputStream)
+            )
+            val output = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                output.append(line).append("\n")
+            }
+            process.waitFor()
+            output.toString().trim()
+        } catch (e: Exception) {
+            "Error: ${e.message}"
+        }
+    }
+
+    override fun getSystemProperty(name: String): String {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("getprop", name))
+            val reader = java.io.BufferedReader(
+                java.io.InputStreamReader(process.inputStream)
+            )
+            reader.readLine() ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+}
+```
+
+---
+
+### 示例 8：绑定和使用用户服务
+
+```kotlin
+import roro.stellar.userservice.StellarUserService
+import roro.stellar.userservice.UserServiceArgs
+import roro.stellar.userservice.ServiceMode
+
+class MainActivity : ComponentActivity() {
+
+    private var userService: IMyUserService? = null
+
+    private val serviceCallback = object : StellarUserService.ServiceCallback {
+        override fun onServiceConnected(service: IBinder) {
+            Log.i("MyApp", "用户服务已连接")
+            userService = IMyUserService.Stub.asInterface(service)
+            // 现在可以使用服务了
+            executeCommandViaService()
+        }
+
+        override fun onServiceDisconnected() {
+            Log.w("MyApp", "用户服务已断开")
+            userService = null
+        }
+
+        override fun onServiceStartFailed(errorCode: Int, message: String) {
+            Log.e("MyApp", "用户服务启动失败: $errorCode - $message")
+        }
+    }
+
+    private fun bindUserService() {
+        val args = UserServiceArgs.Builder(MyUserService::class.java)
+            .processNameSuffix("myservice")
+            .debug(BuildConfig.DEBUG)
+            .versionCode(BuildConfig.VERSION_CODE.toLong())
+            .serviceMode(ServiceMode.ONE_TIME)
+            .build()
+
+        StellarUserService.bindUserService(args, serviceCallback)
+    }
+
+    private fun executeCommandViaService() {
+        thread {
+            try {
+                val result = userService?.executeCommand("ls -la /sdcard")
+                Log.i("MyApp", "命令结果: $result")
+            } catch (e: Exception) {
+                Log.e("MyApp", "执行命令失败", e)
+            }
+        }
+    }
+}
+```
+
+---
+
+### 示例 9：守护进程模式的用户服务
+
+```kotlin
+// 使用 DAEMON 模式创建持久运行的服务
+fun bindDaemonService() {
+    val args = UserServiceArgs.Builder(MyUserService::class.java)
+        .processNameSuffix("daemon")
+        .serviceMode(ServiceMode.DAEMON)  // 守护进程模式
+        .versionCode(BuildConfig.VERSION_CODE.toLong())
+        .build()
+
+    StellarUserService.bindUserService(args, object : StellarUserService.ServiceCallback {
+        override fun onServiceConnected(service: IBinder) {
+            Log.i("MyApp", "守护服务已启动")
+            // 服务将持续运行，直到显式调用 unbindUserService
+        }
+
+        override fun onServiceDisconnected() {
+            Log.i("MyApp", "守护服务已停止")
+        }
+    })
+}
+
+// 停止守护服务
+fun stopDaemonService() {
+    val args = UserServiceArgs.Builder(MyUserService::class.java)
+        .processNameSuffix("daemon")
+        .serviceMode(ServiceMode.DAEMON)
+        .build()
+
+    StellarUserService.unbindUserService(args)
+}
+```
+
 ---
 
 ## 从 Shizuku 迁移
@@ -550,8 +812,6 @@ import roro.stellar.StellarHelper
 
 将代码中所有 Shizuku API 调用替换为对应的 Stellar API。大部分 API 只需要将类名从 `Shizuku` 改为 `Stellar`，少数 API 有细微差异（如 `getUid()` 改为属性 `uid`）。
 
-**重要变更：** Stellar 移除了 Shizuku 的 `UserService` 功能。如果你的代码使用了 `Shizuku.bindUserService()` 或 `UserService`，需要改用其他方式实现（如直接使用 `newProcess()` 或 Binder 调用）。
-
 | 功能说明 | Stellar API | Shizuku API |
 |----------|-------------|-------------|
 | 检查服务是否运行 | `Stellar.pingBinder()` | `Shizuku.pingBinder()` |
@@ -567,6 +827,9 @@ import roro.stellar.StellarHelper
 | 移除服务断开监听器 | `Stellar.removeBinderDeadListener()` | `Shizuku.removeBinderDeadListener()` |
 | 移除权限请求结果监听器 | `Stellar.removeRequestPermissionResultListener()` | `Shizuku.removeRequestPermissionResultListener()` |
 | 创建特权进程执行命令 | `Stellar.newProcess()` | `Shizuku.newProcess()`（已在最新版 API 弃用） |
+| 绑定用户服务 | `StellarUserService.bindUserService()` | `Shizuku.bindUserService()` |
+| 解绑用户服务 | `StellarUserService.unbindUserService()` | `Shizuku.unbindUserService()` |
+| 获取用户服务 | `StellarUserService.peekUserService()` | `Shizuku.peekUserService()` |
 
 #### 步骤 5：更新监听器接口
 
@@ -833,4 +1096,11 @@ fun executeCommandWithErrorHandling() {
 
 ## 许可证
 
-Stellar 使用 GNU General Public License v3.0 许可证。详见 LICENSE 文件。
+本项目的修改部分采用 [Mozilla Public License 2.0](LICENSE)。
+
+原始 Shizuku 代码保留其 Apache License 2.0 许可证。
+
+| 组件 | 许可证 |
+|------|--------|
+| Stellar 修改部分 | Mozilla Public License 2.0 |
+| [Shizuku](https://github.com/RikkaApps/Shizuku) 原始代码 | Apache License 2.0 |

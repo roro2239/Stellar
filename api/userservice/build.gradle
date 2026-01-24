@@ -1,0 +1,34 @@
+plugins {
+    id('com.android.library')
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'roro.stellar.userservice'
+    buildFeatures {
+        buildConfig false
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlin {
+        jvmToolchain(21)
+    }
+}
+
+dependencies {
+    api project(':aidl')
+    api project(':shared')
+    api project(':api')
+
+    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
+}
+
+apply from: rootProject.file('publish.gradle')

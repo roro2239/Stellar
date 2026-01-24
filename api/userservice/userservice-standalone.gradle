@@ -1,0 +1,218 @@
+
+class StellarUserServiceExtension {
+    List<String> extraClasses = []
+}
+
+project.extensions.create('stellarUserService', StellarUserServiceExtension)
+
+project.afterEvaluate {
+    def extension = project.stellarUserService
+
+    project.android.applicationVariants.all { variant ->
+        def variantName = variant.name.capitalize()
+        def buildType = variant.buildType.name
+
+        def compileTaskName = "compileUserServiceClasses${variantName}"
+        def compileTask = project.tasks.register(compileTaskName) {
+            group = 'stellar'
+            description = "编译 UserService 类为独立 jar (${variantName})"
+
+            dependsOn variant.javaCompileProvider
+
+            doLast {
+                def classesDir = variant.javaCompileProvider.get().destinationDirectory.asFile.get()
+                def kotlinClassesDir = new File(project.buildDir, "tmp/kotlin-classes/${variant.name}")
+
+                def outputDir = new File(project.buildDir, "stellar/userservice/${variant.name}")
+                def classesOutputDir = new File(outputDir, "classes")
+                def dexOutputDir = new File(outputDir, "dex")
+
+                outputDir.mkdirs()
+                classesOutputDir.mkdirs()
+                dexOutputDir.mkdirs()
+
+                def userServiceClasses = [] as Set
+                def scanForUserService = { File dir ->
+                    if (!dir.exists()) return
+                    dir.eachFileRecurse { file ->
+                        if (file.name.endsWith('UserService.class') &&
+                            !file.name.contains('$') &&
+                            !file.name.startsWith('I')) {
+                            def relativePath = dir.toPath().relativize(file.toPath()).toString()
+                            def className = relativePath.replace('\\', '/').replace('/', '.').replace('.class', '')
+                            userServiceClasses.add(className)
+                            project.logger.lifecycle("stellarUserService: 发现 UserService 类: ${className}")
+                        }
+                    }
+                }
+                scanForUserService(classesDir)
+                scanForUserService(kotlinClassesDir)
+
+                if (userServiceClasses.isEmpty()) {
+                    project.logger.warn("stellarUserService: 未找到 UserService 类，跳过")
+                    return
+                }
+
+                def copyClassAndInnerClasses = { File sourceDir, String className ->
+                    def classPath = className.replace('.', '/')
+                    def classFile = new File(sourceDir, "${classPath}.class")
+                    if (!classFile.exists()) return false
+
+                    def packagePath = classPath.substring(0, classPath.lastIndexOf('/'))
+                    def simpleClassName = className.substring(className.lastIndexOf('.') + 1)
+                    def targetDir = new File(classesOutputDir, packagePath)
+                    targetDir.mkdirs()
+
+                    project.copy {
+                        from classFile
+                        into targetDir
+                    }
+
+                    classFile.parentFile.listFiles()?.findAll {
+                        it.name.startsWith("${simpleClassName}\$") && it.name.endsWith('.class')
+                    }?.each { innerClass ->
+                        project.copy {
+                            from innerClass
+                            into targetDir
+                        }
+                    }
+                    return true
+                }
+
+                userServiceClasses.each { serviceClassName ->
+                    def copied = copyClassAndInnerClasses(classesDir, serviceClassName)
+                    if (!copied) copied = copyClassAndInnerClasses(kotlinClassesDir, serviceClassName)
+
+                    def simpleServiceName = serviceClassName.substring(serviceClassName.lastIndexOf('.') + 1)
+                    def packageName = serviceClassName.substring(0, serviceClassName.lastIndexOf('.'))
+                    def aidlInterfaceName = "${packageName}.I${simpleServiceName.replace('UserService', '')}UserService"
+
+                    def aidlCopied = copyClassAndInnerClasses(classesDir, aidlInterfaceName)
+                    if (!aidlCopied) aidlCopied = copyClassAndInnerClasses(kotlinClassesDir, aidlInterfaceName)
+
+                    if (aidlCopied) {
+                        project.logger.lifecycle("stellarUserService: 复制 AIDL 接口: ${aidlInterfaceName}")
+                    }
+                }
+
+                extension.extraClasses.each { extraClassName ->
+                    def copied = copyClassAndInnerClasses(classesDir, extraClassName)
+                    if (!copied) copyClassAndInnerClasses(kotlinClassesDir, extraClassName)
+                }
+
+                def classCount = 0
+                classesOutputDir.eachFileRecurse { if (it.name.endsWith('.class')) classCount++ }
+                project.logger.lifecycle("stellarUserService: 已复制 ${classCount} 个类文件到 ${classesOutputDir}")
+            }
+        }
+
+        def dexTaskName = "dexUserServiceClasses${variantName}"
+        def dexTask = project.tasks.register(dexTaskName) {
+            group = 'stellar'
+            description = "将 UserService 类转换为 dex (${variantName})"
+
+            dependsOn compileTask
+
+            doLast {
+                def outputDir = new File(project.buildDir, "stellar/userservice/${variant.name}")
+                def classesOutputDir = new File(outputDir, "classes")
+                def dexOutputDir = new File(outputDir, "dex")
+
+                def androidHome = System.getenv("ANDROID_HOME") ?: project.android.sdkDirectory.absolutePath
+                def buildToolsVersion = project.android.buildToolsVersion
+                def d8Jar = new File(androidHome, "build-tools/${buildToolsVersion}/lib/d8.jar")
+                def androidJar = new File(androidHome, "platforms/android-${project.android.compileSdk}/android.jar")
+
+                if (!d8Jar.exists()) {
+                    throw new GradleException("找不到 d8.jar: ${d8Jar}")
+                }
+
+                def classFiles = []
+                classesOutputDir.eachFileRecurse { file ->
+                    if (file.name.endsWith('.class')) {
+                        classFiles << file.absolutePath
+                    }
+                }
+
+                if (classFiles.isEmpty()) {
+                    throw new GradleException("没有找到要转换的 class 文件")
+                }
+
+                dexOutputDir.mkdirs()
+
+                def d8Args = ['--output', dexOutputDir.absolutePath,
+                              '--min-api', project.android.defaultConfig.minSdk.toString()]
+
+                if (androidJar.exists()) {
+                    d8Args.addAll(['--lib', androidJar.absolutePath])
+                }
+
+                try {
+                    variant.compileConfiguration.incoming.artifactView { config ->
+                        config.attributes { container ->
+                            container.attribute(
+                                org.gradle.api.attributes.Attribute.of("artifactType", String),
+                                "android-classes-jar"
+                            )
+                        }
+                    }.files.each { file ->
+                        if (file.exists()) {
+                            d8Args.addAll(['--classpath', file.absolutePath])
+                        }
+                    }
+                } catch (Exception e) {
+                    project.logger.warn("stellarUserService: 无法获取编译依赖: ${e.message}")
+                }
+
+                d8Args.addAll(classFiles)
+
+                project.javaexec {
+                    classpath = project.files(d8Jar)
+                    mainClass = 'com.android.tools.r8.D8'
+                    args = d8Args
+                }
+
+                def dexFile = new File(dexOutputDir, "classes.dex")
+                if (dexFile.exists()) {
+                    project.logger.lifecycle("stellarUserService: 已生成 ${dexFile}")
+                } else {
+                    throw new GradleException("dex 文件生成失败")
+                }
+            }
+        }
+
+        def resourcesDir = new File(project.buildDir, "stellar/userservice/${variant.name}/javaResources")
+        def userserviceDir = new File(resourcesDir, "userservice")
+
+        def copyTaskName = "copyUserServiceDex${variantName}"
+        def copyTask = project.tasks.register(copyTaskName) {
+            group = 'stellar'
+            description = "复制 UserService dex 到资源目录 (${variantName})"
+
+            dependsOn dexTask
+
+            doLast {
+                def outputDir = new File(project.buildDir, "stellar/userservice/${variant.name}")
+                def dexFile = new File(outputDir, "dex/classes.dex")
+
+                if (!dexFile.exists()) {
+                    throw new GradleException("classes.dex 不存在: ${dexFile}")
+                }
+
+                userserviceDir.mkdirs()
+                project.copy {
+                    from dexFile
+                    into userserviceDir
+                    rename { 'service.dex' }
+                }
+                project.logger.lifecycle("stellarUserService: 已复制 dex 到 ${userserviceDir}/service.dex")
+            }
+        }
+
+        project.android.sourceSets.getByName(variant.name).resources.srcDir(resourcesDir)
+
+        project.tasks.named("process${variantName}JavaRes").configure {
+            dependsOn copyTask
+        }
+    }
+}
