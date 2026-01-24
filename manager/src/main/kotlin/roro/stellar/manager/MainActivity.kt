@@ -33,9 +33,11 @@ import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
 import roro.stellar.manager.ui.navigation.routes.MainScreen
+import roro.stellar.manager.ui.navigation.routes.SettingsScreen as SettingsScreenRoute
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
+import roro.stellar.manager.ui.features.logs.LogsScreen
 import roro.stellar.Stellar
 
 class MainActivity : ComponentActivity() {
@@ -186,7 +188,19 @@ private fun MainScreenContent(
                 route = MainScreen.Settings.route
             ) {
                 composable("settings") {
-                    SettingsScreen(topAppBarState = topAppBarState)
+                    SettingsScreen(
+                        topAppBarState = topAppBarState,
+                        onNavigateToLogs = {
+                            navController.navigate(SettingsScreenRoute.Logs.route)
+                        }
+                    )
+                }
+                composable(SettingsScreenRoute.Logs.route) {
+                    LogsScreen(
+                        onBackClick = {
+                            navController.safePopBackStack()
+                        }
+                    )
                 }
             }
         }

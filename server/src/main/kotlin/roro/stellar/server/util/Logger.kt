@@ -2,10 +2,34 @@ package roro.stellar.server.util
 
 import android.util.Log
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.logging.FileHandler
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
+
+data class LogEntry(
+    val timestamp: Long,
+    val level: Int,
+    val tag: String?,
+    val message: String
+) {
+    fun getLevelName(): String = when (level) {
+        Log.VERBOSE -> "V"
+        Log.DEBUG -> "D"
+        Log.INFO -> "I"
+        Log.WARN -> "W"
+        Log.ERROR -> "E"
+        else -> "?"
+    }
+
+    fun format(): String {
+        val dateFormat = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.getDefault())
+        return "${dateFormat.format(Date(timestamp))} ${getLevelName()}/$tag: $message"
+    }
+}
 
 class Logger {
     private val tag: String?
@@ -26,6 +50,31 @@ class Logger {
             LOGGER.addHandler(fh)
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+    }
+
+    companion object {
+        private const val MAX_LOG_ENTRIES = 500
+        private val logBuffer = CopyOnWriteArrayList<LogEntry>()
+
+        @JvmStatic
+        fun getLogs(): List<LogEntry> = logBuffer.toList()
+
+        @JvmStatic
+        fun getLogsFormatted(): List<String> = logBuffer.map { it.format() }
+
+        @JvmStatic
+        fun clearLogs() {
+            logBuffer.clear()
+        }
+
+        @JvmStatic
+        internal fun addLog(level: Int, tag: String?, message: String) {
+            val entry = LogEntry(System.currentTimeMillis(), level, tag, message)
+            logBuffer.add(entry)
+            while (logBuffer.size > MAX_LOG_ENTRIES) {
+                logBuffer.removeAt(0)
+            }
         }
     }
 
@@ -143,6 +192,7 @@ class Logger {
 
     fun println(priority: Int, msg: String): Int {
         LOGGER?.info(msg)
+        addLog(priority, tag, msg)
         return Log.println(priority, tag, msg)
     }
 }

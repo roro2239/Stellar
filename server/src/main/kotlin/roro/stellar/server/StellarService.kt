@@ -754,6 +754,16 @@ class StellarService : IStellarService.Stub() {
         return userServiceManager.getUserServiceCount(getCallingUid())
     }
 
+    override fun getLogs(): List<String> {
+        enforceManagerPermission("getLogs")
+        return Logger.getLogsFormatted()
+    }
+
+    override fun clearLogs() {
+        enforceManagerPermission("clearLogs")
+        Logger.clearLogs()
+    }
+
     @CallSuper
     @Throws(RemoteException::class)
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
@@ -787,8 +797,7 @@ class StellarService : IStellarService.Stub() {
     @Suppress("DEPRECATION")
     private fun registerPackageRemovedReceiver(ai: ApplicationInfo) {
         val externalDataDir = File("/storage/emulated/0/Android/data/$MANAGER_APPLICATION_ID")
-        LOGGER.i("外部存储目录状态: exists=${externalDataDir.exists()}, path=${externalDataDir.absolutePath}")
-        
+
         if (externalDataDir.exists()) {
             val dirObserver = object : FileObserver(
                 externalDataDir.absolutePath,
@@ -806,14 +815,9 @@ class StellarService : IStellarService.Stub() {
                 }
             }
             dirObserver.startWatching()
-            LOGGER.i("已开始监听外部存储目录（所有事件）")
         } else {
             LOGGER.w("外部存储目录不存在，将在下次启动时创建")
         }
-        
-        mainHandler.postDelayed({
-            LOGGER.i("5秒后检查: 外部存储目录 exists=${externalDataDir.exists()}, 应用信息=${managerApplicationInfo != null}")
-        }, 5000)
     }
     
     private fun eventToString(event: Int): String {

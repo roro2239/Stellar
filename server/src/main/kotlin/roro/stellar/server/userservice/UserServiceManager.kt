@@ -29,8 +29,6 @@ class UserServiceManager {
         args: Bundle,
         callback: IUserServiceCallback?
     ): String? {
-        LOGGER.i("startUserService called: uid=%d, pid=%d", callingUid, callingPid)
-
         val packageName = args.getString(UserServiceConstants.ARG_PACKAGE_NAME)
         val className = args.getString(UserServiceConstants.ARG_CLASS_NAME)
         val processNameSuffix = args.getString(UserServiceConstants.ARG_PROCESS_NAME_SUFFIX)
@@ -42,8 +40,6 @@ class UserServiceManager {
         val useStandaloneDex = args.getBoolean(UserServiceConstants.ARG_USE_STANDALONE_DEX, false)
         val verificationToken = args.getString(UserServiceConstants.ARG_VERIFICATION_TOKEN) ?: ""
         val userId = UserHandleCompat.getUserId(callingUid)
-
-        LOGGER.i("Args: package=%s, class=%s, suffix=%s", packageName, className, processNameSuffix)
 
         if (packageName.isNullOrEmpty() || className.isNullOrEmpty()) {
             LOGGER.w("参数无效: packageName=%s, className=%s", packageName, className)
@@ -111,7 +107,7 @@ class UserServiceManager {
         setupApkObserver(record, apkPath)
 
         val cmd = generateStartCommand(record, apkPath, debug, use32Bit, useStandaloneDex)
-        LOGGER.i("启动 UserService: %s", cmd)
+        LOGGER.i("启动 UserService: %s", record.className)
 
         try {
             Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd))
@@ -130,7 +126,7 @@ class UserServiceManager {
     fun stopUserService(token: String): Boolean {
         val record = servicesByToken[token] ?: return false
 
-        LOGGER.i("停止 UserService: token=%s, package=%s", token, record.packageName)
+        LOGGER.i("停止 UserService: %s", record.className)
         record.removeSelf()
         return true
     }

@@ -63,4 +63,11 @@ interface IStellarService {
 
     int getUserServiceCount() = 203;
 
+    // ============================================
+    // 日志相关接口
+
+    List<String> getLogs() = 300;
+
+    void clearLogs() = 301;
+
 }
