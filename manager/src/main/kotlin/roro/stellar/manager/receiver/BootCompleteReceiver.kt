@@ -18,6 +18,7 @@ import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.ui.features.starter.SelfStarterService
 import roro.stellar.manager.ui.features.starter.Starter
+import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.UserHandleCompat
 
 class BootCompleteReceiver : BroadcastReceiver() {
@@ -56,13 +57,11 @@ class BootCompleteReceiver : BroadcastReceiver() {
         }
         Shell.cmd(Starter.internalCommand).exec()
 
-        // 执行自定义开机启动命令
-        val bootCommand = StellarSettings.getPreferences()
-            .getString(StellarSettings.BOOT_COMMAND, null)
-        if (!bootCommand.isNullOrBlank()) {
-            Log.i(AppConstants.TAG, "执行自定义开机启动命令: $bootCommand")
-            Shell.cmd(bootCommand).exec()
-        }
+        Log.i(AppConstants.TAG, "执行开机自启命令")
+        CommandExecutor.executeAutoStartCommands()
+
+        Log.i(AppConstants.TAG, "执行跟随服务命令")
+        CommandExecutor.executeFollowServiceCommands()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
