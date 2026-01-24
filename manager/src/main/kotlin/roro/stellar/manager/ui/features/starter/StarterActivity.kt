@@ -79,6 +79,7 @@ import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.StellarTheme
+import roro.stellar.manager.util.CommandExecutor
 import java.net.ConnectException
 import javax.net.ssl.SSLProtocolException
 
@@ -832,6 +833,10 @@ class StarterViewModel(
             val currentState = _state.value
             if (currentState is StarterState.Loading) {
                 _state.value = currentState.copy(isSuccess = true)
+                // 执行跟随服务命令
+                launch(Dispatchers.IO) {
+                    CommandExecutor.executeFollowServiceCommands()
+                }
             }
         }
     }

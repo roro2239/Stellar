@@ -20,6 +20,7 @@ import roro.stellar.manager.AppConstants
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
+import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 
@@ -129,7 +130,11 @@ class SelfStarterService : Service(), LifecycleOwner {
                     stopSelf()
                 }
             },
-            onSuccess = { lifecycleScope.launch(Dispatchers.Main) { stopSelf() } })
+            onSuccess = {
+                Log.i(AppConstants.TAG, "服务启动成功，执行跟随服务命令")
+                CommandExecutor.executeFollowServiceCommands()
+                lifecycleScope.launch(Dispatchers.Main) { stopSelf() }
+            })
     }
 
     override fun onDestroy() {
