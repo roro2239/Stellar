@@ -29,6 +29,7 @@ import roro.stellar.manager.ui.features.apps.AppsScreen
 import roro.stellar.manager.ui.features.home.HomeScreen
 import roro.stellar.manager.ui.features.home.HomeViewModel
 import roro.stellar.manager.ui.features.settings.SettingsScreen
+import roro.stellar.manager.ui.features.terminal.TerminalScreen
 import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
@@ -182,7 +183,18 @@ private fun MainScreenContent(
                     )
                 }
             }
-            
+
+            navigation(
+                startDestination = "terminal",
+                route = MainScreen.Terminal.route
+            ) {
+                composable("terminal") {
+                    TerminalScreen(
+                        topAppBarState = topAppBarState
+                    )
+                }
+            }
+
             navigation(
                 startDestination = "settings",
                 route = MainScreen.Settings.route

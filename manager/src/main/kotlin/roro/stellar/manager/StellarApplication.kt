@@ -4,7 +4,11 @@ import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
+import roro.stellar.Stellar
 import roro.stellar.manager.compat.BuildUtils.atLeast30
 import roro.stellar.manager.util.Logger.Companion.LOGGER
 
@@ -38,6 +42,30 @@ class StellarApplication : Application() {
         application = this
         init(this)
         createMarkerDirectory()
+        setupFollowStartupListener()
+    }
+
+    private fun setupFollowStartupListener() {
+        Stellar.addBinderReceivedListener(Stellar.OnBinderReceivedListener {
+            val followCommand = StellarSettings.getPreferences()
+                .getString(StellarSettings.FOLLOW_STARTUP_COMMAND, null)
+            if (!followCommand.isNullOrBlank()) {
+                LOGGER.i("执行跟随启动命令: $followCommand")
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val process = Stellar.newProcess(
+                            arrayOf("sh", "-c", followCommand),
+                            null,
+                            null
+                        )
+                        val exitCode = process.waitFor()
+                        LOGGER.i("跟随启动命令执行完成，退出码: $exitCode")
+                    } catch (e: Exception) {
+                        LOGGER.e("执行跟随启动命令失败: ${e.message}")
+                    }
+                }
+            }
+        })
     }
 
     private fun createMarkerDirectory() {
