@@ -64,7 +64,7 @@ namespace se {
     }
 
     static int __setfilecon(const char *path, const char *ctx) {
-        int rc = syscall(__NR_setxattr, path, "security.selinux"/*XATTR_NAME_SELINUX*/, ctx,
+        int rc = syscall(__NR_setxattr, path, "security.selinux", ctx,
                          strlen(ctx) + 1, 0);
         if (rc) {
             errno = -rc;
