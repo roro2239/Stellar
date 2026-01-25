@@ -49,7 +49,15 @@ enum class MainScreen(
 enum class HomeScreen(
     val route: String
 ) {
-    Home("home")
+    Home("home"),
+    Starter("starter/{isRoot}/{host}/{port}"),
+    AdbPairingTutorial("adb_pairing_tutorial");
+
+    companion object {
+        fun starterRoute(isRoot: Boolean, host: String?, port: Int): String {
+            return "starter/$isRoot/${host ?: "null"}/$port"
+        }
+    }
 }
 
 enum class AppsScreen(

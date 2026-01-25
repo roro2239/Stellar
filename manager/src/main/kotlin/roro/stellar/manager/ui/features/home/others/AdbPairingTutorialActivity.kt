@@ -8,13 +8,10 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -33,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -40,78 +38,45 @@ import roro.stellar.manager.AppConstants
 import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
-import roro.stellar.manager.ui.theme.StellarTheme
 
-@RequiresApi(Build.VERSION_CODES.R)
-class AdbPairingTutorialActivity : ComponentActivity() {
+private fun isNotificationEnabled(context: android.content.Context): Boolean {
+    val nm = context.getSystemService(NotificationManager::class.java)
+    val channel = nm.getNotificationChannel(AdbPairingService.notificationChannel)
+    return nm.areNotificationsEnabled() &&
+            (channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE)
+}
 
-    private var notificationEnabled: Boolean = false
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        notificationEnabled = isNotificationEnabled()
-
-        if (notificationEnabled) {
-            startPairingService()
+private fun startPairingService(context: android.content.Context) {
+    val intent = AdbPairingService.startIntent(context)
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
         }
+    } catch (e: Throwable) {
+        Log.e(AppConstants.TAG, "启动前台服务失败", e)
 
-        setContent {
-            StellarTheme {
-                AdbPairingTutorialScreen(
-                    onBackPressed = { finish() }
-                )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            && e is ForegroundServiceStartNotAllowedException
+        ) {
+            val mode = context.getSystemService(AppOpsManager::class.java)
+                .noteOpNoThrow("android:start_foreground", android.os.Process.myUid(), context.packageName, null, null)
+            if (mode == AppOpsManager.MODE_ERRORED) {
+                Toast.makeText(context, "前台服务权限被拒绝，请检查权限设置", Toast.LENGTH_LONG).show()
             }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        val newNotificationEnabled = isNotificationEnabled()
-        if (newNotificationEnabled != notificationEnabled) {
-            notificationEnabled = newNotificationEnabled
-
-            if (newNotificationEnabled) {
-                startPairingService()
-            }
-        }
-    }
-
-    private fun isNotificationEnabled(): Boolean {
-        val nm = getSystemService(NotificationManager::class.java)
-        val channel = nm.getNotificationChannel(AdbPairingService.notificationChannel)
-        return nm.areNotificationsEnabled() &&
-                (channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE)
-    }
-
-    private fun startPairingService() {
-        val intent = AdbPairingService.startIntent(this)
-        try {
-            startForegroundService(intent)
-        } catch (e: Throwable) {
-            Log.e(AppConstants.TAG, "启动前台服务失败", e)
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                && e is ForegroundServiceStartNotAllowedException
-            ) {
-                val mode = getSystemService(AppOpsManager::class.java)
-                    .noteOpNoThrow("android:start_foreground", android.os.Process.myUid(), packageName, null, null)
-                if (mode == AppOpsManager.MODE_ERRORED) {
-                    Toast.makeText(this, "前台服务权限被拒绝，请检查权限设置", Toast.LENGTH_LONG).show()
-                }
-                startService(intent)
-            }
+            context.startService(intent)
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdbPairingTutorialScreen(
     onBackPressed: () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val topAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
         TopAppBarState(
             initialHeightOffsetLimit = -Float.MAX_VALUE,
@@ -143,13 +108,13 @@ fun AdbPairingTutorialScreen(
             Toast.makeText(context, "需要通知权限才能继续配对", Toast.LENGTH_LONG).show()
         }
     }
-    
-    val isColorOS = remember {
-        Build.MANUFACTURER.equals("OPPO", ignoreCase = true) ||
-        Build.MANUFACTURER.equals("OnePlus", ignoreCase = true) ||
-        Build.MANUFACTURER.equals("Realme", ignoreCase = true)
+
+    LaunchedEffect(hasNotificationPermission) {
+        if (hasNotificationPermission && isNotificationEnabled(context)) {
+            startPairingService(context)
+        }
     }
-    
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
