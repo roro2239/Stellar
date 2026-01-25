@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.json.JSONArray
 import org.json.JSONObject
 import roro.stellar.manager.StellarSettings
+import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
@@ -489,69 +490,58 @@ private fun CreateCommandDialog(
     var title by remember { mutableStateOf("") }
     var command by remember { mutableStateOf("") }
 
-    AlertDialog(
+    StellarDialog(
         onDismissRequest = onDismiss,
-        title = { Text("创建命令") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("标题") },
-                    placeholder = { Text("命令名称") },
-                    shape = AppShape.shapes.inputField,
-                    singleLine = true
-                )
+        title = "创建命令",
+        confirmText = if (selectedMode == CommandMode.CLICK_EXECUTE) "执行" else "保存",
+        confirmEnabled = command.isNotBlank(),
+        onConfirm = { onConfirm(title.ifBlank { command.take(20) }, command, selectedMode) },
+        onDismiss = onDismiss
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.dialogContentSpacing)) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("标题") },
+                placeholder = { Text("命令名称") },
+                shape = AppShape.shapes.inputField,
+                singleLine = true
+            )
 
-                OutlinedTextField(
-                    value = command,
-                    onValueChange = { command = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("命令") },
-                    placeholder = { Text("输入要执行的命令") },
-                    shape = AppShape.shapes.inputField,
-                    singleLine = false,
-                    maxLines = 3,
-                    textStyle = LocalTextStyle.current.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
+            OutlinedTextField(
+                value = command,
+                onValueChange = { command = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("命令") },
+                placeholder = { Text("输入要执行的命令") },
+                shape = AppShape.shapes.inputField,
+                singleLine = false,
+                maxLines = 3,
+                textStyle = LocalTextStyle.current.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+            )
+
+            Text(
+                text = "选择模式",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CommandMode.entries.forEach { mode ->
+                    ModeSelectionItem(
+                        mode = mode,
+                        selected = selectedMode == mode,
+                        enabled = true,
+                        onClick = { selectedMode = mode }
                     )
-                )
-
-                Text(
-                    text = "选择模式",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CommandMode.entries.forEach { mode ->
-                        ModeSelectionItem(
-                            mode = mode,
-                            selected = selectedMode == mode,
-                            enabled = true,
-                            onClick = { selectedMode = mode }
-                        )
-                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(title.ifBlank { command.take(20) }, command, selectedMode) },
-                enabled = command.isNotBlank(),
-                shape = AppShape.shapes.buttonMedium
-            ) {
-                Text(if (selectedMode == CommandMode.CLICK_EXECUTE) "执行" else "保存")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
         }
-    )
+    }
 }
 
 @Composable
@@ -619,75 +609,64 @@ private fun EditCommandDialog(
     var title by remember { mutableStateOf(item.title) }
     var command by remember { mutableStateOf(item.command) }
 
-    AlertDialog(
+    StellarDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑命令") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShape.shapes.cardMedium,
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = item.mode.icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = item.mode.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("标题") },
-                    shape = AppShape.shapes.inputField,
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = command,
-                    onValueChange = { command = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("命令") },
-                    shape = AppShape.shapes.inputField,
-                    singleLine = false,
-                    maxLines = 3,
-                    textStyle = LocalTextStyle.current.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(title, command) },
-                enabled = command.isNotBlank(),
-                shape = AppShape.shapes.buttonMedium
+        title = "编辑命令",
+        confirmText = "保存",
+        confirmEnabled = command.isNotBlank(),
+        onConfirm = { onConfirm(title, command) },
+        onDismiss = onDismiss
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.dialogContentSpacing)) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShape.shapes.dialogContent,
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
-                Text("保存")
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = item.mode.icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = item.mode.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("标题") },
+                shape = AppShape.shapes.inputField,
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = command,
+                onValueChange = { command = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("命令") },
+                shape = AppShape.shapes.inputField,
+                singleLine = false,
+                maxLines = 3,
+                textStyle = LocalTextStyle.current.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+            )
         }
-    )
+    }
 }
 
 @Composable
@@ -697,48 +676,32 @@ private fun QuickExecuteDialog(
 ) {
     var command by remember { mutableStateOf("") }
 
-    AlertDialog(
+    StellarDialog(
         onDismissRequest = onDismiss,
-        title = { Text("快速执行") },
-        text = {
-            OutlinedTextField(
-                value = command,
-                onValueChange = { command = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("命令") },
-                placeholder = { Text("输入要执行的命令") },
-                shape = AppShape.shapes.inputField,
-                singleLine = false,
-                maxLines = 3,
-                textStyle = LocalTextStyle.current.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp
-                )
+        title = "快速执行",
+        confirmText = "执行",
+        confirmEnabled = command.isNotBlank(),
+        onConfirm = { onExecute(command) },
+        onDismiss = onDismiss
+    ) {
+        OutlinedTextField(
+            value = command,
+            onValueChange = { command = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("命令") },
+            placeholder = { Text("输入要执行的命令") },
+            shape = AppShape.shapes.inputField,
+            singleLine = false,
+            maxLines = 3,
+            textStyle = LocalTextStyle.current.copy(
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp
             )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onExecute(command) },
-                enabled = command.isNotBlank(),
-                shape = AppShape.shapes.buttonMedium
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("执行")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExecutionResultDialog(
     state: TerminalState,
@@ -746,67 +709,87 @@ private fun ExecutionResultDialog(
 ) {
     val result = state.result
 
-    AlertDialog(
-        onDismissRequest = { if (!state.isRunning) onDismiss() },
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(text = if (state.isRunning) "执行中" else "执行结果")
-                if (state.isRunning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                }
-            }
-        },
-        text = {
+    BasicAlertDialog(
+        onDismissRequest = { if (!state.isRunning) onDismiss() }
+    ) {
+        Surface(
+            shape = AppShape.shapes.dialog,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp
+        ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(AppSpacing.dialogPadding)
             ) {
-                if (result != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        InfoChip(label = "返回值", value = result.exitCode.toString(), isError = result.isError)
-                        InfoChip(label = "耗时", value = "${result.executionTimeMs}ms", isError = result.isError)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = if (state.isRunning) "执行中" else "执行结果",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (state.isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
                     }
                 }
 
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = AppShape.shapes.cardMedium
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.dialogContentSpacing)
                 ) {
-                    val scrollState = rememberScrollState()
-                    val output = if (state.isRunning) {
-                        state.currentOutput.ifEmpty { "执行中..." }
-                    } else {
-                        result?.output ?: ""
+                    if (result != null) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            InfoChip(label = "返回值", value = result.exitCode.toString(), isError = result.isError)
+                            InfoChip(label = "耗时", value = "${result.executionTimeMs}ms", isError = result.isError)
+                        }
                     }
-                    Text(
-                        text = output,
+
+                    Surface(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState)
-                            .padding(12.dp),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp
-                    )
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = AppShape.shapes.dialogContent
+                    ) {
+                        val scrollState = rememberScrollState()
+                        val output = if (state.isRunning) {
+                            state.currentOutput.ifEmpty { "执行中..." }
+                        } else {
+                            result?.output ?: ""
+                        }
+                        Text(
+                            text = output,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .padding(12.dp),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !state.isRunning
+                    ) {
+                        Text(if (state.isRunning) "执行中..." else "关闭")
+                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = !state.isRunning
-            ) {
-                Text(if (state.isRunning) "执行中..." else "关闭")
-            }
         }
-    )
+    }
 }
 
 @Composable

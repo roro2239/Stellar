@@ -8,21 +8,16 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -63,16 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.BuildConfig
@@ -86,6 +77,12 @@ import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.ktx.isComponentEnabled
 import roro.stellar.manager.ktx.setComponentEnabled
 import roro.stellar.manager.receiver.BootCompleteReceiver
+import roro.stellar.manager.ui.components.StellarDialog
+import roro.stellar.manager.ui.components.StellarSegmentedSelector
+import roro.stellar.manager.ui.components.SettingsContentCard
+import roro.stellar.manager.ui.components.SettingsSwitchCard
+import roro.stellar.manager.ui.components.SettingsClickableCard
+import roro.stellar.manager.ui.components.IconContainer
 import roro.stellar.manager.ui.features.settings.update.UpdateUtils
 import roro.stellar.manager.ui.features.settings.update.isNewerThan
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -96,7 +93,6 @@ import roro.stellar.manager.ui.theme.ThemeMode
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.util.PortBlacklistUtils
 import roro.stellar.manager.util.StellarSystemApis
-import kotlin.math.roundToInt
 
 private const val TAG = "SettingsScreen"
 
@@ -150,6 +146,11 @@ fun SettingsScreen(
     var updateAvailable by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableIntStateOf(0) }
+
+    // 权限对话框状态
+    var showSecurePermissionDialog by remember { mutableStateOf(false) }
+    var showAdbCommandDialog by remember { mutableStateOf(false) }
+    var pendingPermissionCallback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
     
     Scaffold(
         modifier = Modifier
@@ -174,299 +175,99 @@ fun SettingsScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = AppShape.shapes.cardMedium
+            // 主题设置卡片
+            SettingsContentCard(
+                icon = Icons.Default.DarkMode,
+                title = "主题",
+                subtitle = "选择应用的外观主题"
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DarkMode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column {
-                            Text(
-                                text = "主题",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "选择应用的外观主题",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                ThemeSelectorWithAnimation(
+                    currentMode = currentThemeMode,
+                    onModeChange = { mode ->
+                        currentThemeMode = mode
+                        ThemePreferences.setThemeMode(mode)
                     }
-
-                    ThemeSelectorWithAnimation(
-                        currentMode = currentThemeMode,
-                        onModeChange = { mode ->
-                            currentThemeMode = mode
-                            ThemePreferences.setThemeMode(mode)
-                        }
-                    )
-                }
+                )
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = AppShape.shapes.cardMedium
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PowerSettingsNew,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        Column {
-                            Text(
-                                text = "开机启动（Root）",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "已 root 设备，Stellar 可以开机启动",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+            // 开机启动（Root）卡片
+            SettingsSwitchCard(
+                icon = Icons.Default.PowerSettingsNew,
+                title = "开机启动（Root）",
+                subtitle = "已 root 设备，Stellar 可以开机启动",
+                checked = startOnBoot,
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        startOnBootWireless = false
+                        savePreference(KEEP_START_ON_BOOT_WIRELESS, false)
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Switch(
-                        checked = startOnBoot,
-                        onCheckedChange = { newValue ->
-                            if (newValue) {
-                                startOnBootWireless = false
-                                savePreference(KEEP_START_ON_BOOT_WIRELESS, false)
-                            }
-                            startOnBoot = newValue
-                            toggleBootComponent(
-                                context,
-                                componentName,
-                                KEEP_START_ON_BOOT,
-                                newValue || startOnBootWireless
-                            )
-                        }
+                    startOnBoot = newValue
+                    toggleBootComponent(
+                        context,
+                        componentName,
+                        KEEP_START_ON_BOOT,
+                        newValue || startOnBootWireless
                     )
                 }
-            }
+            )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = AppShape.shapes.cardMedium
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column {
-                            Text(
-                                text = "降权激活",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Root 启动后降权到 shell 用户运行",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Switch(
-                        checked = dropPrivileges,
-                        onCheckedChange = { newValue ->
-                            dropPrivileges = newValue
-                            savePreference(DROP_PRIVILEGES, newValue)
-                        }
-                    )
+            // 降权激活卡片
+            SettingsSwitchCard(
+                icon = Icons.Default.Security,
+                title = "降权激活",
+                subtitle = "Root 启动后降权到 shell 用户运行",
+                checked = dropPrivileges,
+                onCheckedChange = { newValue ->
+                    dropPrivileges = newValue
+                    savePreference(DROP_PRIVILEGES, newValue)
                 }
-            }
+            )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = AppShape.shapes.cardMedium
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Wifi,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
-                        Column {
-                            Text(
-                                text = "开机启动（无线调试）",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Stellar 可以通过无线调试开机启动",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Switch(
-                        checked = startOnBootWireless,
-                        onCheckedChange = { newValue ->
-                            if (newValue) {
-                                if (!hasSecurePermission) {
-                                    showSecureSettingsPermissionDialog(context) { granted ->
-                                        if (granted) {
-                                            startOnBoot = false
-                                            savePreference(KEEP_START_ON_BOOT, false)
-                                            startOnBootWireless = true
-                                            toggleBootComponent(
-                                                context,
-                                                componentName,
-                                                KEEP_START_ON_BOOT_WIRELESS,
-                                                true
-                                            )
-                                        }
-                                    }
-                                } else {
+            // 开机启动（无线调试）卡片
+            SettingsSwitchCard(
+                icon = Icons.Default.Wifi,
+                title = "开机启动（无线调试）",
+                subtitle = "Stellar 可以通过无线调试开机启动",
+                checked = startOnBootWireless,
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        if (!hasSecurePermission) {
+                            pendingPermissionCallback = { granted ->
+                                if (granted) {
                                     startOnBoot = false
                                     savePreference(KEEP_START_ON_BOOT, false)
-                                    startOnBootWireless = newValue
+                                    startOnBootWireless = true
                                     toggleBootComponent(
                                         context,
                                         componentName,
                                         KEEP_START_ON_BOOT_WIRELESS,
-                                        newValue
+                                        true
                                     )
                                 }
-                            } else {
-                                startOnBootWireless = false
-                                toggleBootComponent(
-                                    context,
-                                    componentName,
-                                    KEEP_START_ON_BOOT_WIRELESS,
-                                    false
-                                )
                             }
+                            showSecurePermissionDialog = true
+                        } else {
+                            startOnBoot = false
+                            savePreference(KEEP_START_ON_BOOT, false)
+                            startOnBootWireless = newValue
+                            toggleBootComponent(
+                                context,
+                                componentName,
+                                KEEP_START_ON_BOOT_WIRELESS,
+                                newValue
+                            )
                         }
-                    )
+                    } else {
+                        startOnBootWireless = false
+                        toggleBootComponent(
+                            context,
+                            componentName,
+                            KEEP_START_ON_BOOT_WIRELESS,
+                            false
+                        )
+                    }
                 }
-            }
+            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -588,56 +389,13 @@ fun SettingsScreen(
                 }
             }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToLogs() },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                shape = AppShape.shapes.cardMedium
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Subject,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = "服务日志",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "查看 Stellar 服务运行日志",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+            // 服务日志卡片
+            SettingsClickableCard(
+                icon = Icons.Default.Subject,
+                title = "服务日志",
+                subtitle = "查看 Stellar 服务运行日志",
+                onClick = onNavigateToLogs
+            )
 
              Card(
                  modifier = Modifier.fillMaxWidth(),
@@ -847,99 +605,128 @@ fun SettingsScreen(
                  }
              }
          }
-     }
- }
+    }
+
+    // 权限警告对话框
+    if (showSecurePermissionDialog) {
+        SecureSettingsPermissionDialog(
+            onDismiss = {
+                showSecurePermissionDialog = false
+                pendingPermissionCallback?.invoke(false)
+                pendingPermissionCallback = null
+            },
+            onManual = {
+                showSecurePermissionDialog = false
+                showAdbCommandDialog = true
+            },
+            onAuto = {
+                showSecurePermissionDialog = false
+                Thread {
+                    try {
+                        StellarSystemApis.grantRuntimePermission(
+                            BuildConfig.APPLICATION_ID,
+                            Manifest.permission.WRITE_SECURE_SETTINGS,
+                            0
+                        )
+                        Thread.sleep(500)
+                        val hasPermission = try {
+                            context.packageManager.checkPermission(
+                                Manifest.permission.WRITE_SECURE_SETTINGS,
+                                BuildConfig.APPLICATION_ID
+                            ) == PackageManager.PERMISSION_GRANTED
+                        } catch (e: Exception) { false }
+
+                        (context as? android.app.Activity)?.runOnUiThread {
+                            if (hasPermission) {
+                                Toast.makeText(context, "授权成功", Toast.LENGTH_SHORT).show()
+                                pendingPermissionCallback?.invoke(true)
+                            } else {
+                                Toast.makeText(context, "授权失败", Toast.LENGTH_LONG).show()
+                                pendingPermissionCallback?.invoke(false)
+                            }
+                            pendingPermissionCallback = null
+                        }
+                    } catch (e: Exception) {
+                        (context as? android.app.Activity)?.runOnUiThread {
+                            Toast.makeText(context, "自动授权失败", Toast.LENGTH_LONG).show()
+                            pendingPermissionCallback?.invoke(false)
+                            pendingPermissionCallback = null
+                        }
+                    }
+                }.start()
+            },
+            isServiceRunning = Stellar.pingBinder()
+        )
+    }
+
+    // ADB 命令对话框
+    if (showAdbCommandDialog) {
+        val command = "adb shell pm grant ${BuildConfig.APPLICATION_ID} android.permission.WRITE_SECURE_SETTINGS"
+        StellarDialog(
+            onDismissRequest = {
+                showAdbCommandDialog = false
+                pendingPermissionCallback?.invoke(false)
+                pendingPermissionCallback = null
+            },
+            title = "查看指令",
+            confirmText = "复制",
+            onConfirm = {
+                if (ClipboardUtils.put(context, command)) {
+                    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                }
+                showAdbCommandDialog = false
+                pendingPermissionCallback?.invoke(false)
+                pendingPermissionCallback = null
+            },
+            onDismiss = {
+                showAdbCommandDialog = false
+                pendingPermissionCallback?.invoke(false)
+                pendingPermissionCallback = null
+            }
+        ) {
+            Text(
+                text = command,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 
 @Composable
 private fun ThemeSelectorWithAnimation(
     currentMode: ThemeMode,
     onModeChange: (ThemeMode) -> Unit
 ) {
-    val density = LocalDensity.current
-    val themeCount = ThemeMode.entries.size
-    val currentIndex = ThemeMode.entries.indexOf(currentMode)
-
-    var innerWidth by remember { mutableStateOf(0) }
-
-    val spacing = 4.dp
-    val spacingPx = with(density) { spacing.toPx() }
-
-    val animatedIndex by animateFloatAsState(
-        targetValue = currentIndex.toFloat(),
-        animationSpec = tween(durationMillis = 300),
-        label = "theme_index"
+    StellarSegmentedSelector(
+        items = ThemeMode.entries.toList(),
+        selectedItem = currentMode,
+        onItemSelected = onModeChange,
+        itemLabel = { ThemePreferences.getThemeModeDisplayName(it) }
     )
+}
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = AppShape.shapes.cardMedium
-            )
-            .padding(6.dp)
+@Composable
+private fun SecureSettingsPermissionDialog(
+    onDismiss: () -> Unit,
+    onManual: () -> Unit,
+    onAuto: () -> Unit,
+    isServiceRunning: Boolean
+) {
+    StellarDialog(
+        onDismissRequest = onDismiss,
+        title = "注意",
+        confirmText = if (isServiceRunning) "自动" else "手动",
+        dismissText = if (isServiceRunning) "手动" else "取消",
+        onConfirm = if (isServiceRunning) onAuto else onManual,
+        onDismiss = if (isServiceRunning) onManual else onDismiss
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { size ->
-                    innerWidth = size.width
-                },
-            horizontalArrangement = Arrangement.spacedBy(spacing)
-        ) {
-            ThemeMode.entries.forEach { _ ->
-                Spacer(modifier = Modifier.weight(1f).height(40.dp))
-            }
-        }
-        
-        if (innerWidth > 0) {
-            val itemWidth = (innerWidth - spacingPx * (themeCount - 1)) / themeCount
-            val offsetX = animatedIndex * (itemWidth + spacingPx)
-            
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(offsetX.roundToInt(), 0) }
-                    .width(with(density) { itemWidth.toDp() })
-                    .height(40.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = AppShape.shapes.iconSmall
-                    )
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp),
-            horizontalArrangement = Arrangement.spacedBy(spacing)
-        ) {
-            ThemeMode.entries.forEach { mode ->
-                val isSelected = currentMode == mode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(
-                            onClick = { onModeChange(mode) },
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = ThemePreferences.getThemeModeDisplayName(mode),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                }
-            }
-        }
+        Text(
+            text = "此功能需要 WRITE_SECURE_SETTINGS 权限。\n\n" +
+                    "警告：这是高度敏感的权限，仅在明确操作风险时启用。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -970,105 +757,4 @@ private fun toggleBootComponent(
     }
 
     return true
-}
-
-private fun showSecureSettingsPermissionDialog(context: Context, onResult: (Boolean) -> Unit) {
-    val command = "adb shell pm grant ${BuildConfig.APPLICATION_ID} android.permission.WRITE_SECURE_SETTINGS"
-    
-    val dialog = MaterialAlertDialogBuilder(context)
-        .setMessage("注意\n\n此功能需要 WRITE_SECURE_SETTINGS 权限。\n\n警告\n\nWRITE_SECURE_SETTINGS 是高度敏感的权限，仅在明确操作风险时启用。后续可能产生的任何后果均由用户自行承担。")
-    
-    val click: (android.content.DialogInterface, Int) -> Unit = { _, _ ->
-        MaterialAlertDialogBuilder(context)
-            .setTitle("查看指令")
-            .setMessage(command)
-            .setPositiveButton("复制") { _, _ ->
-                if (ClipboardUtils.put(context, command)) {
-                    Toast.makeText(
-                        context,
-                        "$command\n已被复制到剪贴板。",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-    
-    if (Stellar.pingBinder()) {
-        dialog.setNeutralButton("取消") { _, _ -> 
-            onResult(false)
-        }
-        .setNegativeButton("手动", click)
-        .setPositiveButton("自动") { _, _ ->
-            Thread {
-                try {
-                    StellarSystemApis.grantRuntimePermission(
-                        BuildConfig.APPLICATION_ID,
-                        Manifest.permission.WRITE_SECURE_SETTINGS,
-                        0
-                    )
-
-                    Thread.sleep(500)
-
-                    val hasPermission = try {
-                        context.packageManager.checkPermission(
-                            Manifest.permission.WRITE_SECURE_SETTINGS,
-                            BuildConfig.APPLICATION_ID
-                        ) == PackageManager.PERMISSION_GRANTED
-                    } catch (e: Exception) {
-                        false
-                    }
-
-                    (context as? android.app.Activity)?.runOnUiThread {
-                        if (hasPermission) {
-                            Toast.makeText(
-                                context,
-                                "授权成功",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            onResult(true)
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "授权失败：权限未生效\n\n请使用手动方式授权",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            onResult(false)
-                        }
-                    }
-                } catch (e: Exception) {
-                    val errorMsg = e.message?.let { msg ->
-                        when {
-                            msg.contains("GRANT_RUNTIME_PERMISSIONS", ignoreCase = true) ->
-                                "服务进程没有授权权限"
-                            msg.contains("Unknown permission", ignoreCase = true) ->
-                                "未知权限"
-                            msg.contains("not found", ignoreCase = true) ->
-                                "权限未找到"
-                            msg.contains("Operation not permitted", ignoreCase = true) ->
-                                "操作不被允许"
-                            else -> msg
-                        }
-                    } ?: "未知错误"
-
-                    (context as? android.app.Activity)?.runOnUiThread {
-                        Toast.makeText(
-                            context,
-                            "自动授权失败：$errorMsg\n\n请使用手动方式授权",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        onResult(false)
-                    }
-                }
-            }.start()
-        }
-    } else {
-        dialog.setNegativeButton("取消") { _, _ -> 
-            onResult(false)
-        }
-        .setPositiveButton("手动", click)
-    }
-    
-    dialog.show()
 }
