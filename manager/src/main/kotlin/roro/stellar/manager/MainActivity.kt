@@ -13,6 +13,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -21,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +52,7 @@ import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.ui.features.logs.LogsScreen
 import roro.stellar.Stellar
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 data class StarterParams(
     val isRoot: Boolean,
@@ -83,8 +84,9 @@ class MainActivity : ComponentActivity() {
 
     private val homeModel by viewModels<HomeViewModel>()
     private val appsModel by appsViewModel()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
@@ -148,7 +150,7 @@ private fun MainScreenContent(
 ) {
     val topAppBarState = LocalTopAppBarState.current!!
     val navController = rememberNavController()
-    var selectedIndex by remember { mutableIntStateOf(0) }
+    var selectedIndex by remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     val context = navController.context
@@ -189,32 +191,34 @@ private fun MainScreenContent(
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            AnimatedVisibility(
-                visible = shouldShowBottomBar,
-                enter = expandVertically(animationSpec = tween(300)),
-                exit = shrinkVertically(animationSpec = tween(300))
-            ) {
-                StandardBottomNavigation(
-                    selectedIndex = selectedIndex,
-                    onItemClick = { index ->
-                        if (selectedIndex != index) {
-                            selectedIndex = index
-                            val route = MainScreen.entries[index].route
-                            navController.navigate(route) {
-                                popUpTo(0) {
-                                    inclusive = true
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 主界面
+        Scaffold(
+            bottomBar = {
+                AnimatedVisibility(
+                    visible = shouldShowBottomBar,
+                    enter = expandVertically(animationSpec = tween(300)),
+                    exit = shrinkVertically(animationSpec = tween(300))
+                ) {
+                    StandardBottomNavigation(
+                        selectedIndex = selectedIndex,
+                        onItemClick = { index ->
+                            if (selectedIndex != index) {
+                                selectedIndex = index
+                                val route = MainScreen.entries[index].route
+                                navController.navigate(route) {
+                                    popUpTo(0) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
                             }
                         }
-                    }
-                )
-            }
-        },
-        contentWindowInsets = if (shouldShowBottomBar) WindowInsets.navigationBars else WindowInsets(0)
-    ) {
+                    )
+                }
+            },
+            contentWindowInsets = if (shouldShowBottomBar) WindowInsets.navigationBars else WindowInsets(0)
+        ) {
         NavHost(
             navController = navController,
             startDestination = MainScreen.Home.route,
@@ -326,6 +330,7 @@ private fun MainScreenContent(
                     )
                 }
             }
+        }
         }
     }
 }
