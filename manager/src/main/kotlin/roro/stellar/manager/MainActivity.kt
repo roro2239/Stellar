@@ -7,6 +7,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
@@ -22,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import roro.stellar.manager.management.appsViewModel
@@ -146,6 +153,16 @@ private fun MainScreenContent(
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     val context = navController.context
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val hideBottomBarRoutes = listOf(
+        HomeScreenRoute.Starter.route,
+        HomeScreenRoute.AdbPairingTutorial.route,
+        SettingsScreenRoute.Logs.route
+    )
+    val shouldShowBottomBar = currentRoute !in hideBottomBarRoutes
+
     androidx.compose.runtime.LaunchedEffect(initialStarterParams) {
         if (initialStarterParams != null) {
             navController.navigate(
@@ -174,23 +191,29 @@ private fun MainScreenContent(
 
     Scaffold(
         bottomBar = {
-            StandardBottomNavigation(
-                selectedIndex = selectedIndex,
-                onItemClick = { index ->
-                    if (selectedIndex != index) {
-                        selectedIndex = index
-                        val route = MainScreen.entries[index].route
-                        navController.navigate(route) {
-                            popUpTo(0) {
-                                inclusive = true
+            AnimatedVisibility(
+                visible = shouldShowBottomBar,
+                enter = expandVertically(animationSpec = tween(300)),
+                exit = shrinkVertically(animationSpec = tween(300))
+            ) {
+                StandardBottomNavigation(
+                    selectedIndex = selectedIndex,
+                    onItemClick = { index ->
+                        if (selectedIndex != index) {
+                            selectedIndex = index
+                            val route = MainScreen.entries[index].route
+                            navController.navigate(route) {
+                                popUpTo(0) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
                             }
-                            launchSingleTop = true
                         }
                     }
-                }
-            )
+                )
+            }
         },
-        contentWindowInsets = WindowInsets.navigationBars
+        contentWindowInsets = if (shouldShowBottomBar) WindowInsets.navigationBars else WindowInsets(0)
     ) {
         NavHost(
             navController = navController,
@@ -222,20 +245,32 @@ private fun MainScreenContent(
                         navArgument("isRoot") { type = NavType.BoolType },
                         navArgument("host") { type = NavType.StringType },
                         navArgument("port") { type = NavType.IntType }
-                    )
+                    ),
+                    enterTransition = { slideInHorizontally(tween(300)) { it } },
+                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
                 ) { backStackEntry ->
                     val isRoot = backStackEntry.arguments?.getBoolean("isRoot") ?: true
                     val host = backStackEntry.arguments?.getString("host")?.takeIf { it != "null" }
                     val port = backStackEntry.arguments?.getInt("port") ?: 0
                     StarterScreen(
+                        topAppBarState = topAppBarState,
                         isRoot = isRoot,
                         host = host,
                         port = port,
                         onClose = { navController.safePopBackStack() }
                     )
                 }
-                composable(HomeScreenRoute.AdbPairingTutorial.route) {
+                composable(
+                    route = HomeScreenRoute.AdbPairingTutorial.route,
+                    enterTransition = { slideInHorizontally(tween(300)) { it } },
+                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
+                ) {
                     AdbPairingTutorialScreen(
+                        topAppBarState = topAppBarState,
                         onBackPressed = { navController.safePopBackStack() }
                     )
                 }
@@ -276,8 +311,15 @@ private fun MainScreenContent(
                         }
                     )
                 }
-                composable(SettingsScreenRoute.Logs.route) {
+                composable(
+                    route = SettingsScreenRoute.Logs.route,
+                    enterTransition = { slideInHorizontally(tween(300)) { it } },
+                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
+                ) {
                     LogsScreen(
+                        topAppBarState = topAppBarState,
                         onBackClick = {
                             navController.safePopBackStack()
                         }

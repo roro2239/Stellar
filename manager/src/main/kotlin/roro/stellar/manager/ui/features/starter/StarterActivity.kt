@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -34,12 +35,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +75,7 @@ import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbWirelessHelper
+import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.navigation.routes.HomeScreen
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.util.CommandExecutor
@@ -86,6 +92,7 @@ sealed class StarterState {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StarterScreen(
+    topAppBarState: TopAppBarState,
     isRoot: Boolean,
     host: String?,
     port: Int,
@@ -105,15 +112,25 @@ fun StarterScreen(
         }
     }
 
+    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopAppBar(
-                title = { Text("Stellar 启动器") },
+            LargeTopAppBar(
+                title = {
+                    Text(
+                        text = "Stellar 启动器",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->

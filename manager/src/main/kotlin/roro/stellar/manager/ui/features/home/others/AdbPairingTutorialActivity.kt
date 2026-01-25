@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.adb.AdbPairingService
+import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
@@ -74,17 +75,11 @@ private fun startPairingService(context: android.content.Context) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdbPairingTutorialScreen(
+    topAppBarState: TopAppBarState,
     onBackPressed: () -> Unit
 ) {
     val context = LocalContext.current
-    val topAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
-        TopAppBarState(
-            initialHeightOffsetLimit = -Float.MAX_VALUE,
-            initialHeightOffset = 0f,
-            initialContentOffset = 0f
-        )
-    }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     
     var hasNotificationPermission by remember {
         mutableStateOf(
@@ -119,6 +114,7 @@ fun AdbPairingTutorialScreen(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             LargeTopAppBar(
                 title = { 
