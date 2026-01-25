@@ -107,23 +107,34 @@ class AdbWirelessHelper {
             return false
         }
 
-        AdbClient(host, port, key).use { client ->
-            client.connect()
+        val maxRetries = 3
+        for (attempt in 1..maxRetries) {
+            try {
+                AdbClient(host, port, key).use { client ->
+                    client.connect()
 
-            var flag = false
-            client.tcpip(newPort) {
-                commandOutput.append(String(it).apply {
-                    if (contains(Regex("restarting in TCP mode port: [0-9]*"))) flag = true
-                }).append("\n")
-                onOutput(commandOutput.toString())
+                    var flag = false
+                    client.tcpip(newPort) {
+                        commandOutput.append(String(it).apply {
+                            if (contains(Regex("restarting in TCP mode port: [0-9]*"))) flag = true
+                        }).append("\n")
+                        onOutput(commandOutput.toString())
+                    }
+
+                    if (flag) {
+                        Thread.sleep(500)
+                    }
+
+                    return flag
+                }
+            } catch (e: Exception) {
+                Log.w(AppConstants.TAG, "切换端口尝试 $attempt/$maxRetries 失败: ${e.message}")
+                if (attempt < maxRetries) {
+                    Thread.sleep(1000L * attempt)
+                }
             }
-
-            if (flag) {
-                Thread.sleep(500)
-            }
-
-            return flag
         }
+        return false
     }
 
     private fun waitForAdbPortAvailable(
@@ -205,7 +216,7 @@ class AdbWirelessHelper {
                     )
                 ) {
                     Log.i(AppConstants.TAG, "ADB端口从${port}切换到${newPort}，等待新端口可用...")
-                    delay(2000)
+                    delay(3000)
                     if (!waitForAdbPortAvailable(host, newPort, timeoutMs = 20000L)) {
                         Log.w(
                             AppConstants.TAG,
@@ -214,7 +225,7 @@ class AdbWirelessHelper {
                         onError(Exception("等待ADB在新端口${newPort}上监听超时"))
                         return@launch
                     }
-                    delay(500)
+                    delay(1000)
                     newPort
                 } else {
                     if (newPort == port && newPort > 0) {
