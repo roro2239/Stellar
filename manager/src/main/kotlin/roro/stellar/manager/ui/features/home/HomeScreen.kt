@@ -1,6 +1,5 @@
 package roro.stellar.manager.ui.features.home
 
-import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +40,9 @@ import roro.stellar.manager.util.UserHandleCompat
 fun HomeScreen(
     topAppBarState: TopAppBarState,
     homeViewModel: HomeViewModel,
-    appsViewModel: AppsViewModel
+    appsViewModel: AppsViewModel,
+    onNavigateToStarter: (isRoot: Boolean, host: String?, port: Int) -> Unit = { _, _, _ -> },
+    onNavigateToAdbPairing: () -> Unit = {}
 ) {
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val context = LocalContext.current
@@ -96,7 +97,10 @@ fun HomeScreen(
             if (isPrimaryUser) {
                 if (hasRoot) {
                     item {
-                        StartRootCard(isRestart = isRunning && isRoot)
+                        StartRootCard(
+                            isRestart = isRunning && isRoot,
+                            onStartClick = { onNavigateToStarter(true, null, 0) }
+                        )
                     }
                 }
 
@@ -105,9 +109,7 @@ fun HomeScreen(
                         StartWirelessAdbCard(
                             onPairClick = {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    context.startActivity(
-                                        Intent(context, roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity::class.java)
-                                    )
+                                    onNavigateToAdbPairing()
                                 }
                             },
                             onStartClick = {
@@ -131,7 +133,10 @@ fun HomeScreen(
 
                 if (!hasRoot) {
                     item {
-                        StartRootCard(isRestart = isRunning && isRoot)
+                        StartRootCard(
+                            isRestart = isRunning && isRoot,
+                            onStartClick = { onNavigateToStarter(true, null, 0) }
+                        )
                     }
                 }
             }
@@ -185,8 +190,7 @@ fun HomeScreen(
         androidx.compose.runtime.key(System.currentTimeMillis()) {
             roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
                 onStartConnection = { port ->
-                    val helper = roro.stellar.manager.adb.AdbWirelessHelper()
-                    helper.launchStarterActivity(context, "127.0.0.1", port)
+                    onNavigateToStarter(false, "127.0.0.1", port)
                 },
                 onComplete = { triggerAdbAutoConnect = false }
             )

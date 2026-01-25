@@ -1,11 +1,6 @@
 package roro.stellar.manager.ui.features.starter
 
-import android.content.Intent
 import android.os.Build
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -62,8 +57,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -73,12 +68,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
-import roro.stellar.manager.AppConstants.EXTRA
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity
+import roro.stellar.manager.ui.navigation.routes.HomeScreen
 import roro.stellar.manager.ui.theme.AppShape
-import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.util.CommandExecutor
 import java.net.ConnectException
 import javax.net.ssl.SSLProtocolException
@@ -90,47 +83,19 @@ sealed class StarterState {
     data class Error(val error: Throwable) : StarterState()
 }
 
-class StarterActivity : ComponentActivity() {
-
-    private val viewModel by viewModels<StarterViewModel> {
-        object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return StarterViewModel(
-                    isRoot = intent.getBooleanExtra(EXTRA_IS_ROOT, true),
-                    host = intent.getStringExtra(EXTRA_HOST),
-                    port = intent.getIntExtra(EXTRA_PORT, 0)
-                ) as T
-            }
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            StellarTheme {
-                StarterScreen(
-                    viewModel = viewModel,
-                    onClose = { finish() }
-                )
-            }
-        }
-    }
-
-    companion object {
-        const val EXTRA_IS_ROOT = "$EXTRA.IS_ROOT"
-        const val EXTRA_HOST = "$EXTRA.HOST"
-        const val EXTRA_PORT = "$EXTRA.PORT"
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StarterScreen(
-    viewModel: StarterViewModel,
-    onClose: () -> Unit
+    isRoot: Boolean,
+    host: String?,
+    port: Int,
+    onClose: () -> Unit,
+    onNavigateToAdbPairing: (() -> Unit)? = null
 ) {
+    val viewModel: StarterViewModel = viewModel(
+        key = "starter_${isRoot}_${host}_$port",
+        factory = StarterViewModelFactory(isRoot, host, port)
+    )
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(state) {
@@ -173,7 +138,8 @@ fun StarterScreen(
                         command = viewModel.lastCommand,
                         outputLines = viewModel.outputLines.collectAsState().value,
                         viewModel = viewModel,
-                        onClose = onClose
+                        onClose = onClose,
+                        onNavigateToAdbPairing = onNavigateToAdbPairing
                     )
                 }
             }
@@ -433,7 +399,8 @@ fun ErrorView(
     command: String,
     outputLines: List<String>,
     viewModel: StarterViewModel,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onNavigateToAdbPairing: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(false) }
@@ -697,9 +664,7 @@ fun ErrorView(
             needsPairing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
                 Button(
                     onClick = {
-                        context.startActivity(
-                            Intent(context, AdbPairingTutorialActivity::class.java)
-                        )
+                        onNavigateToAdbPairing?.invoke()
                         onClose()
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -993,5 +958,16 @@ class StarterViewModel(
                 setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"))
             }
         }
+    }
+}
+
+class StarterViewModelFactory(
+    private val isRoot: Boolean,
+    private val host: String?,
+    private val port: Int
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return StarterViewModel(isRoot, host, port) as T
     }
 }

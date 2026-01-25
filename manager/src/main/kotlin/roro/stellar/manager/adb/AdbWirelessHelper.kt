@@ -18,7 +18,6 @@ import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
 import roro.stellar.manager.ui.features.starter.Starter
-import roro.stellar.manager.ui.features.starter.StarterActivity
 import java.net.Socket
 
 class AdbWirelessHelper {
@@ -93,16 +92,6 @@ class AdbWirelessHelper {
             Log.e(AppConstants.TAG, "启用无线调试时出错", e)
             throw e
         }
-    }
-
-    fun launchStarterActivity(context: Context, host: String, port: Int) {
-        val intent = Intent(context, StarterActivity::class.java).apply {
-            putExtra(StarterActivity.EXTRA_IS_ROOT, false)
-            putExtra(StarterActivity.EXTRA_HOST, host)
-            putExtra(StarterActivity.EXTRA_PORT, port)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
     }
 
     private fun changeTcpipPortIfNeeded(

@@ -61,12 +61,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.features.home.others.AdbPairingTutorialActivity"
-            android:label="配对" />
-        <activity
-            android:name=".ui.features.starter.StarterActivity"
-            android:label="启动程序" />
-        <activity
             android:name=".authorization.RequestPermissionActivity"
             android:directBootAware="true"
             android:excludeFromRecents="true"
