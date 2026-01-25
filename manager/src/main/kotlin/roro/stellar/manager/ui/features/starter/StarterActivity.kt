@@ -1,6 +1,12 @@
 package roro.stellar.manager.ui.features.starter
 
+import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,9 +47,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,12 +80,54 @@ import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
-import roro.stellar.manager.ui.navigation.routes.HomeScreen
+import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity
 import roro.stellar.manager.ui.theme.AppShape
+import roro.stellar.manager.ui.theme.StellarTheme
+import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.util.CommandExecutor
 import java.net.ConnectException
 import javax.net.ssl.SSLProtocolException
+
+class StarterActivity : ComponentActivity() {
+
+    companion object {
+        private const val EXTRA_IS_ROOT = "is_root"
+        private const val EXTRA_HOST = "host"
+        private const val EXTRA_PORT = "port"
+
+        fun createIntent(context: Context, isRoot: Boolean, host: String?, port: Int): Intent {
+            return Intent(context, StarterActivity::class.java).apply {
+                putExtra(EXTRA_IS_ROOT, isRoot)
+                putExtra(EXTRA_HOST, host)
+                putExtra(EXTRA_PORT, port)
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        val isRoot = intent.getBooleanExtra(EXTRA_IS_ROOT, true)
+        val host = intent.getStringExtra(EXTRA_HOST)
+        val port = intent.getIntExtra(EXTRA_PORT, 0)
+
+        setContent {
+            val themeMode = ThemePreferences.themeMode.value
+            StellarTheme(themeMode = themeMode) {
+                StarterScreen(
+                    isRoot = isRoot,
+                    host = host,
+                    port = port,
+                    onClose = { finish() },
+                    onNavigateToAdbPairing = {
+                        startActivity(Intent(this, AdbPairingTutorialActivity::class.java))
+                    }
+                )
+            }
+        }
+    }
+}
 
 private class NotRootedException : Exception()
 
@@ -91,8 +138,7 @@ sealed class StarterState {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StarterScreen(
-    topAppBarState: TopAppBarState,
+private fun StarterScreen(
     isRoot: Boolean,
     host: String?,
     port: Int,
@@ -112,7 +158,7 @@ fun StarterScreen(
         }
     }
 
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),

@@ -62,6 +62,15 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.features.starter.StarterActivity"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name=".ui.features.home.others.AdbPairingTutorialActivity"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name=".ui.features.logs.LogsActivity"
+            android:theme="@style/AppTheme" />
+        <activity
             android:name=".authorization.RequestPermissionActivity"
             android:directBootAware="true"
             android:excludeFromRecents="true"

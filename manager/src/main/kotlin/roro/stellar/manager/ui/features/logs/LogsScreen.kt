@@ -1,6 +1,10 @@
 package roro.stellar.manager.ui.features.logs
 
+import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,9 +43,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,14 +68,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
+import roro.stellar.manager.ui.theme.StellarTheme
+import roro.stellar.manager.ui.theme.ThemePreferences
+
+class LogsActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            val themeMode = ThemePreferences.themeMode.value
+            StellarTheme(themeMode = themeMode) {
+                LogsScreen(onBackClick = { finish() })
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogsScreen(
-    topAppBarState: TopAppBarState,
+private fun LogsScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -156,7 +173,7 @@ fun LogsScreen(
         loadLogs()
     }
 
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
