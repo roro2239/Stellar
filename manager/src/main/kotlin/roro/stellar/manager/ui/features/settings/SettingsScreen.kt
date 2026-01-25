@@ -49,6 +49,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +94,9 @@ import roro.stellar.manager.ui.theme.ThemeMode
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.util.PortBlacklistUtils
 import roro.stellar.manager.util.StellarSystemApis
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TAG = "SettingsScreen"
 
@@ -105,26 +109,42 @@ fun SettingsScreen(
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val context = LocalContext.current
     val componentName = ComponentName(context.packageName, BootCompleteReceiver::class.java.name)
-    
+
     val preferences = StellarSettings.getPreferences()
-    
-    var startOnBoot by remember { 
-        mutableStateOf(
-            context.packageManager.isComponentEnabled(componentName) && 
-            !preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false)
-        )
-    }
-    
+
+    // Root 权限状态
+    var hasRootPermission by remember { mutableStateOf<Boolean?>(null) }
+
+    var startOnBoot by remember { mutableStateOf(false) }
+
     val hasSecurePermission = ContextCompat.checkSelfPermission(
         context, Manifest.permission.WRITE_SECURE_SETTINGS
     ) == PackageManager.PERMISSION_GRANTED
-    
-    var startOnBootWireless by remember { 
+
+    var startOnBootWireless by remember {
         mutableStateOf(
-            context.packageManager.isComponentEnabled(componentName) && 
+            context.packageManager.isComponentEnabled(componentName) &&
             preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false) &&
             hasSecurePermission
         )
+    }
+
+    val scope = rememberCoroutineScope()
+
+    // 启动时检测 Root 权限，并根据结果设置 startOnBoot
+    LaunchedEffect(Unit) {
+        val isRoot = withContext(Dispatchers.IO) {
+            try {
+                Shell.getShell().isRoot
+            } catch (e: Exception) {
+                false
+            }
+        }
+        hasRootPermission = isRoot
+        if (isRoot) {
+            startOnBoot = context.packageManager.isComponentEnabled(componentName) &&
+                    !preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false)
+        }
     }
     
     var tcpipPort by remember { 
@@ -141,7 +161,6 @@ fun SettingsScreen(
     
     var currentThemeMode by remember { mutableStateOf(ThemePreferences.themeMode.value) }
 
-    val scope = rememberCoroutineScope()
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var updateAvailable by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
@@ -196,6 +215,7 @@ fun SettingsScreen(
                 title = "开机启动（Root）",
                 subtitle = "已 root 设备，Stellar 可以开机启动",
                 checked = startOnBoot,
+                enabled = hasRootPermission == true,
                 onCheckedChange = { newValue ->
                     if (newValue) {
                         startOnBootWireless = false
@@ -217,6 +237,7 @@ fun SettingsScreen(
                 title = "降权激活",
                 subtitle = "Root 启动后降权到 shell 用户运行",
                 checked = dropPrivileges,
+                enabled = hasRootPermission == true,
                 onCheckedChange = { newValue ->
                     dropPrivileges = newValue
                     savePreference(DROP_PRIVILEGES, newValue)
