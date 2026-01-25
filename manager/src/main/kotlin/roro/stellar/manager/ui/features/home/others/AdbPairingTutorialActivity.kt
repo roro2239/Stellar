@@ -8,10 +8,14 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -25,7 +29,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,9 +39,27 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.adb.AdbPairingService
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
+import roro.stellar.manager.ui.theme.StellarTheme
+import roro.stellar.manager.ui.theme.ThemePreferences
+
+@RequiresApi(Build.VERSION_CODES.R)
+class AdbPairingTutorialActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            val themeMode = ThemePreferences.themeMode.value
+            StellarTheme(themeMode = themeMode) {
+                AdbPairingTutorialScreen(
+                    onBackPressed = { finish() }
+                )
+            }
+        }
+    }
+}
 
 private fun isNotificationEnabled(context: android.content.Context): Boolean {
     val nm = context.getSystemService(NotificationManager::class.java)
@@ -74,12 +95,11 @@ private fun startPairingService(context: android.content.Context) {
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdbPairingTutorialScreen(
-    topAppBarState: TopAppBarState,
+private fun AdbPairingTutorialScreen(
     onBackPressed: () -> Unit
 ) {
     val context = LocalContext.current
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     var hasNotificationPermission by remember {
         mutableStateOf(
