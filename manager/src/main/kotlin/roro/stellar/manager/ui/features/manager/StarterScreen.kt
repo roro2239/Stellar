@@ -1,7 +1,11 @@
 package roro.stellar.manager.ui.features.manager
 
 import android.os.Build
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,10 +16,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -32,18 +38,36 @@ import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbWirelessHelper
+import roro.stellar.manager.BuildConfig
 import roro.stellar.manager.ui.features.starter.Starter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
+import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.CommandExecutor
 import java.net.ConnectException
 import javax.net.ssl.SSLProtocolException
 
-private class NotRootedException : Exception()
+private class NotRootedException : Exception("没有 Root 权限")
+
+// 启动步骤状态
+enum class StepStatus { PENDING, RUNNING, COMPLETED, ERROR }
+
+data class StartStep(
+    val title: String,
+    val icon: ImageVector,
+    val status: StepStatus = StepStatus.PENDING
+)
 
 sealed class StarterState {
     data class Loading(val command: String, val isSuccess: Boolean = false) : StarterState()
-    data class Error(val error: Throwable) : StarterState()
+    data class Error(
+        val error: Throwable,
+        val command: String,
+        val failedStepIndex: Int
+    ) : StarterState()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,42 +105,46 @@ internal fun StarterScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
-            when (state) {
-                is StarterState.Loading -> {
-                    val loadingState = state as StarterState.Loading
-                    LoadingView(
-                        command = loadingState.command,
-                        outputLines = viewModel.outputLines.collectAsState().value,
-                        isSuccess = loadingState.isSuccess
-                    )
-                }
-                is StarterState.Error -> {
-                    ErrorView(
-                        error = (state as StarterState.Error).error,
-                        command = viewModel.lastCommand,
-                        outputLines = viewModel.outputLines.collectAsState().value,
-                        viewModel = viewModel,
-                        onClose = onClose,
-                        onNavigateToAdbPairing = onNavigateToAdbPairing
-                    )
-                }
+        when (state) {
+            is StarterState.Loading -> {
+                val loadingState = state as StarterState.Loading
+                LoadingContent(
+                    paddingValues = paddingValues,
+                    command = loadingState.command,
+                    outputLines = viewModel.outputLines.collectAsState().value,
+                    isSuccess = loadingState.isSuccess,
+                    isRoot = isRoot
+                )
+            }
+            is StarterState.Error -> {
+                val errorState = state as StarterState.Error
+                ErrorContent(
+                    paddingValues = paddingValues,
+                    command = errorState.command,
+                    outputLines = viewModel.outputLines.collectAsState().value,
+                    error = errorState.error,
+                    failedStepIndex = errorState.failedStepIndex,
+                    isRoot = isRoot,
+                    onRetry = { viewModel.retry() },
+                    onClose = onClose,
+                    onNavigateToAdbPairing = onNavigateToAdbPairing
+                )
             }
         }
     }
 }
 
 @Composable
-private fun LoadingView(
+private fun LoadingContent(
+    paddingValues: PaddingValues,
     command: String,
     outputLines: List<String>,
-    isSuccess: Boolean
+    isSuccess: Boolean,
+    isRoot: Boolean
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     var countdown by remember { mutableIntStateOf(3) }
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(isSuccess) {
         if (isSuccess) {
@@ -127,98 +155,401 @@ private fun LoadingView(
         }
     }
 
+    // 根据输出解析当前步骤
+    val steps = remember(isRoot) {
+        if (isRoot) {
+            listOf(
+                StartStep("检查 Root 权限", Icons.Filled.Security),
+                StartStep("检查现有服务", Icons.Filled.Search),
+                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
+                StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("启动完成", Icons.Filled.CheckCircle)
+            )
+        } else {
+            listOf(
+                StartStep("连接 ADB 服务", Icons.Filled.Cable),
+                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
+                StartStep("检查现有服务", Icons.Filled.Search),
+                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
+                StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("启动完成", Icons.Filled.CheckCircle)
+            )
+        }
+    }
+
+    // 根据输出判断当前步骤
+    val totalSteps = steps.size
+    val currentStepIndex by remember(outputLines, isSuccess) {
+        derivedStateOf {
+            when {
+                isSuccess -> totalSteps - 1
+                outputLines.any { it.contains("stellar_starter 正常退出") } -> totalSteps - 2
+                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 3
+                outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
+                    if (isRoot) 1 else 2
+                outputLines.any { it.startsWith("$") || it.contains("Connecting") } ->
+                    if (isRoot) 0 else 1
+                outputLines.isNotEmpty() -> 0
+                else -> 0
+            }
+        }
+    }
+
+    // 自动滚动到当前步骤
+    LaunchedEffect(currentStepIndex) {
+        scrollState.animateScrollTo(currentStepIndex * 180)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .padding(top = paddingValues.calculateTopPadding())
     ) {
-        StatusIcon(isSuccess = isSuccess)
-        StatusText(isSuccess = isSuccess)
-        CommandCard(
-            command = command,
-            outputLines = outputLines,
-            isExpanded = isExpanded,
-            onExpandToggle = { isExpanded = !isExpanded },
-            isError = false
-        )
-        if (isSuccess) {
-            CountdownCard(countdown = countdown)
+        // 固定顶部状态卡片
+        Column(
+            modifier = Modifier.padding(
+                top = AppSpacing.topBarContentSpacing,
+                start = AppSpacing.screenHorizontalPadding,
+                end = AppSpacing.screenHorizontalPadding
+            )
+        ) {
+            StarterStatusCard(isSuccess = isSuccess, isError = false, countdown = countdown)
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.cardSpacing))
+
+        // 可滚动的步骤列表
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .padding(horizontal = AppSpacing.screenHorizontalPadding),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
+        ) {
+            steps.forEachIndexed { index, step ->
+                val status = when {
+                    index < currentStepIndex -> StepStatus.COMPLETED
+                    index == currentStepIndex -> if (isSuccess && index == totalSteps - 1) StepStatus.COMPLETED else StepStatus.RUNNING
+                    else -> StepStatus.PENDING
+                }
+
+                var visible by remember { mutableStateOf(false) }
+                LaunchedEffect(index) {
+                    delay(index * 50L)
+                    visible = true
+                }
+
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+                ) {
+                    StepCard(step = step.copy(status = status), index = index + 1)
+                }
+            }
+
+            // 启动完成后显示复制日志卡片
+            if (isSuccess && outputLines.isNotEmpty()) {
+                var copyLogVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(totalSteps * 50L + 100L)
+                    copyLogVisible = true
+                    delay(150)
+                    scrollState.animateScrollTo(scrollState.maxValue)
+                }
+
+                AnimatedVisibility(
+                    visible = copyLogVisible,
+                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+                ) {
+                    CopyLogCard(
+                        command = command,
+                        outputLines = outputLines,
+                        context = context
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-private fun StatusIcon(isSuccess: Boolean, isError: Boolean = false) {
-    Surface(
-        shape = AppShape.shapes.iconLarge,
-        color = when {
-            isError -> MaterialTheme.colorScheme.errorContainer
-            isSuccess -> MaterialTheme.colorScheme.primaryContainer
-            else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        },
-        modifier = Modifier.size(140.dp)
+private fun StepCard(step: StartStep, index: Int) {
+    val isCompleted = step.status == StepStatus.COMPLETED
+    val isRunning = step.status == StepStatus.RUNNING
+    val isPending = step.status == StepStatus.PENDING
+    val isError = step.status == StepStatus.ERROR
+
+    val containerColor = when {
+        isCompleted -> MaterialTheme.colorScheme.primaryContainer
+        isError -> MaterialTheme.colorScheme.errorContainer
+        isRunning -> MaterialTheme.colorScheme.surfaceContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerLow
+    }
+    val contentColor = when {
+        isCompleted -> MaterialTheme.colorScheme.onPrimaryContainer
+        isError -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val iconBgColor = when {
+        isCompleted -> contentColor.copy(alpha = 0.15f)
+        isError -> contentColor.copy(alpha = 0.15f)
+        isRunning -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val iconTint = when {
+        isCompleted -> contentColor
+        isError -> MaterialTheme.colorScheme.error
+        isRunning -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    }
+
+    // 完成时的缩放动画
+    val scale by animateFloatAsState(
+        targetValue = if (isCompleted) 1f else 1f,
+        animationSpec = tween(200),
+        label = "scale"
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale },
+        shape = AppShape.shapes.cardLarge,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            when {
-                isError -> {
-                    Surface(
-                        shape = AppShape.shapes.iconLarge,
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
-                        modifier = Modifier.size(100.dp)
-                    ) {}
-                    Icon(
-                        imageVector = Icons.Filled.Error,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.cardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 步骤图标
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(AppShape.shapes.iconSmall)
+                    .background(iconBgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isCompleted -> Icon(
+                        Icons.Filled.Check,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(70.dp)
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    isError -> Icon(
+                        Icons.Filled.Close,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    isRunning -> CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = iconTint
+                    )
+                    else -> Text(
+                        text = "$index",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = iconTint
                     )
                 }
-                isSuccess -> {
-                    Surface(
-                        shape = AppShape.shapes.iconLarge,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        modifier = Modifier.size(100.dp)
-                    ) {}
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(70.dp)
-                    )
-                }
-                else -> {
-                    CircularProgressIndicator(Modifier.size(100.dp), strokeWidth = 4.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                    CircularProgressIndicator(Modifier.size(70.dp), strokeWidth = 5.dp,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+            }
+
+            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
+
+            // 步骤标题
+            Text(
+                text = step.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isRunning || isCompleted || isError) FontWeight.Medium else FontWeight.Normal,
+                color = if (isPending) contentColor.copy(alpha = 0.5f) else contentColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun CopyLogCard(
+    command: String,
+    outputLines: List<String>,
+    context: android.content.Context
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = AppShape.shapes.cardLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.cardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(AppShape.shapes.iconSmall)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
+
+            Text(
+                text = "启动日志",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+
+            FilledTonalButton(
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+                    val logText = buildString {
+                        appendLine("=== Stellar 启动日志 ===")
+                        appendLine()
+                        appendLine("执行命令:")
+                        appendLine(command)
+                        appendLine()
+                        appendLine("命令输出:")
+                        outputLines.forEach { appendLine(it) }
+                    }
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 启动日志", logText))
+                    android.widget.Toast.makeText(context, "日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                shape = AppShape.shapes.buttonSmall14
+            ) {
+                Icon(
+                    Icons.Filled.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("复制", style = MaterialTheme.typography.labelMedium)
             }
         }
     }
 }
 
 @Composable
-private fun StatusText(isSuccess: Boolean) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun StarterStatusCard(
+    isSuccess: Boolean,
+    isError: Boolean = false,
+    countdown: Int = 0
+) {
+    val containerColor = when {
+        isError -> MaterialTheme.colorScheme.errorContainer
+        isSuccess -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceContainer
+    }
+    val contentColor = when {
+        isError -> MaterialTheme.colorScheme.onErrorContainer
+        isSuccess -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val iconColor = when {
+        isError -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = AppShape.shapes.cardLarge,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
-        Text(
-            text = if (isSuccess) "启动成功" else "正在启动服务",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = if (isSuccess) "Stellar 服务已成功启动" else "请稍候片刻...",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.cardPaddingLarge),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 左侧图标
+            Box(
+                modifier = Modifier
+                    .size(AppSpacing.iconContainerSizeLarge)
+                    .clip(AppShape.shapes.iconSmall)
+                    .background(contentColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isError -> Icon(
+                        imageVector = Icons.Filled.Error,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(AppSpacing.iconSizeLarge)
+                    )
+                    isSuccess -> Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(AppSpacing.iconSizeLarge)
+                    )
+                    else -> CircularProgressIndicator(
+                        modifier = Modifier.size(AppSpacing.iconSizeLarge),
+                        strokeWidth = 3.dp,
+                        color = iconColor
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
+
+            // 中间标题和副标题
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = when {
+                        isError -> "启动失败"
+                        isSuccess -> "启动成功"
+                        else -> "正在启动"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.titleSubtitleSpacing))
+                Text(
+                    text = when {
+                        isError -> "请查看错误信息"
+                        isSuccess -> "Stellar 服务已成功启动"
+                        else -> "请稍候片刻..."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.7f)
+                )
+            }
+
+            // 右侧倒计时（仅成功时显示）
+            if (isSuccess && countdown > 0) {
+                Surface(
+                    shape = AppShape.shapes.iconSmall,
+                    color = contentColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "${countdown}s",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -226,301 +557,368 @@ private fun StatusText(isSuccess: Boolean) {
 private fun CommandCard(
     command: String,
     outputLines: List<String>,
-    isExpanded: Boolean,
-    onExpandToggle: () -> Unit,
     isError: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = AppShape.shapes.cardMedium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-        )
-    ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp),
-               verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(32.dp).background(
-                        color = if (isError) MaterialTheme.colorScheme.errorContainer
-                               else MaterialTheme.colorScheme.primaryContainer,
-                        shape = AppShape.shapes.iconSmall
-                    ), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.Terminal,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isError) MaterialTheme.colorScheme.error
-                                  else MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Text("启动命令", style = MaterialTheme.typography.titleSmall,
-                         fontWeight = FontWeight.Bold)
-                }
-                IconButton(onClick = onExpandToggle, modifier = Modifier.size(32.dp)) {
-                    Icon(if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                         if (isExpanded) "收起" else "展开",
-                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Surface(shape = AppShape.shapes.iconSmall,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)) {
-                Text(command, style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace, fontSize = 11.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(12.dp))
-            }
-            if (isExpanded && outputLines.isNotEmpty()) {
-                HorizontalDivider()
-                OutputLogSurface(outputLines = outputLines, isError = isError)
-            }
-        }
-    }
-}
+    val terminalBgColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val commandColor = MaterialTheme.colorScheme.primary
+    val outputColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val errorColor = MaterialTheme.colorScheme.error
 
-@Composable
-private fun OutputLogSurface(outputLines: List<String>, isError: Boolean) {
-    Surface(
-        shape = AppShape.shapes.iconSmall,
-        color = if (isError) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-               else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-        modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)
-    ) {
-        Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
-            outputLines.forEach { line ->
-                Text(line, style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace, fontSize = 10.sp),
-                    color = if (isError) MaterialTheme.colorScheme.error
-                           else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun CountdownCard(countdown: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardMedium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        )
+        shape = AppShape.shapes.cardLarge,
+        colors = CardDefaults.cardColors(containerColor = terminalBgColor)
     ) {
-        Row(modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically) {
-            if (countdown > 0) {
-                Text("$countdown", style = MaterialTheme.typography.headlineSmall,
-                     fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("秒后自动关闭", style = MaterialTheme.typography.bodyMedium,
-                     color = MaterialTheme.colorScheme.onSurface)
-            } else {
-                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("正在关闭...", style = MaterialTheme.typography.bodyMedium,
-                     color = MaterialTheme.colorScheme.onSurface)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 280.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(AppSpacing.cardPadding)
+        ) {
+            // 命令行（带 $ 前缀）
+            Text(
+                text = "$ $command",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
+                ),
+                color = commandColor,
+                fontWeight = FontWeight.Medium
+            )
+
+            // 日志输出
+            if (outputLines.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                outputLines.forEach { line ->
+                    val lineColor = when {
+                        isError -> errorColor
+                        line.startsWith("错误") || line.contains("Error") -> errorColor
+                        else -> outputColor
+                    }
+                    Text(
+                        text = line,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp
+                        ),
+                        color = lineColor
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ErrorView(
-    error: Throwable,
+private fun ErrorContent(
+    paddingValues: PaddingValues,
     command: String,
     outputLines: List<String>,
-    viewModel: StarterViewModel,
+    error: Throwable,
+    failedStepIndex: Int,
+    isRoot: Boolean,
+    onRetry: () -> Unit,
     onClose: () -> Unit,
     onNavigateToAdbPairing: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    var isExpanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     val needsPairing = error is SSLProtocolException || error is ConnectException
-    val isProcessKillError = error.message?.contains("无法终止进程") == true ||
-                             error.message?.contains("停止现有服务") == true
 
-    val (errorTitle, errorMessage, errorTip) = getErrorInfo(error, isProcessKillError)
+    val steps = remember(isRoot) {
+        if (isRoot) {
+            listOf(
+                StartStep("检查 Root 权限", Icons.Filled.Security),
+                StartStep("检查现有服务", Icons.Filled.Search),
+                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
+                StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("启动完成", Icons.Filled.CheckCircle)
+            )
+        } else {
+            listOf(
+                StartStep("连接 ADB 服务", Icons.Filled.Cable),
+                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
+                StartStep("检查现有服务", Icons.Filled.Search),
+                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
+                StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("启动完成", Icons.Filled.CheckCircle)
+            )
+        }
+    }
+
+    val totalSteps = steps.size
+
+    // 自动滚动到底部（等待所有卡片显示后）
+    LaunchedEffect(failedStepIndex) {
+        delay(totalSteps * 50L + 350L)
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = paddingValues.calculateTopPadding())
     ) {
-        StatusIcon(isSuccess = false, isError = true)
-        ErrorText(errorTitle = errorTitle, errorMessage = errorMessage)
-        CommandCard(command, outputLines, isExpanded, { isExpanded = !isExpanded }, true)
-        if (errorTip.isNotEmpty()) { ErrorTipCard(errorTip) }
-        ErrorActions(isProcessKillError, needsPairing, viewModel, onClose,
-                    onNavigateToAdbPairing, context, errorTitle, errorMessage,
-                    errorTip, command, outputLines)
-    }
-}
+        // 固定顶部状态卡片
+        Column(
+            modifier = Modifier.padding(
+                top = AppSpacing.topBarContentSpacing,
+                start = AppSpacing.screenHorizontalPadding,
+                end = AppSpacing.screenHorizontalPadding
+            )
+        ) {
+            StarterStatusCard(isSuccess = false, isError = true, countdown = 0)
+        }
 
-private fun getErrorInfo(error: Throwable, isProcessKillError: Boolean): Triple<String, String, String> {
-    return when {
-        isProcessKillError -> Triple("服务已在运行", "无法终止现有进程", "")
-        error is AdbKeyException -> Triple("KeyStore 错误", "设备的 KeyStore 机制已损坏",
-            "这可能是系统问题，请尝试重启设备或使用 Root 模式")
-        error is NotRootedException -> Triple("权限不足", "设备未 Root 或无 Root 权限",
-            "请确保设备已 Root 并授予应用超级用户权限")
-        error is ConnectException -> Triple("无线调试未启用", "无法连接到 ADB 服务",
-            "请在开发者选项中启用无线调试功能")
-        error is SSLProtocolException -> Triple("配对未完成", "设备尚未完成配对",
-            "使用无线调试前需要先完成配对步骤")
-        else -> Triple("启动失败", error.message ?: "未知错误",
-            "请展开查看完整日志以了解详细信息")
+        Spacer(modifier = Modifier.height(AppSpacing.cardSpacing))
+
+        // 可滚动的步骤列表
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(scrollState)
+                .padding(horizontal = AppSpacing.screenHorizontalPadding),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
+        ) {
+            steps.forEachIndexed { index, step ->
+                val status = when {
+                    index < failedStepIndex -> StepStatus.COMPLETED
+                    index == failedStepIndex -> StepStatus.ERROR
+                    else -> StepStatus.PENDING
+                }
+
+                var visible by remember { mutableStateOf(false) }
+                LaunchedEffect(index) {
+                    delay(index * 50L)
+                    visible = true
+                }
+
+                AnimatedVisibility(
+                    visible = visible,
+                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+                ) {
+                    StepCard(step = step.copy(status = status), index = index + 1)
+                }
+            }
+
+            // 复制报告卡片
+            var copyVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                delay(totalSteps * 50L + 100L)
+                copyVisible = true
+            }
+
+            AnimatedVisibility(
+                visible = copyVisible,
+                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+            ) {
+                CopyErrorReportCard(
+                    command = command,
+                    outputLines = outputLines,
+                    error = error,
+                    context = context
+                )
+            }
+
+            // 重试卡片
+            var retryVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                delay(totalSteps * 50L + 150L)
+                retryVisible = true
+            }
+
+            AnimatedVisibility(
+                visible = retryVisible,
+                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+            ) {
+                ActionCard(
+                    icon = Icons.Filled.Refresh,
+                    title = if (needsPairing) "前往配对" else "重试",
+                    onClick = {
+                        if (needsPairing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            onNavigateToAdbPairing?.invoke()
+                            onClose()
+                        } else {
+                            onRetry()
+                        }
+                    }
+                )
+            }
+
+            // 返回卡片
+            var backVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                delay(totalSteps * 50L + 200L)
+                backVisible = true
+            }
+
+            AnimatedVisibility(
+                visible = backVisible,
+                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+            ) {
+                ActionCard(
+                    icon = Icons.Filled.ArrowBack,
+                    title = "返回",
+                    onClick = onClose
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }
 
 @Composable
-private fun ErrorText(errorTitle: String, errorMessage: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally,
-           verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(errorTitle, style = MaterialTheme.typography.headlineSmall,
-             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error,
-             textAlign = TextAlign.Center)
-        Text(errorMessage, style = MaterialTheme.typography.bodyMedium,
-             color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun ErrorTipCard(errorTip: String) {
+private fun CopyErrorReportCard(
+    command: String,
+    outputLines: List<String>,
+    error: Throwable,
+    context: android.content.Context
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardMedium,
+        shape = AppShape.shapes.cardLarge,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Row(modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Filled.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(20.dp)
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.cardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(AppShape.shapes.iconSmall)
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
+
             Text(
-                text = errorTip,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "错误报告",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+
+            FilledTonalButton(
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+
+                    // 从输出日志中提取错误信息
+                    val errorFromOutput = outputLines
+                        .filter { it.contains("错误：") || it.contains("Error:") }
+                        .lastOrNull()
+                        ?.let { line ->
+                            line.substringAfter("错误：", "")
+                                .ifEmpty { line.substringAfter("Error:", "") }
+                                .trim()
+                        }
+                    val errorMessage = errorFromOutput?.ifEmpty { null }
+                        ?: error.message
+                        ?: "未知错误"
+
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    val currentTime = dateFormat.format(Date())
+
+                    val logText = buildString {
+                        appendLine("=== Stellar 启动错误报告 ===")
+                        appendLine()
+                        appendLine("时间: $currentTime")
+                        appendLine("错误信息: $errorMessage")
+                        appendLine()
+                        appendLine("执行命令:")
+                        appendLine(command)
+                        appendLine()
+                        if (outputLines.isNotEmpty()) {
+                            appendLine("命令输出:")
+                            outputLines.forEach { appendLine(it) }
+                            appendLine()
+                        }
+                        appendLine("软件信息:")
+                        appendLine("版本: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                        appendLine()
+                        appendLine("设备信息:")
+                        appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                        appendLine("设备: ${Build.MANUFACTURER} ${Build.MODEL}")
+                    }
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 错误报告", logText))
+                    android.widget.Toast.makeText(context, "错误报告已复制", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                shape = AppShape.shapes.buttonSmall14
+            ) {
+                Icon(
+                    Icons.Filled.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("复制", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionCard(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = AppShape.shapes.cardLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AppSpacing.cardPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(AppShape.shapes.iconSmall)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-    }
-}
-
-@Composable
-private fun ErrorActions(
-    isProcessKillError: Boolean,
-    needsPairing: Boolean,
-    viewModel: StarterViewModel,
-    onClose: () -> Unit,
-    onNavigateToAdbPairing: (() -> Unit)?,
-    context: android.content.Context,
-    errorTitle: String,
-    errorMessage: String,
-    errorTip: String,
-    command: String,
-    outputLines: List<String>
-) {
-    when {
-        isProcessKillError -> {
-            Button(onClick = {
-                if (Stellar.pingBinder()) { try { Stellar.exit() } catch (_: Throwable) {} }
-                viewModel.retry()
-            }, modifier = Modifier.fillMaxWidth(), shape = AppShape.shapes.buttonMedium,
-               colors = ButtonDefaults.buttonColors(
-                   containerColor = MaterialTheme.colorScheme.primary,
-                   contentColor = MaterialTheme.colorScheme.onPrimary)) {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("关闭服务并重试", style = MaterialTheme.typography.titleMedium,
-                     fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
-            }
-        }
-        needsPairing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-            PairingButtons(onNavigateToAdbPairing, onClose)
-        }
-        else -> {
-            CopyErrorButton(context, errorTitle, errorMessage, errorTip, command, outputLines)
-            OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth(),
-                          shape = AppShape.shapes.buttonMedium) {
-                Text("返回", style = MaterialTheme.typography.titleMedium,
-                     modifier = Modifier.padding(vertical = 4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun PairingButtons(onNavigateToAdbPairing: (() -> Unit)?, onClose: () -> Unit) {
-    Button(onClick = { onNavigateToAdbPairing?.invoke(); onClose() },
-           modifier = Modifier.fillMaxWidth(), shape = AppShape.shapes.buttonMedium,
-           colors = ButtonDefaults.buttonColors(
-               containerColor = MaterialTheme.colorScheme.primary,
-               contentColor = MaterialTheme.colorScheme.onPrimary)) {
-        Text("前往配对", style = MaterialTheme.typography.titleMedium,
-             fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
-    }
-    OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth(),
-                  shape = AppShape.shapes.buttonMedium) {
-        Text("返回", style = MaterialTheme.typography.titleMedium,
-             modifier = Modifier.padding(vertical = 4.dp))
-    }
-}
-
-@Composable
-private fun CopyErrorButton(
-    context: android.content.Context,
-    errorTitle: String,
-    errorMessage: String,
-    errorTip: String,
-    command: String,
-    outputLines: List<String>
-) {
-    Button(onClick = {
-        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-            as android.content.ClipboardManager
-        val logText = buildString {
-            appendLine("=== Stellar 启动错误报告 ===")
-            appendLine()
-            appendLine("错误类型: $errorTitle")
-            appendLine("错误信息: $errorMessage")
-            if (errorTip.isNotEmpty()) appendLine("提示: $errorTip")
-            appendLine()
-            appendLine("执行命令:")
-            appendLine(command)
-            appendLine()
-            if (outputLines.isNotEmpty()) {
-                appendLine("命令输出:")
-                outputLines.forEach { appendLine(it) }
-            }
-            appendLine()
-            appendLine("设备信息:")
-            appendLine("Android 版本: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-            appendLine("设备型号: ${Build.MANUFACTURER} ${Build.MODEL}")
-            appendLine("应用版本: ${context.packageManager.getPackageInfo(context.packageName, 0).versionName}")
-        }
-        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 错误日志", logText))
-        android.widget.Toast.makeText(context, "错误日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
-    }, modifier = Modifier.fillMaxWidth(), shape = AppShape.shapes.buttonMedium,
-       colors = ButtonDefaults.buttonColors(
-           containerColor = MaterialTheme.colorScheme.primary,
-           contentColor = MaterialTheme.colorScheme.onPrimary)) {
-        Text("复制错误日志", style = MaterialTheme.typography.titleMedium,
-             fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 4.dp))
     }
 }
 
@@ -538,7 +936,7 @@ internal class StarterViewModel(
     private val _outputLines = MutableStateFlow<List<String>>(emptyList())
     val outputLines: StateFlow<List<String>> = _outputLines.asStateFlow()
 
-    val lastCommand: String = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
+    private val lastCommand: String = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
 
     private val adbWirelessHelper = AdbWirelessHelper()
 
@@ -558,8 +956,14 @@ internal class StarterViewModel(
         }
     }
 
-    private fun setError(error: Throwable) {
-        viewModelScope.launch { _state.value = StarterState.Error(error) }
+    private fun setError(error: Throwable, failedStepIndex: Int = 0) {
+        viewModelScope.launch {
+            _state.value = StarterState.Error(
+                error = error,
+                command = lastCommand,
+                failedStepIndex = failedStepIndex
+            )
+        }
     }
 
     fun retry() {
@@ -583,7 +987,7 @@ internal class StarterViewModel(
                 if (!Shell.getShell().isRoot) {
                     Shell.getCachedShell()?.close()
                     if (!Shell.getShell().isRoot) {
-                        setError(NotRootedException())
+                        setError(NotRootedException(), 0) // 检查 Root 权限失败
                         return@launch
                     }
                 }
@@ -599,12 +1003,12 @@ internal class StarterViewModel(
                     if (result.code != 0) {
                         val errorMsg = getErrorMessage(result.code)
                         addOutputLine("错误：$errorMsg")
-                        setError(Exception(errorMsg))
+                        setError(Exception(errorMsg), 2) // 启动服务进程失败
                     }
                 }
             } catch (e: Exception) {
                 addOutputLine("Error: ${e.message}")
-                setError(e)
+                setError(e, 2) // 启动服务进程失败
             }
         }
     }
@@ -629,14 +1033,16 @@ internal class StarterViewModel(
                 output.lines().forEach { line ->
                     val trimmedLine = line.trim()
                     if (trimmedLine.startsWith("错误：")) {
-                        setError(Exception(trimmedLine.substringAfter("错误：").trim()))
+                        setError(Exception(trimmedLine.substringAfter("错误：").trim()), 3) // 启动服务进程失败
                     }
                 }
                 if (output.contains("stellar_starter 正常退出")) waitForService()
             },
             onError = { error ->
                 addOutputLine("错误：${error.message}")
-                setError(error)
+                // ADB 连接或验证失败
+                val stepIndex = if (error is SSLProtocolException || error is ConnectException) 0 else 1
+                setError(error, stepIndex)
             }
         )
     }
@@ -664,14 +1070,16 @@ internal class StarterViewModel(
                 elapsed += checkInterval
                 if (hasErrorInOutput()) {
                     Stellar.removeBinderReceivedListener(listener)
-                    setError(Exception(getLastErrorMessage()))
+                    // 等待 Binder 响应时出错 (Root: 3, ADB: 4)
+                    setError(Exception(getLastErrorMessage()), if (isRoot) 3 else 4)
                     return@launch
                 }
             }
 
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"))
+                // 等待 Binder 响应超时 (Root: 3, ADB: 4)
+                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 4)
             }
         }
     }

@@ -23,12 +23,16 @@ class AdbMdns(
     private val onTimeout: (() -> Unit)? = null
 ) {
 
+    @Volatile
     private var registered = false
+    @Volatile
     private var running = false
+    @Volatile
+    private var pendingRestart = false
     private var serviceName: String? = null
     private val listener = DiscoveryListener(this)
     private val nsdManager: NsdManager = context.getSystemService(NsdManager::class.java)
-    
+
     private val executor = Executors.newSingleThreadExecutor()
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -37,32 +41,28 @@ class AdbMdns(
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
-            if (running) {
-                val elapsedTime = System.currentTimeMillis() - startTime
-                if (elapsedTime >= TIMEOUT_MILLIS) {
-                    Log.v(TAG, "搜索超时，自动停止")
-                    stop()
-                    onTimeout?.invoke()
-                    return
-                }
+            if (!running) return
 
-                if (registered) {
-                    Log.v(TAG, "定期刷新服务发现")
-                    try {
-                        nsdManager.stopServiceDiscovery(listener)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "停止服务发现失败", e)
-                    }
-                    registered = false
-                }
-
-                mainHandler.postDelayed({
-                    if (running && !registered) {
-                        nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
-                    }
-                }, 50)
-                mainHandler.postDelayed(this, 50)
+            val elapsedTime = System.currentTimeMillis() - startTime
+            if (elapsedTime >= TIMEOUT_MILLIS) {
+                Log.v(TAG, "搜索超时，自动停止")
+                stop()
+                onTimeout?.invoke()
+                return
             }
+
+            if (registered && !pendingRestart) {
+                Log.v(TAG, "定期刷新服务发现")
+                pendingRestart = true
+                try {
+                    nsdManager.stopServiceDiscovery(listener)
+                } catch (e: Exception) {
+                    Log.e(TAG, "停止服务发现失败", e)
+                    pendingRestart = false
+                }
+            }
+
+            mainHandler.postDelayed(this, REFRESH_INTERVAL_MILLIS)
         }
     }
 
@@ -96,6 +96,18 @@ class AdbMdns(
 
     private fun onDiscoveryStop() {
         registered = false
+        if (pendingRestart && running) {
+            pendingRestart = false
+            mainHandler.post {
+                if (running && !registered) {
+                    try {
+                        nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "重新启动服务发现失败", e)
+                    }
+                }
+            }
+        }
     }
 
     @Suppress("DEPRECATION")
