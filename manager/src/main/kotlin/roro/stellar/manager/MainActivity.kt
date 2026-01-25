@@ -7,12 +7,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,34 +34,17 @@ import roro.stellar.manager.ui.features.terminal.TerminalScreen
 import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
-import roro.stellar.manager.ui.navigation.routes.HomeScreen as HomeScreenRoute
 import roro.stellar.manager.ui.navigation.routes.MainScreen
-import roro.stellar.manager.ui.navigation.routes.SettingsScreen as SettingsScreenRoute
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import roro.stellar.manager.ui.features.starter.StarterScreen
-import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialScreen
+import roro.stellar.manager.ui.features.starter.StarterActivity
+import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity
+import roro.stellar.manager.ui.features.logs.LogsActivity
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
-import roro.stellar.manager.ui.features.logs.LogsScreen
 import roro.stellar.Stellar
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
-data class StarterParams(
-    val isRoot: Boolean,
-    val host: String?,
-    val port: Int
-)
-
 class MainActivity : ComponentActivity() {
-
-    companion object {
-        const val EXTRA_NAVIGATE_TO_STARTER = "navigate_to_starter"
-        const val EXTRA_STARTER_IS_ROOT = "starter_is_root"
-        const val EXTRA_STARTER_HOST = "starter_host"
-        const val EXTRA_STARTER_PORT = "starter_port"
-    }
 
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
         checkServerStatus()
@@ -94,19 +71,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode = ThemePreferences.themeMode.value
 
-            val navigateToStarter = intent.getBooleanExtra(EXTRA_NAVIGATE_TO_STARTER, false)
-            val starterIsRoot = intent.getBooleanExtra(EXTRA_STARTER_IS_ROOT, false)
-            val starterHost = intent.getStringExtra(EXTRA_STARTER_HOST)
-            val starterPort = intent.getIntExtra(EXTRA_STARTER_PORT, 0)
-
             StellarTheme(themeMode = themeMode) {
                 TopAppBarProvider {
                     MainScreenContent(
                         homeViewModel = homeModel,
-                        appsViewModel = appsModel,
-                        initialStarterParams = if (navigateToStarter) {
-                            StarterParams(starterIsRoot, starterHost, starterPort)
-                        } else null
+                        appsViewModel = appsModel
                     )
                 }
             }
@@ -145,8 +114,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainScreenContent(
     homeViewModel: HomeViewModel,
-    appsViewModel: roro.stellar.manager.management.AppsViewModel,
-    initialStarterParams: StarterParams? = null
+    appsViewModel: roro.stellar.manager.management.AppsViewModel
 ) {
     val topAppBarState = LocalTopAppBarState.current!!
     val navController = rememberNavController()
@@ -154,28 +122,6 @@ private fun MainScreenContent(
 
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     val context = navController.context
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    val hideBottomBarRoutes = listOf(
-        HomeScreenRoute.Starter.route,
-        HomeScreenRoute.AdbPairingTutorial.route,
-        SettingsScreenRoute.Logs.route
-    )
-    val shouldShowBottomBar = currentRoute !in hideBottomBarRoutes
-
-    androidx.compose.runtime.LaunchedEffect(initialStarterParams) {
-        if (initialStarterParams != null) {
-            navController.navigate(
-                HomeScreenRoute.starterRoute(
-                    initialStarterParams.isRoot,
-                    initialStarterParams.host,
-                    initialStarterParams.port
-                )
-            )
-        }
-    }
 
     BackHandler {
         if (navController.previousBackStackEntry == null) {
@@ -192,32 +138,25 @@ private fun MainScreenContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 主界面
         Scaffold(
             bottomBar = {
-                AnimatedVisibility(
-                    visible = shouldShowBottomBar,
-                    enter = expandVertically(animationSpec = tween(300)),
-                    exit = shrinkVertically(animationSpec = tween(300))
-                ) {
-                    StandardBottomNavigation(
-                        selectedIndex = selectedIndex,
-                        onItemClick = { index ->
-                            if (selectedIndex != index) {
-                                selectedIndex = index
-                                val route = MainScreen.entries[index].route
-                                navController.navigate(route) {
-                                    popUpTo(0) {
-                                        inclusive = true
-                                    }
-                                    launchSingleTop = true
+                StandardBottomNavigation(
+                    selectedIndex = selectedIndex,
+                    onItemClick = { index ->
+                        if (selectedIndex != index) {
+                            selectedIndex = index
+                            val route = MainScreen.entries[index].route
+                            navController.navigate(route) {
+                                popUpTo(0) {
+                                    inclusive = true
                                 }
+                                launchSingleTop = true
                             }
                         }
-                    )
-                }
+                    }
+                )
             },
-            contentWindowInsets = if (shouldShowBottomBar) WindowInsets.navigationBars else WindowInsets(0)
+            contentWindowInsets = WindowInsets.navigationBars
         ) {
         NavHost(
             navController = navController,
@@ -236,46 +175,11 @@ private fun MainScreenContent(
                         homeViewModel = homeViewModel,
                         appsViewModel = appsViewModel,
                         onNavigateToStarter = { isRoot, host, port ->
-                            navController.navigate(HomeScreenRoute.starterRoute(isRoot, host, port))
+                            context.startActivity(StarterActivity.createIntent(context, isRoot, host, port))
                         },
                         onNavigateToAdbPairing = {
-                            navController.navigate(HomeScreenRoute.AdbPairingTutorial.route)
+                            context.startActivity(android.content.Intent(context, AdbPairingTutorialActivity::class.java))
                         }
-                    )
-                }
-                composable(
-                    route = HomeScreenRoute.Starter.route,
-                    arguments = listOf(
-                        navArgument("isRoot") { type = NavType.BoolType },
-                        navArgument("host") { type = NavType.StringType },
-                        navArgument("port") { type = NavType.IntType }
-                    ),
-                    enterTransition = { slideInHorizontally(tween(300)) { it } },
-                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
-                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
-                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
-                ) { backStackEntry ->
-                    val isRoot = backStackEntry.arguments?.getBoolean("isRoot") ?: true
-                    val host = backStackEntry.arguments?.getString("host")?.takeIf { it != "null" }
-                    val port = backStackEntry.arguments?.getInt("port") ?: 0
-                    StarterScreen(
-                        topAppBarState = topAppBarState,
-                        isRoot = isRoot,
-                        host = host,
-                        port = port,
-                        onClose = { navController.safePopBackStack() }
-                    )
-                }
-                composable(
-                    route = HomeScreenRoute.AdbPairingTutorial.route,
-                    enterTransition = { slideInHorizontally(tween(300)) { it } },
-                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
-                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
-                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
-                ) {
-                    AdbPairingTutorialScreen(
-                        topAppBarState = topAppBarState,
-                        onBackPressed = { navController.safePopBackStack() }
                     )
                 }
             }
@@ -311,21 +215,7 @@ private fun MainScreenContent(
                     SettingsScreen(
                         topAppBarState = topAppBarState,
                         onNavigateToLogs = {
-                            navController.navigate(SettingsScreenRoute.Logs.route)
-                        }
-                    )
-                }
-                composable(
-                    route = SettingsScreenRoute.Logs.route,
-                    enterTransition = { slideInHorizontally(tween(300)) { it } },
-                    exitTransition = { slideOutHorizontally(tween(300)) { it } },
-                    popEnterTransition = { slideInHorizontally(tween(300)) { -it } },
-                    popExitTransition = { slideOutHorizontally(tween(300)) { it } }
-                ) {
-                    LogsScreen(
-                        topAppBarState = topAppBarState,
-                        onBackClick = {
-                            navController.safePopBackStack()
+                            context.startActivity(android.content.Intent(context, LogsActivity::class.java))
                         }
                     )
                 }
