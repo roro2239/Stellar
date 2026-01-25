@@ -9,11 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cable
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +27,8 @@ import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.management.AppsViewModel
 import roro.stellar.manager.ui.components.ModernActionCard
+import roro.stellar.manager.ui.components.StellarConfirmDialog
+import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
@@ -138,62 +139,46 @@ fun HomeScreen(
     }
 
     if (showStopDialog) {
-        AlertDialog(
+        StellarConfirmDialog(
             onDismissRequest = { showStopDialog = false },
-            title = { Text("停止服务") },
-            text = { Text("Stellar 服务将被停止。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (Stellar.pingBinder()) {
-                            try {
-                                Stellar.exit()
-                            } catch (_: Throwable) {
-                            }
-                        }
-                        showStopDialog = false
+            title = "停止服务",
+            message = "Stellar 服务将被停止。",
+            onConfirm = {
+                if (Stellar.pingBinder()) {
+                    try {
+                        Stellar.exit()
+                    } catch (_: Throwable) {
                     }
-                ) {
-                    Text("确定")
                 }
+                showStopDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showStopDialog = false }) {
-                    Text("取消")
-                }
-            }
+            onDismiss = { showStopDialog = false }
         )
     }
 
     if (showAdbCommandDialog) {
-        AlertDialog(
+        StellarDialog(
             onDismissRequest = { showAdbCommandDialog = false },
-            title = { Text("查看指令") },
-            text = { 
-                Text(Starter.adbCommand)
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (ClipboardUtils.put(context, Starter.adbCommand)) {
-                            Toast.makeText(
-                                context,
-                                "${Starter.adbCommand}\n已被复制到剪贴板。",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                        showAdbCommandDialog = false
-                    }
-                ) {
-                    Text("复制")
+            title = "查看指令",
+            confirmText = "复制",
+            onConfirm = {
+                if (ClipboardUtils.put(context, Starter.adbCommand)) {
+                    Toast.makeText(
+                        context,
+                        "${Starter.adbCommand}\n已被复制到剪贴板。",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
+                showAdbCommandDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showAdbCommandDialog = false }) {
-                    Text("取消")
-                }
-            }
-        )
+            onDismiss = { showAdbCommandDialog = false }
+        ) {
+            Text(
+                text = Starter.adbCommand,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
     
     if (triggerAdbAutoConnect && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

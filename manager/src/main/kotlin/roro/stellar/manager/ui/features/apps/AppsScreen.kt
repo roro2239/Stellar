@@ -8,7 +8,6 @@ import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -17,18 +16,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,9 +48,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,6 +59,8 @@ import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.compat.Status
 import roro.stellar.manager.management.AppsViewModel
+import roro.stellar.manager.ui.components.StellarInfoDialog
+import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
@@ -257,15 +251,11 @@ fun AppsScreen(
     }
 
     if (showPermissionError) {
-        AlertDialog(
+        StellarInfoDialog(
             onDismissRequest = { showPermissionError = false },
-            title = { Text("ADB 权限受限") },
-            text = { Text("您的设备制造商很可能限制了 ADB 的权限。\n\n请在开发者选项中调整相关设置，或尝试使用 Root 模式运行。") },
-            confirmButton = {
-                TextButton(onClick = { showPermissionError = false }) {
-                    Text("确定")
-                }
-            }
+            title = "ADB 权限受限",
+            message = "您的设备制造商很可能限制了 ADB 的权限。\n\n请在开发者选项中调整相关设置，或尝试使用 Root 模式运行。",
+            onConfirm = { showPermissionError = false }
         )
     }
 }
@@ -509,86 +499,24 @@ private fun PermissionSegmentSelector(
     currentFlag: Int,
     onFlagChange: (Int) -> Unit
 ) {
-    val density = LocalDensity.current
     val entries = listOf(
         AuthorizationManager.FLAG_ASK,
         AuthorizationManager.FLAG_GRANTED,
         AuthorizationManager.FLAG_DENIED
     )
-    val labels = listOf("询问", "允许", "拒绝")
-    val currentIndex = entries.indexOf(currentFlag).coerceIn(0, entries.lastIndex)
-
-    var innerWidth by remember { mutableIntStateOf(0) }
-    val spacing = 3.dp
-    val spacingPx = with(density) { spacing.toPx() }
-    val animatedIndex by animateFloatAsState(
-        targetValue = currentIndex.toFloat(),
-        label = "permission_index"
+    val labels = mapOf(
+        AuthorizationManager.FLAG_ASK to "询问",
+        AuthorizationManager.FLAG_GRANTED to "允许",
+        AuthorizationManager.FLAG_DENIED to "拒绝"
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surface,
-                shape = AppShape.shapes.cardMedium
-            )
-            .padding(horizontal = 6.dp, vertical = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onSizeChanged { size -> innerWidth = size.width },
-            horizontalArrangement = Arrangement.spacedBy(spacing)
-        ) {
-            repeat(entries.size) {
-                Spacer(modifier = Modifier.weight(1f).height(36.dp))
-            }
-        }
-
-        if (innerWidth > 0) {
-            val itemWidth = (innerWidth - spacingPx * (entries.size - 1)) / entries.size
-            val offsetX = animatedIndex * (itemWidth + spacingPx)
-            Box(
-                modifier = Modifier
-                    .offset(x = with(density) { offsetX.toDp() })
-                    .width(with(density) { itemWidth.toDp() })
-                    .height(36.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = AppShape.shapes.iconSmall
-                    )
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(36.dp),
-            horizontalArrangement = Arrangement.spacedBy(spacing)
-        ) {
-            entries.forEachIndexed { index, entry ->
-                val isSelected = currentIndex == index
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onFlagChange(entry) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = labels[index],
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
+    StellarSegmentedSelector(
+        items = entries,
+        selectedItem = currentFlag,
+        onItemSelected = onFlagChange,
+        itemLabel = { labels[it] ?: "" },
+        itemHeight = AppSpacing.selectorItemHeightSmall
+    )
 }
 
 private fun drawableToBitmap(drawable: Drawable): Bitmap? {
