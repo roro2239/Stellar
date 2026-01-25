@@ -1,6 +1,5 @@
 package roro.stellar.manager.ui.features.home
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,23 +27,15 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import roro.stellar.Stellar
 import roro.stellar.StellarApiConstants
 import roro.stellar.manager.ui.components.ModernActionCard
 import roro.stellar.manager.ui.components.ModernStatusCard
-import roro.stellar.manager.ui.features.starter.StarterActivity
 import roro.stellar.manager.ui.theme.AppShape
 
 @Composable
@@ -141,20 +132,16 @@ fun InfoRow(
 }
 
 @Composable
-fun StartRootCard(isRestart: Boolean) {
-    val context = LocalContext.current
-
+fun StartRootCard(
+    isRestart: Boolean,
+    onStartClick: () -> Unit = {}
+) {
     ModernActionCard(
         icon = Icons.Default.Security,
         title = if (isRestart) "Root 重启" else "Root 启动",
         subtitle = "通过 Root 权限启动 Stellar 服务",
         buttonText = if (isRestart) "重启" else "启动",
-        onButtonClick = {
-            val intent = Intent(context, StarterActivity::class.java).apply {
-                putExtra(StarterActivity.EXTRA_IS_ROOT, true)
-            }
-            context.startActivity(intent)
-        }
+        onButtonClick = onStartClick
     )
 }
 
