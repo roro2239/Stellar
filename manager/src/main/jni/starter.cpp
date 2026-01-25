@@ -200,13 +200,15 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FATAL_UID);
     }
 
+    printf("检查权限: %s (uid=%d)\n", uid == 0 ? "Root" : "ADB", uid);
+    fflush(stdout);
+
     se::init();
 
     if (uid == 0) {
         switch_cgroup();
 
         if (android_get_device_api_level() >= 29) {
-            printf("切换挂载命名空间到 init...\n");
             switch_mnt_ns(1);
         }
     }
@@ -227,14 +229,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("启动器开始运行\n");
+    printf("检查现有服务\n");
     fflush(stdout);
 
-    printf("正在终止旧进程...\n");
-    fflush(stdout);
+    static bool found_existing = false;
+    static pid_t self_pid = getpid();
+    found_existing = false;
+    self_pid = getpid();
 
     foreach_proc([](pid_t pid) {
-        if (pid == getpid()) return;
+        if (pid == self_pid) return;
 
         char name[1024];
         if (get_proc_name(pid, name, 1024) != 0) return;
@@ -242,56 +246,59 @@ int main(int argc, char *argv[]) {
         if (strcmp(SERVER_NAME, name) != 0)
             return;
 
+        found_existing = true;
+        printf("终止现有服务 (PID: %d)\n", pid);
+        fflush(stdout);
+
         if (kill(pid, SIGKILL) == 0)
-            printf("已终止进程 %d (%s)\n", pid, name);
+            printf("已终止进程 %d\n", pid);
         else if (errno == EPERM) {
             perrorf("错误：无法终止进程 %d，请先从应用中停止现有服务\n", pid);
             exit(EXIT_FATAL_KILL);
         } else {
-            printf("警告：终止进程 %d (%s) 失败\n", pid, name);
+            printf("警告：终止进程 %d 失败\n", pid);
         }
     });
 
-    if (access(apk_path.c_str(), R_OK) == 0) {
-        printf("使用来自参数的 apk 路径\n");
+    if (!found_existing) {
+        printf("未发现现有服务\n");
         fflush(stdout);
     }
 
-    if (apk_path.empty()) {
-        auto f = popen("pm path " PACKAGE_NAME, "r");
-        if (f) {
-            char line[PATH_MAX]{0};
-            fgets(line, PATH_MAX, f);
-            trim(line);
-            if (strstr(line, "package:") == line) {
-                apk_path = line + strlen("package:");
-            }
-            pclose(f);
-        }
-    }
-
-    if (apk_path.empty() && argc > 0) {
-        std::string so_path(argv[0]);
-        size_t lib_pos = so_path.find("/lib/");
-        if (lib_pos != std::string::npos) {
-            apk_path = so_path.substr(0, lib_pos) + "/base.apk";
-            printf("从执行路径推导 apk 路径\n");
-            fflush(stdout);
-        }
-    }
-
-    if (apk_path.empty()) {
-        perrorf("错误：无法获取应用路径\n");
-        exit(EXIT_FATAL_PM_PATH);
-    }
-
-    printf("apk 路径为 %s\n", apk_path.c_str());
     if (access(apk_path.c_str(), R_OK) != 0) {
-        perrorf("错误：无法访问应用文件 %s\n", apk_path.c_str());
-        exit(EXIT_FATAL_PM_PATH);
+        if (apk_path.empty()) {
+            auto f = popen("pm path " PACKAGE_NAME, "r");
+            if (f) {
+                char line[PATH_MAX]{0};
+                fgets(line, PATH_MAX, f);
+                trim(line);
+                if (strstr(line, "package:") == line) {
+                    apk_path = line + strlen("package:");
+                }
+                pclose(f);
+            }
+        }
+
+        if (apk_path.empty() && argc > 0) {
+            std::string so_path(argv[0]);
+            size_t lib_pos = so_path.find("/lib/");
+            if (lib_pos != std::string::npos) {
+                apk_path = so_path.substr(0, lib_pos) + "/base.apk";
+            }
+        }
+
+        if (apk_path.empty()) {
+            perrorf("错误：无法获取应用路径\n");
+            exit(EXIT_FATAL_PM_PATH);
+        }
+
+        if (access(apk_path.c_str(), R_OK) != 0) {
+            perrorf("错误：无法访问应用文件\n");
+            exit(EXIT_FATAL_PM_PATH);
+        }
     }
 
-    printf("正在启动服务器...\n");
+    printf("启动服务进程\n");
     fflush(stdout);
     LOGD("启动服务器");
     start_server(apk_path.c_str(), SERVER_CLASS_PATH, SERVER_NAME);
