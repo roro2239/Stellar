@@ -35,9 +35,7 @@ import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
 import roro.stellar.manager.ui.navigation.routes.MainScreen
-import roro.stellar.manager.ui.features.starter.StarterActivity
-import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialActivity
-import roro.stellar.manager.ui.features.logs.LogsActivity
+import roro.stellar.manager.ui.features.manager.ManagerActivity
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
@@ -175,10 +173,10 @@ private fun MainScreenContent(
                         homeViewModel = homeViewModel,
                         appsViewModel = appsViewModel,
                         onNavigateToStarter = { isRoot, host, port ->
-                            context.startActivity(StarterActivity.createIntent(context, isRoot, host, port))
+                            context.startActivity(ManagerActivity.createStarterIntent(context, isRoot, host, port))
                         },
                         onNavigateToAdbPairing = {
-                            context.startActivity(android.content.Intent(context, AdbPairingTutorialActivity::class.java))
+                            context.startActivity(ManagerActivity.createPairingIntent(context))
                         }
                     )
                 }
@@ -215,7 +213,7 @@ private fun MainScreenContent(
                     SettingsScreen(
                         topAppBarState = topAppBarState,
                         onNavigateToLogs = {
-                            context.startActivity(android.content.Intent(context, LogsActivity::class.java))
+                            context.startActivity(ManagerActivity.createLogsIntent(context))
                         }
                     )
                 }

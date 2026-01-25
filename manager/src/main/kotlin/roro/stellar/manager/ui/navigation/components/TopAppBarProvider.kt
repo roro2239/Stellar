@@ -15,7 +15,7 @@ fun TopAppBarProvider(
     content: @Composable () -> Unit
 ) {
     val topAppBarState = rememberTopAppBarState()
-    
+
     CompositionLocalProvider(
         LocalTopAppBarState provides topAppBarState
     ) {
@@ -28,4 +28,3 @@ fun TopAppBarProvider(
 fun rememberCurrentTopAppBarState(): TopAppBarState {
     return LocalTopAppBarState.current ?: rememberTopAppBarState()
 }
-
