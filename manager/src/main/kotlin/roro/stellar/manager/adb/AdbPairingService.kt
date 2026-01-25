@@ -307,7 +307,7 @@ class AdbPairingService : Service() {
                         ?: roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
 
                     if (port in 1..65535) {
-                        val intent = roro.stellar.manager.ui.features.starter.StarterActivity.createIntent(
+                        val intent = roro.stellar.manager.ui.features.manager.ManagerActivity.createStarterIntent(
                             this,
                             isRoot = false,
                             host = "127.0.0.1",

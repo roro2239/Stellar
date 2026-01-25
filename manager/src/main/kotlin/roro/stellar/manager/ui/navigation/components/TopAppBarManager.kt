@@ -43,16 +43,39 @@ fun StandardLargeTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior
 ) {
     LargeTopAppBar(
-        title = { 
+        title = {
             Text(
                 text = title,
                 fontWeight = FontWeight.Bold,
                 modifier = titleModifier
-            ) 
+            )
         },
         navigationIcon = navigationIcon,
         actions = { actions() },
         scrollBehavior = scrollBehavior
+    )
+}
+
+/**
+ * 固定的 TopAppBar，不响应滚动，始终保持收缩状态
+ * 用于 ManagerActivity 的子页面
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FixedTopAppBar(
+    title: String,
+    navigationIcon: @Composable () -> Unit = {},
+    actions: @Composable () -> Unit = {}
+) {
+    androidx.compose.material3.TopAppBar(
+        title = {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        navigationIcon = navigationIcon,
+        actions = { actions() }
     )
 }
 
