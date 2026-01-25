@@ -1,6 +1,9 @@
 package roro.stellar.manager.ui.features.logs
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,12 +34,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -58,12 +65,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
+import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogsScreen(
+    topAppBarState: TopAppBarState,
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -147,10 +156,19 @@ fun LogsScreen(
         loadLogs()
     }
 
+    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopAppBar(
-                title = { Text("服务日志") },
+            LargeTopAppBar(
+                title = {
+                    Text(
+                        text = "服务日志",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -160,49 +178,59 @@ fun LogsScreen(
                     }
                 },
                 actions = {
-                    Surface(
-                        onClick = { copyLogs() },
-                        shape = AppShape.shapes.iconSmall,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    val isCollapsed = scrollBehavior.state.collapsedFraction > 0.5f
+                    AnimatedVisibility(
+                        visible = isCollapsed,
+                        enter = fadeIn(),
+                        exit = fadeOut()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "复制日志",
-                            modifier = Modifier.padding(8.dp).size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row {
+                            Surface(
+                                onClick = { copyLogs() },
+                                shape = AppShape.shapes.iconSmall,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "复制日志",
+                                    modifier = Modifier.padding(8.dp).size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                onClick = { clearLogs() },
+                                shape = AppShape.shapes.iconSmall,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = "清除日志",
+                                    modifier = Modifier.padding(8.dp).size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                onClick = { loadLogs() },
+                                shape = AppShape.shapes.iconSmall,
+                                color = MaterialTheme.colorScheme.primaryContainer
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "刷新",
+                                    modifier = Modifier.padding(8.dp).size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        onClick = { clearLogs() },
-                        shape = AppShape.shapes.iconSmall,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "清除日志",
-                            modifier = Modifier.padding(8.dp).size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        onClick = { loadLogs() },
-                        shape = AppShape.shapes.iconSmall,
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "刷新",
-                            modifier = Modifier.padding(8.dp).size(20.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
-                )
+                ),
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
