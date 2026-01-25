@@ -33,16 +33,34 @@ import roro.stellar.manager.ui.features.terminal.TerminalScreen
 import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
+import roro.stellar.manager.ui.navigation.routes.HomeScreen as HomeScreenRoute
 import roro.stellar.manager.ui.navigation.routes.MainScreen
 import roro.stellar.manager.ui.navigation.routes.SettingsScreen as SettingsScreenRoute
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import roro.stellar.manager.ui.features.starter.StarterScreen
+import roro.stellar.manager.ui.features.home.others.AdbPairingTutorialScreen
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.ui.features.logs.LogsScreen
 import roro.stellar.Stellar
 
+data class StarterParams(
+    val isRoot: Boolean,
+    val host: String?,
+    val port: Int
+)
+
 class MainActivity : ComponentActivity() {
-    
+
+    companion object {
+        const val EXTRA_NAVIGATE_TO_STARTER = "navigate_to_starter"
+        const val EXTRA_STARTER_IS_ROOT = "starter_is_root"
+        const val EXTRA_STARTER_HOST = "starter_host"
+        const val EXTRA_STARTER_PORT = "starter_port"
+    }
+
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
         checkServerStatus()
         try {
@@ -66,11 +84,20 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             val themeMode = ThemePreferences.themeMode.value
+
+            val navigateToStarter = intent.getBooleanExtra(EXTRA_NAVIGATE_TO_STARTER, false)
+            val starterIsRoot = intent.getBooleanExtra(EXTRA_STARTER_IS_ROOT, false)
+            val starterHost = intent.getStringExtra(EXTRA_STARTER_HOST)
+            val starterPort = intent.getIntExtra(EXTRA_STARTER_PORT, 0)
+
             StellarTheme(themeMode = themeMode) {
                 TopAppBarProvider {
                     MainScreenContent(
                         homeViewModel = homeModel,
-                        appsViewModel = appsModel
+                        appsViewModel = appsModel,
+                        initialStarterParams = if (navigateToStarter) {
+                            StarterParams(starterIsRoot, starterHost, starterPort)
+                        } else null
                     )
                 }
             }
@@ -109,15 +136,28 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainScreenContent(
     homeViewModel: HomeViewModel,
-    appsViewModel: roro.stellar.manager.management.AppsViewModel
+    appsViewModel: roro.stellar.manager.management.AppsViewModel,
+    initialStarterParams: StarterParams? = null
 ) {
     val topAppBarState = LocalTopAppBarState.current!!
     val navController = rememberNavController()
     var selectedIndex by remember { mutableIntStateOf(0) }
-    
+
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     val context = navController.context
-    
+
+    androidx.compose.runtime.LaunchedEffect(initialStarterParams) {
+        if (initialStarterParams != null) {
+            navController.navigate(
+                HomeScreenRoute.starterRoute(
+                    initialStarterParams.isRoot,
+                    initialStarterParams.host,
+                    initialStarterParams.port
+                )
+            )
+        }
+    }
+
     BackHandler {
         if (navController.previousBackStackEntry == null) {
             val currentTime = System.currentTimeMillis()
@@ -167,7 +207,36 @@ private fun MainScreenContent(
                     HomeScreen(
                         topAppBarState = topAppBarState,
                         homeViewModel = homeViewModel,
-                        appsViewModel = appsViewModel
+                        appsViewModel = appsViewModel,
+                        onNavigateToStarter = { isRoot, host, port ->
+                            navController.navigate(HomeScreenRoute.starterRoute(isRoot, host, port))
+                        },
+                        onNavigateToAdbPairing = {
+                            navController.navigate(HomeScreenRoute.AdbPairingTutorial.route)
+                        }
+                    )
+                }
+                composable(
+                    route = HomeScreenRoute.Starter.route,
+                    arguments = listOf(
+                        navArgument("isRoot") { type = NavType.BoolType },
+                        navArgument("host") { type = NavType.StringType },
+                        navArgument("port") { type = NavType.IntType }
+                    )
+                ) { backStackEntry ->
+                    val isRoot = backStackEntry.arguments?.getBoolean("isRoot") ?: true
+                    val host = backStackEntry.arguments?.getString("host")?.takeIf { it != "null" }
+                    val port = backStackEntry.arguments?.getInt("port") ?: 0
+                    StarterScreen(
+                        isRoot = isRoot,
+                        host = host,
+                        port = port,
+                        onClose = { navController.safePopBackStack() }
+                    )
+                }
+                composable(HomeScreenRoute.AdbPairingTutorial.route) {
+                    AdbPairingTutorialScreen(
+                        onBackPressed = { navController.safePopBackStack() }
                     )
                 }
             }
