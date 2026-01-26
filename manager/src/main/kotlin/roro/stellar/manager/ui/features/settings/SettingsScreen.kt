@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Subject
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
@@ -74,6 +76,7 @@ import roro.stellar.manager.StellarSettings.DROP_PRIVILEGES
 import roro.stellar.manager.ktx.isComponentEnabled
 import roro.stellar.manager.ktx.setComponentEnabled
 import roro.stellar.manager.receiver.BootCompleteReceiver
+import roro.stellar.manager.ui.components.IconContainer
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.components.SettingsContentCard
 import roro.stellar.manager.ui.components.SettingsSwitchCard
@@ -86,6 +89,7 @@ import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.ui.theme.ThemeMode
 import roro.stellar.manager.ui.theme.ThemePreferences
+import roro.stellar.manager.util.AutoStartUtils
 import roro.stellar.manager.util.PortBlacklistUtils
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -105,7 +109,6 @@ fun SettingsScreen(
 
     val preferences = StellarSettings.getPreferences()
 
-    // Root 权限状态
     var hasRootPermission by remember { mutableStateOf<Boolean?>(null) }
 
     var startOnBoot by remember { mutableStateOf(false) }
@@ -119,7 +122,6 @@ fun SettingsScreen(
 
     val scope = rememberCoroutineScope()
 
-    // 启动时检测 Root 权限，并根据结果设置 startOnBoot
     LaunchedEffect(Unit) {
         val isRoot = withContext(Dispatchers.IO) {
             try {
@@ -177,7 +179,6 @@ fun SettingsScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
         ) {
-            // 主题设置卡片
             SettingsContentCard(
                 icon = Icons.Default.DarkMode,
                 title = "主题",
@@ -192,7 +193,6 @@ fun SettingsScreen(
                 )
             }
 
-            // 开机启动（Root）卡片
             SettingsSwitchCard(
                 icon = Icons.Default.PowerSettingsNew,
                 title = "开机启动（Root）",
@@ -201,6 +201,8 @@ fun SettingsScreen(
                 enabled = hasRootPermission == true,
                 onCheckedChange = { newValue ->
                     if (newValue) {
+                        Toast.makeText(context, "请在自启动管理中允许本应用", Toast.LENGTH_SHORT).show()
+                        AutoStartUtils.openAutoStartSettings(context)
                         startOnBootWireless = false
                         savePreference(KEEP_START_ON_BOOT_WIRELESS, false)
                     }
@@ -214,7 +216,6 @@ fun SettingsScreen(
                 }
             )
 
-            // 降权激活卡片
             SettingsSwitchCard(
                 icon = Icons.Default.Security,
                 title = "降权激活",
@@ -227,14 +228,15 @@ fun SettingsScreen(
                 }
             )
 
-            // 开机启动（无线调试）卡片
             SettingsSwitchCard(
                 icon = Icons.Default.Wifi,
                 title = "开机启动（无线调试）",
-                subtitle = "Stellar 可以通过无线调试开机启动（需要先配对获取权限）",
+                subtitle = "Stellar 可以通过无线调试开机启动",
                 checked = startOnBootWireless,
                 onCheckedChange = { newValue ->
                     if (newValue) {
+                        Toast.makeText(context, "请在自启动管理中允许本应用", Toast.LENGTH_SHORT).show()
+                        AutoStartUtils.openAutoStartSettings(context)
                         startOnBoot = false
                         savePreference(KEEP_START_ON_BOOT, false)
                     }
@@ -258,14 +260,18 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(16.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        IconContainer(
+                            icon = Icons.Default.SettingsEthernet
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "TCP/IP 端口",
@@ -308,10 +314,12 @@ fun SettingsScreen(
                             }
                         )
                     }
-                    
-                    if (tcpipPortEnabled) {
+
+                    AnimatedVisibility(visible = tcpipPortEnabled) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.Top
                         ) {
@@ -368,7 +376,6 @@ fun SettingsScreen(
                 }
             }
 
-            // 服务日志卡片
             SettingsClickableCard(
                 icon = Icons.Default.Subject,
                 title = "服务日志",
