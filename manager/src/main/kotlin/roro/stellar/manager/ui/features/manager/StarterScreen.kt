@@ -48,12 +48,13 @@ import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.CommandExecutor
 import java.net.ConnectException
+import javax.net.ssl.SSLException
 import javax.net.ssl.SSLProtocolException
 
 private class NotRootedException : Exception("没有 Root 权限")
 
 // 启动步骤状态
-enum class StepStatus { PENDING, RUNNING, COMPLETED, ERROR }
+enum class StepStatus { PENDING, RUNNING, COMPLETED, ERROR, WARNING }
 
 data class StartStep(
     val title: String,
@@ -62,7 +63,11 @@ data class StartStep(
 )
 
 sealed class StarterState {
-    data class Loading(val command: String, val isSuccess: Boolean = false) : StarterState()
+    data class Loading(
+        val command: String,
+        val isSuccess: Boolean = false,
+        val warningStepIndex: Int? = null
+    ) : StarterState()
     data class Error(
         val error: Throwable,
         val command: String,
@@ -113,7 +118,8 @@ internal fun StarterScreen(
                     command = loadingState.command,
                     outputLines = viewModel.outputLines.collectAsState().value,
                     isSuccess = loadingState.isSuccess,
-                    isRoot = isRoot
+                    isRoot = isRoot,
+                    warningStepIndex = loadingState.warningStepIndex
                 )
             }
             is StarterState.Error -> {
@@ -140,7 +146,8 @@ private fun LoadingContent(
     command: String,
     outputLines: List<String>,
     isSuccess: Boolean,
-    isRoot: Boolean
+    isRoot: Boolean,
+    warningStepIndex: Int? = null
 ) {
     val context = LocalContext.current
     var countdown by remember { mutableIntStateOf(3) }
@@ -167,6 +174,7 @@ private fun LoadingContent(
             )
         } else {
             listOf(
+                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("连接 ADB 服务", Icons.Filled.Cable),
                 StartStep("验证连接状态", Icons.Filled.VerifiedUser),
                 StartStep("检查现有服务", Icons.Filled.Search),
@@ -183,12 +191,19 @@ private fun LoadingContent(
         derivedStateOf {
             when {
                 isSuccess -> totalSteps - 1
-                outputLines.any { it.contains("stellar_starter 正常退出") } -> totalSteps - 2
-                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 3
+                // 等待 Binder 响应 (Root: 3, ADB: 5)
+                outputLines.any { it.contains("stellar_starter 正常退出") } ->
+                    if (isRoot) 3 else 5
+                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 4
                 outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
-                    if (isRoot) 1 else 2
-                outputLines.any { it.startsWith("$") || it.contains("Connecting") } ->
+                    if (isRoot) 1 else 3
+                // ADB 模式: 连接 ADB 服务 (index 1), 验证连接状态 (index 2)
+                outputLines.any { it.contains("Connecting") } ->
                     if (isRoot) 0 else 1
+                // ADB 模式: 切换端口步骤 (index 0)
+                outputLines.any { it.contains("切换端口") || it.contains("restarting in TCP mode") } ->
+                    if (isRoot) 0 else 0
+                outputLines.any { it.startsWith("$") } -> 0
                 outputLines.isNotEmpty() -> 0
                 else -> 0
             }
@@ -228,6 +243,7 @@ private fun LoadingContent(
         ) {
             steps.forEachIndexed { index, step ->
                 val status = when {
+                    warningStepIndex == index -> StepStatus.WARNING
                     index < currentStepIndex -> StepStatus.COMPLETED
                     index == currentStepIndex -> if (isSuccess && index == totalSteps - 1) StepStatus.COMPLETED else StepStatus.RUNNING
                     else -> StepStatus.PENDING
@@ -280,26 +296,31 @@ private fun StepCard(step: StartStep, index: Int) {
     val isRunning = step.status == StepStatus.RUNNING
     val isPending = step.status == StepStatus.PENDING
     val isError = step.status == StepStatus.ERROR
+    val isWarning = step.status == StepStatus.WARNING
 
     val containerColor = when {
         isCompleted -> MaterialTheme.colorScheme.primaryContainer
+        isWarning -> MaterialTheme.colorScheme.tertiaryContainer
         isError -> MaterialTheme.colorScheme.errorContainer
         isRunning -> MaterialTheme.colorScheme.surfaceContainer
         else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
     val contentColor = when {
         isCompleted -> MaterialTheme.colorScheme.onPrimaryContainer
+        isWarning -> MaterialTheme.colorScheme.onTertiaryContainer
         isError -> MaterialTheme.colorScheme.onErrorContainer
         else -> MaterialTheme.colorScheme.onSurface
     }
     val iconBgColor = when {
         isCompleted -> contentColor.copy(alpha = 0.15f)
+        isWarning -> contentColor.copy(alpha = 0.15f)
         isError -> contentColor.copy(alpha = 0.15f)
         isRunning -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val iconTint = when {
         isCompleted -> contentColor
+        isWarning -> MaterialTheme.colorScheme.tertiary
         isError -> MaterialTheme.colorScheme.error
         isRunning -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
@@ -340,6 +361,12 @@ private fun StepCard(step: StartStep, index: Int) {
                         tint = iconTint,
                         modifier = Modifier.size(20.dp)
                     )
+                    isWarning -> Icon(
+                        Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
                     isError -> Icon(
                         Icons.Filled.Close,
                         contentDescription = null,
@@ -362,7 +389,6 @@ private fun StepCard(step: StartStep, index: Int) {
 
             Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
 
-            // 步骤标题
             Text(
                 text = step.title,
                 style = MaterialTheme.typography.bodyLarge,
@@ -479,7 +505,6 @@ private fun StarterStatusCard(
                 .padding(AppSpacing.cardPaddingLarge),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 左侧图标
             Box(
                 modifier = Modifier
                     .size(AppSpacing.iconContainerSizeLarge)
@@ -510,7 +535,6 @@ private fun StarterStatusCard(
 
             Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
 
-            // 中间标题和副标题
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = when {
@@ -534,7 +558,6 @@ private fun StarterStatusCard(
                 )
             }
 
-            // 右侧倒计时（仅成功时显示）
             if (isSuccess && countdown > 0) {
                 Surface(
                     shape = AppShape.shapes.iconSmall,
@@ -576,7 +599,6 @@ private fun CommandCard(
                 .verticalScroll(rememberScrollState())
                 .padding(AppSpacing.cardPadding)
         ) {
-            // 命令行（带 $ 前缀）
             Text(
                 text = "$ $command",
                 style = MaterialTheme.typography.bodySmall.copy(
@@ -588,7 +610,6 @@ private fun CommandCard(
                 fontWeight = FontWeight.Medium
             )
 
-            // 日志输出
             if (outputLines.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 outputLines.forEach { line ->
@@ -626,7 +647,7 @@ private fun ErrorContent(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val needsPairing = error is SSLProtocolException || error is ConnectException
+    val needsPairing = error is SSLException || error is ConnectException
 
     val steps = remember(isRoot) {
         if (isRoot) {
@@ -639,6 +660,7 @@ private fun ErrorContent(
             )
         } else {
             listOf(
+                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("连接 ADB 服务", Icons.Filled.Cable),
                 StartStep("验证连接状态", Icons.Filled.VerifiedUser),
                 StartStep("检查现有服务", Icons.Filled.Search),
@@ -651,7 +673,6 @@ private fun ErrorContent(
 
     val totalSteps = steps.size
 
-    // 自动滚动到底部（等待所有卡片显示后）
     LaunchedEffect(failedStepIndex) {
         delay(totalSteps * 50L + 350L)
         scrollState.animateScrollTo(scrollState.maxValue)
@@ -662,7 +683,6 @@ private fun ErrorContent(
             .fillMaxSize()
             .padding(top = paddingValues.calculateTopPadding())
     ) {
-        // 固定顶部状态卡片
         Column(
             modifier = Modifier.padding(
                 top = AppSpacing.topBarContentSpacing,
@@ -675,7 +695,6 @@ private fun ErrorContent(
 
         Spacer(modifier = Modifier.height(AppSpacing.cardSpacing))
 
-        // 可滚动的步骤列表
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -704,7 +723,6 @@ private fun ErrorContent(
                 }
             }
 
-            // 复制报告卡片
             var copyVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 delay(totalSteps * 50L + 100L)
@@ -723,7 +741,6 @@ private fun ErrorContent(
                 )
             }
 
-            // 重试卡片
             var retryVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 delay(totalSteps * 50L + 150L)
@@ -748,7 +765,6 @@ private fun ErrorContent(
                 )
             }
 
-            // 返回卡片
             var backVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 delay(totalSteps * 50L + 200L)
@@ -821,7 +837,6 @@ private fun CopyErrorReportCard(
                     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                         as android.content.ClipboardManager
 
-                    // 从输出日志中提取错误信息
                     val errorFromOutput = outputLines
                         .filter { it.contains("错误：") || it.contains("Error:") }
                         .lastOrNull()
@@ -956,6 +971,16 @@ internal class StarterViewModel(
         }
     }
 
+    private fun setSuccessWithWarning(warningStepIndex: Int) {
+        viewModelScope.launch {
+            val currentState = _state.value
+            if (currentState is StarterState.Loading) {
+                _state.value = currentState.copy(isSuccess = true, warningStepIndex = warningStepIndex)
+                launch(Dispatchers.IO) { CommandExecutor.executeFollowServiceCommands() }
+            }
+        }
+    }
+
     private fun setError(error: Throwable, failedStepIndex: Int = 0) {
         viewModelScope.launch {
             _state.value = StarterState.Error(
@@ -1008,7 +1033,7 @@ internal class StarterViewModel(
                 }
             } catch (e: Exception) {
                 addOutputLine("Error: ${e.message}")
-                setError(e, 2) // 启动服务进程失败
+                setError(e, 2)
             }
         }
     }
@@ -1025,6 +1050,32 @@ internal class StarterViewModel(
     }
 
     private fun startAdb(host: String, port: Int) {
+        val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(port)
+
+        if (shouldChange) {
+            addOutputLine("切换端口: $port -> $newPort")
+            adbWirelessHelper.changeTcpipPortAfterStart(
+                host = host,
+                port = port,
+                newPort = newPort,
+                coroutineScope = viewModelScope,
+                onOutput = { addOutputLine(it) },
+                onError = { error ->
+                    addOutputLine("端口切换失败: ${error.message}")
+                    addOutputLine("使用原端口 $port 继续启动...")
+                    startAdbConnection(host, port, warningOnSuccess = true)
+                },
+                onSuccess = {
+                    addOutputLine("端口切换成功，使用新端口 $newPort 启动...")
+                    startAdbConnection(host, newPort, warningOnSuccess = false)
+                }
+            )
+        } else {
+            startAdbConnection(host, port, warningOnSuccess = false)
+        }
+    }
+
+    private fun startAdbConnection(host: String, port: Int, warningOnSuccess: Boolean) {
         addOutputLine("Connecting to $host:$port...")
         adbWirelessHelper.startStellarViaAdb(
             host = host, port = port, coroutineScope = viewModelScope,
@@ -1033,21 +1084,20 @@ internal class StarterViewModel(
                 output.lines().forEach { line ->
                     val trimmedLine = line.trim()
                     if (trimmedLine.startsWith("错误：")) {
-                        setError(Exception(trimmedLine.substringAfter("错误：").trim()), 3) // 启动服务进程失败
+                        setError(Exception(trimmedLine.substringAfter("错误：").trim()), 4)
                     }
                 }
-                if (output.contains("stellar_starter 正常退出")) waitForService()
+                if (output.contains("stellar_starter 正常退出")) waitForService(warningOnSuccess)
             },
             onError = { error ->
                 addOutputLine("错误：${error.message}")
-                // ADB 连接或验证失败
-                val stepIndex = if (error is SSLProtocolException || error is ConnectException) 0 else 1
-                setError(error, stepIndex)
+                val needsPairing = error is SSLException || error is ConnectException
+                setError(error, if (needsPairing) 1 else 2)
             }
         )
     }
 
-    private fun waitForService() {
+    private fun waitForService(warningOnSuccess: Boolean = false) {
         viewModelScope.launch {
             var binderReceived = false
             val listener = object : Stellar.OnBinderReceivedListener {
@@ -1055,11 +1105,26 @@ internal class StarterViewModel(
                     if (!binderReceived) {
                         binderReceived = true
                         Stellar.removeBinderReceivedListener(this)
-                        setSuccess()
+                        if (warningOnSuccess) {
+                            setSuccessWithWarning(0)
+                        } else {
+                            setSuccess()
+                        }
                     }
                 }
             }
             Stellar.addBinderReceivedListener(listener)
+
+            if (Stellar.pingBinder()) {
+                binderReceived = true
+                Stellar.removeBinderReceivedListener(listener)
+                if (warningOnSuccess) {
+                    setSuccessWithWarning(0)
+                } else {
+                    setSuccess()
+                }
+                return@launch
+            }
 
             val maxWaitTime = 10000L
             val checkInterval = 500L
@@ -1068,18 +1133,28 @@ internal class StarterViewModel(
             while (elapsed < maxWaitTime && !binderReceived) {
                 delay(checkInterval)
                 elapsed += checkInterval
+
+                if (!binderReceived && Stellar.pingBinder()) {
+                    binderReceived = true
+                    Stellar.removeBinderReceivedListener(listener)
+                    if (warningOnSuccess) {
+                        setSuccessWithWarning(0)
+                    } else {
+                        setSuccess()
+                    }
+                    return@launch
+                }
+
                 if (hasErrorInOutput()) {
                     Stellar.removeBinderReceivedListener(listener)
-                    // 等待 Binder 响应时出错 (Root: 3, ADB: 4)
-                    setError(Exception(getLastErrorMessage()), if (isRoot) 3 else 4)
+                    setError(Exception(getLastErrorMessage()), if (isRoot) 3 else 5)
                     return@launch
                 }
             }
 
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                // 等待 Binder 响应超时 (Root: 3, ADB: 4)
-                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 4)
+                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 5)
             }
         }
     }

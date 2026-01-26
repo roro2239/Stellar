@@ -19,8 +19,30 @@ import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
 import roro.stellar.manager.ui.features.starter.Starter
 import java.net.Socket
+import javax.net.ssl.SSLException
 
 class AdbWirelessHelper {
+
+    suspend fun checkAdbConnection(host: String, port: Int): Throwable? {
+        val key = try {
+            AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
+        } catch (e: Throwable) {
+            return AdbKeyException(e)
+        }
+
+        return try {
+            AdbClient(host, port, key).use { client ->
+                client.connect()
+            }
+            null
+        } catch (e: SSLException) {
+            e
+        } catch (e: java.net.ConnectException) {
+            e
+        } catch (e: Throwable) {
+            null
+        }
+    }
 
     fun validateThenEnableWirelessAdb(
         contentResolver: ContentResolver,
@@ -184,96 +206,26 @@ class AdbWirelessHelper {
                     return@launch
                 }
 
-                val commandOutput = StringBuilder()
-
-                val portEnabled = StellarSettings.getPreferences().getBoolean(TCPIP_PORT_ENABLED, true)
-                
-                var newPort: Int = -1
-                val shouldChangePort = if (portEnabled) {
-                    StellarSettings.getPreferences().getString(TCPIP_PORT, "").let {
-                        if (it.isNullOrEmpty()) {
-                            false
-                        } else {
-                            try {
-                                newPort = it.toInt()
-                                newPort != port
-                            } catch (_: NumberFormatException) {
-                                false
-                            }
-                        }
-                    }
-                } else {
-                    false
-                }
-                
-                val finalPort = if (shouldChangePort && changeTcpipPortIfNeeded(
-                        host,
-                        port,
-                        newPort,
-                        key,
-                        commandOutput,
-                        onOutput
-                    )
-                ) {
-                    Log.i(AppConstants.TAG, "ADB端口从${port}切换到${newPort}，等待新端口可用...")
-                    delay(3000)
-                    if (!waitForAdbPortAvailable(host, newPort, timeoutMs = 20000L)) {
-                        Log.w(
-                            AppConstants.TAG,
-                            "等待ADB在新端口${newPort}上监听超时"
-                        )
-                        onError(Exception("等待ADB在新端口${newPort}上监听超时"))
-                        return@launch
-                    }
-                    delay(1000)
-                    newPort
-                } else {
-                    if (newPort == port && newPort > 0) {
-                        Log.i(AppConstants.TAG, "目标端口${newPort}与当前端口相同，跳过切换")
-                    }
-                    port
-                }
-
-                if (!waitForAdbPortAvailable(host, finalPort, timeoutMs = 15000L)) {
-                    Log.w(AppConstants.TAG, "等待ADB端口${finalPort}可用超时")
-                    onError(Exception("等待ADB端口${finalPort}可用超时"))
+                if (!waitForAdbPortAvailable(host, port, timeoutMs = 15000L)) {
+                    Log.w(AppConstants.TAG, "等待ADB端口${port}可用超时")
+                    onError(Exception("等待ADB端口${port}可用超时"))
                     return@launch
                 }
 
-                var lastError: Throwable? = null
-                val maxRetries = 5
-                for (attempt in 1..maxRetries) {
-                    try {
-                        AdbClient(host, finalPort, key).use { client ->
-                            client.connect()
-                            Log.i(
-                                AppConstants.TAG,
-                                "ADB已连接到${host}:${finalPort}。正在执行启动命令..."
-                            )
+                try {
+                    AdbClient(host, port, key).use { client ->
+                        client.connect()
+                        Log.i(AppConstants.TAG, "ADB已连接到${host}:${port}。正在执行启动命令...")
 
-                            client.shellCommand(Starter.internalCommand) { output ->
-                                val outputString = String(output)
-                                commandOutput.append(outputString)
-                                onOutput(outputString)
-                                Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
-                            }
-                        }
-                        lastError = null
-                        break
-                    } catch (e: Throwable) {
-                        lastError = e
-                        Log.w(AppConstants.TAG, "ADB连接尝试 $attempt/$maxRetries 失败: ${e.message}")
-                        if (attempt < maxRetries) {
-                            val delayTime = 1000L * attempt
-                            Log.d(AppConstants.TAG, "等待 ${delayTime}ms 后重试...")
-                            delay(delayTime)
+                        client.shellCommand(Starter.internalCommand) { output ->
+                            val outputString = String(output)
+                            onOutput(outputString)
+                            Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
                         }
                     }
-                }
-
-                if (lastError != null) {
-                    Log.e(AppConstants.TAG, "ADB连接/命令执行失败，已重试 $maxRetries 次", lastError)
-                    onError(lastError)
+                } catch (e: Throwable) {
+                    Log.e(AppConstants.TAG, "ADB连接/命令执行失败", e)
+                    onError(e)
                     return@launch
                 }
 
@@ -283,6 +235,64 @@ class AdbWirelessHelper {
                 Log.e(AppConstants.TAG, "startStellarViaAdb中出错", e)
                 onError(e)
             }
+        }
+    }
+
+    fun changeTcpipPortAfterStart(
+        host: String,
+        port: Int,
+        newPort: Int,
+        coroutineScope: CoroutineScope,
+        onOutput: (String) -> Unit,
+        onError: (Throwable) -> Unit,
+        onSuccess: () -> Unit
+    ) {
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                if (newPort !in 1..65535 || newPort == port) {
+                    Log.i(AppConstants.TAG, "无需切换端口")
+                    onSuccess()
+                    return@launch
+                }
+
+                val key = try {
+                    AdbKey(
+                        PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar"
+                    )
+                } catch (e: Throwable) {
+                    Log.e(AppConstants.TAG, "ADB密钥错误", e)
+                    onError(AdbKeyException(e))
+                    return@launch
+                }
+
+                val commandOutput = StringBuilder()
+                val success = changeTcpipPortIfNeeded(host, port, newPort, key, commandOutput, onOutput)
+
+                if (success) {
+                    Log.i(AppConstants.TAG, "端口切换成功: $port -> $newPort")
+                    onSuccess()
+                } else {
+                    onError(Exception("端口切换失败"))
+                }
+            } catch (e: Throwable) {
+                Log.e(AppConstants.TAG, "changeTcpipPortAfterStart出错", e)
+                onError(e)
+            }
+        }
+    }
+
+    fun shouldChangePort(currentPort: Int): Pair<Boolean, Int> {
+        val portEnabled = StellarSettings.getPreferences().getBoolean(TCPIP_PORT_ENABLED, true)
+        if (!portEnabled) return Pair(false, -1)
+
+        val portStr = StellarSettings.getPreferences().getString(TCPIP_PORT, "")
+        if (portStr.isNullOrEmpty()) return Pair(false, -1)
+
+        return try {
+            val newPort = portStr.toInt()
+            Pair(newPort != currentPort && newPort in 1..65535, newPort)
+        } catch (_: NumberFormatException) {
+            Pair(false, -1)
         }
     }
 }

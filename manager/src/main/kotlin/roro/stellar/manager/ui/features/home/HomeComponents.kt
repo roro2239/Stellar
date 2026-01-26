@@ -147,7 +147,6 @@ fun StartRootCard(
 
 @Composable
 fun StartWirelessAdbCard(
-    onPairClick: () -> Unit,
     onStartClick: () -> Unit
 ) {
     Card(
@@ -198,42 +197,12 @@ fun StartWirelessAdbCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "首次使用需要先配对，配对成功后可直接启动",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onPairClick,
-                    modifier = Modifier.weight(1f),
-                    shape = AppShape.shapes.buttonMedium
-                ) {
-                    Text(
-                        text = "配对",
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
 
                 Button(
                     onClick = onStartClick,
-                    modifier = Modifier.weight(1f),
                     shape = AppShape.shapes.buttonMedium
                 ) {
-                    Text(
-                        text = "启动",
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Text(text = "启动")
                 }
             }
         }
