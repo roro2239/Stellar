@@ -64,7 +64,7 @@ fun AdbAutoConnect(
         // 用于标记是否已处理
         var handled = false
 
-        // 第二轮扫描（开启无线调试后）
+        // 第二轮扫描（开启无线调试后，失败直接进入配对页面）
         fun startSecondRoundScan() {
             handled = false
             val secondObserver = Observer<Int> { discoveredPort ->
@@ -78,6 +78,7 @@ fun AdbAutoConnect(
                             if (hasPermission) {
                                 onStartConnection(discoveredPort, hasSecureSettings)
                             } else {
+                                // 第二轮失败，直接进入配对页面
                                 onNeedsPairing()
                             }
                             onComplete()
@@ -93,12 +94,12 @@ fun AdbAutoConnect(
                 onTimeout = {
                     if (!handled) {
                         handled = true
-                        // 第二轮超时，进入配对页面
+                        // 第二轮超时，直接进入配对页面
                         onNeedsPairing()
                         onComplete()
                     }
                 },
-                timeoutMillis = 1000L  // 第二轮给更长时间
+                timeoutMillis = 500L
             ).apply { start() }
         }
 
