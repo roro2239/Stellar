@@ -23,6 +23,37 @@ import javax.net.ssl.SSLException
 
 class AdbWirelessHelper {
 
+    /**
+     * 快速检测是否有 ADB 连接权限（已配对）
+     * 通过尝试连接 ADB 来判断
+     * @return true 表示有权限可以直接启动，false 表示需要配对
+     */
+    suspend fun hasAdbPermission(host: String, port: Int): Boolean {
+        if (port !in 1..65535) return false
+
+        val key = try {
+            AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
+        } catch (e: Throwable) {
+            return false
+        }
+
+        return try {
+            AdbClient(host, port, key).use { client ->
+                client.connect()
+            }
+            true
+        } catch (e: SSLException) {
+            // SSL 错误表示证书不被信任，需要配对
+            false
+        } catch (e: java.net.ConnectException) {
+            // 连接失败，端口可能未开启
+            false
+        } catch (e: Throwable) {
+            // 其他错误也视为需要配对
+            false
+        }
+    }
+
     suspend fun checkAdbConnection(host: String, port: Int): Throwable? {
         val key = try {
             AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
@@ -132,24 +163,28 @@ class AdbWirelessHelper {
         val maxRetries = 3
         for (attempt in 1..maxRetries) {
             try {
+                var success = false
                 AdbClient(host, port, key).use { client ->
                     client.connect()
 
-                    var flag = false
                     client.tcpip(newPort) {
-                        commandOutput.append(String(it).apply {
-                            if (contains(Regex("restarting in TCP mode port: [0-9]*"))) flag = true
-                        }).append("\n")
+                        val output = String(it)
+                        commandOutput.append(output).append("\n")
                         onOutput(commandOutput.toString())
+                        if (output.contains(Regex("restarting in TCP mode port: [0-9]*"))) {
+                            success = true
+                        }
                     }
-
-                    if (flag) {
-                        Thread.sleep(500)
-                    }
-
-                    return flag
+                }
+                if (success) {
+                    Thread.sleep(500)
+                    return true
                 }
             } catch (e: Exception) {
+                if (commandOutput.contains("restarting in TCP mode port:")) {
+                    Log.i(AppConstants.TAG, "端口切换成功（连接已断开，这是正常的）")
+                    return true
+                }
                 Log.w(AppConstants.TAG, "切换端口尝试 $attempt/$maxRetries 失败: ${e.message}")
                 if (attempt < maxRetries) {
                     Thread.sleep(1000L * attempt)
