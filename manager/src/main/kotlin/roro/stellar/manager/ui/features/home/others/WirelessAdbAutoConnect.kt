@@ -17,16 +17,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbMdns
+import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.util.EnvironmentUtils
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun AdbAutoConnect(
     onStartConnection: (Int) -> Unit,
+    onNeedsPairing: () -> Unit,
     onComplete: () -> Unit
 ) {
     val context = LocalContext.current
@@ -36,6 +40,7 @@ fun AdbAutoConnect(
 
     val discoveredPort by viewModel.port.collectAsState()
     val systemPort = EnvironmentUtils.getAdbTcpPort()
+    val adbWirelessHelper = remember { AdbWirelessHelper() }
 
     LaunchedEffect(key1 = Unit) {
         val cr = context.contentResolver
@@ -64,22 +69,36 @@ fun AdbAutoConnect(
         }
 
         if (systemPort in 1..65535) {
-            onStartConnection(systemPort)
+            val error = withContext(Dispatchers.IO) {
+                adbWirelessHelper.checkAdbConnection("127.0.0.1", systemPort)
+            }
+            if (error != null) {
+                onNeedsPairing()
+            } else {
+                onStartConnection(systemPort)
+            }
             onComplete()
         } else {
             viewModel.startDiscovery()
         }
     }
-    
+
     DisposableEffect(Unit) {
         onDispose {
             viewModel.stopDiscovery()
         }
     }
-    
+
     LaunchedEffect(discoveredPort) {
         if (discoveredPort > 0 && discoveredPort <= 65535) {
-            onStartConnection(discoveredPort)
+            val error = withContext(Dispatchers.IO) {
+                adbWirelessHelper.checkAdbConnection("127.0.0.1", discoveredPort)
+            }
+            if (error != null) {
+                onNeedsPairing()
+            } else {
+                onStartConnection(discoveredPort)
+            }
             onComplete()
         }
     }
