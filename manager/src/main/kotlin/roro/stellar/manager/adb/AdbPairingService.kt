@@ -30,12 +30,10 @@ class AdbPairingService : Service() {
     companion object {
 
         const val notificationChannel = "adb_pairing"
-        const val detectedNotificationChannel = "adb_pairing_detected"
 
         private const val tag = "AdbPairingService"
 
         private const val notificationId = 1
-        private const val detectedNotificationId = 2
         private const val replyRequestId = 1
         private const val stopRequestId = 2
         private const val retryRequestId = 3
@@ -65,26 +63,13 @@ class AdbPairingService : Service() {
     private val retryHandler = Handler(Looper.getMainLooper())
     private var discoveredPort: Int = -1
 
-    private var hasNotified = false
-
     private val observer = Observer<Int> { port ->
         Log.i(tag, "配对服务端口: $port")
         if (port <= 0) {
-            hasNotified = false
             return@Observer
         }
 
         discoveredPort = port
-
-        if (!hasNotified) {
-            hasNotified = true
-            val detectedNotification = createDetectedNotification()
-            getSystemService(NotificationManager::class.java).notify(detectedNotificationId, detectedNotification)
-
-            retryHandler.postDelayed({
-                getSystemService(NotificationManager::class.java).cancel(detectedNotificationId)
-            }, 500)
-        }
 
         val notification = createInputNotification(port)
         try {
@@ -116,18 +101,6 @@ class AdbPairingService : Service() {
                 setSound(null, null)
                 setShowBadge(false)
                 setAllowBubbles(false)
-            })
-
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
-                detectedNotificationChannel,
-                "配对服务检测提醒",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 200, 100, 200)
-                setShowBadge(true)
-                enableLights(true)
             })
     }
 
@@ -195,6 +168,8 @@ class AdbPairingService : Service() {
         isRunning = false
         retryHandler.removeCallbacksAndMessages(null)
         stopSearch()
+        connectMdns?.stop()
+        connectMdns = null
     }
 
     private fun onStart(): Notification {
@@ -203,7 +178,6 @@ class AdbPairingService : Service() {
             return searchingNotification
         }
         isRunning = true
-        hasNotified = false
         startSearch()
         return searchingNotification
     }
@@ -262,33 +236,19 @@ class AdbPairingService : Service() {
         return workingNotification
     }
 
+    private var connectMdns: AdbMdns? = null
+
     private fun handleResult(success: Boolean, exception: Throwable?) {
         retryHandler.post {
             if (success) {
-                Log.i(tag, "配对成功")
-
-                val preferences = StellarSettings.getPreferences()
-                val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
-                val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
-
-                if (tcpipPortEnabled && currentPort.isNullOrEmpty()) {
-                    val systemPort = roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
-                    if (systemPort in 1..65535) {
-                        preferences.edit()
-                            .putString(StellarSettings.TCPIP_PORT, systemPort.toString())
-                            .apply()
-                        Log.i(tag, "自动设置 TCP 端口: $systemPort")
-                    }
-                }
-
-                val title = "配对成功，正在启动服务..."
-                val text = "请稍候"
+                Log.i(tag, "配对成功，开始搜索连接服务")
+                stopSearch()
 
                 val successNotification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
-                    .setContentTitle(title)
-                    .setContentText(text)
-                    .setOngoing(false)
+                    .setContentTitle("配对成功")
+                    .setContentText("正在搜索连接服务...")
+                    .setOngoing(true)
                     .build()
 
                 try {
@@ -302,51 +262,7 @@ class AdbPairingService : Service() {
                     Log.e(tag, "更新前台通知失败", e)
                 }
 
-                retryHandler.postDelayed({
-                    val port = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
-                        ?: roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
-
-                    if (port in 1..65535) {
-                        val intent = roro.stellar.manager.ui.features.manager.ManagerActivity.createStarterIntent(
-                            this,
-                            isRoot = false,
-                            host = "127.0.0.1",
-                            port = port
-                        ).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-
-                        val pendingIntent = PendingIntent.getActivity(
-                            this,
-                            0,
-                            intent,
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                            else
-                                PendingIntent.FLAG_UPDATE_CURRENT
-                        )
-
-                        val launchNotification = Notification.Builder(this, notificationChannel)
-                            .setSmallIcon(R.drawable.stellar_icon)
-                            .setContentTitle("配对成功")
-                            .setContentText("点击启动 Stellar 服务")
-                            .setContentIntent(pendingIntent)
-                            .setAutoCancel(true)
-                            .build()
-
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                        getSystemService(NotificationManager::class.java).notify(
-                            notificationId,
-                            launchNotification
-                        )
-                    } else {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                    }
-
-                    stopSearch()
-                    isRunning = false
-                    stopSelf()
-                }, 500)
+                searchConnectService()
             } else {
                 val title = "配对失败，正在重试..."
                 val text = "请稍候，将自动返回输入界面"
@@ -384,6 +300,120 @@ class AdbPairingService : Service() {
                         Log.e(tag, "更新前台通知失败", e)
                     }
                 }, 2000)
+            }
+        }
+    }
+
+    private fun searchConnectService() {
+        val connectObserver = Observer<Int> { port ->
+            Log.i(tag, "连接服务端口: $port")
+            if (port <= 0) return@Observer
+
+            connectMdns?.stop()
+            connectMdns = null
+
+            onConnectServiceFound(port)
+        }
+
+        connectMdns = AdbMdns(this, AdbMdns.TLS_CONNECT, connectObserver, onTimeout = {
+            Log.w(tag, "搜索连接服务超时")
+            onConnectServiceTimeout()
+        }).apply { start() }
+    }
+
+    private fun onConnectServiceFound(port: Int) {
+        retryHandler.post {
+            Log.i(tag, "找到连接服务端口: $port")
+
+            val preferences = StellarSettings.getPreferences()
+            val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+            val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
+
+            if (tcpipPortEnabled && currentPort.isNullOrEmpty()) {
+                preferences.edit()
+                    .putString(StellarSettings.TCPIP_PORT, port.toString())
+                    .apply()
+                Log.i(tag, "自动设置 TCP 端口: $port")
+            }
+
+            // 配对成功后自动授权 WRITE_SECURE_SETTINGS 权限
+            grantSecureSettingsPermission(port)
+        }
+    }
+
+    private fun grantSecureSettingsPermission(port: Int) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                val key = AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
+
+                // 等待端口可用
+                val maxWait = 5000L
+                val interval = 200L
+                var elapsed = 0L
+                while (elapsed < maxWait) {
+                    try {
+                        java.net.Socket("127.0.0.1", port).close()
+                        break
+                    } catch (e: Exception) {
+                        kotlinx.coroutines.delay(interval)
+                        elapsed += interval
+                    }
+                }
+
+                AdbClient("127.0.0.1", port, key).use { client ->
+                    client.connect()
+                    val command = "pm grant ${packageName} android.permission.WRITE_SECURE_SETTINGS"
+                    client.shellCommand(command) { output ->
+                        Log.d(tag, "授权命令输出: ${String(output)}")
+                    }
+                }
+                Log.i(tag, "WRITE_SECURE_SETTINGS 权限授权成功")
+            } catch (e: Exception) {
+                Log.e(tag, "自动授权 WRITE_SECURE_SETTINGS 失败", e)
+            }
+
+            retryHandler.post {
+                navigateToStarter(port)
+            }
+        }
+    }
+
+    private fun navigateToStarter(port: Int) {
+        val intent = roro.stellar.manager.ui.features.manager.ManagerActivity.createStarterIntent(
+            this,
+            isRoot = false,
+            host = "127.0.0.1",
+            port = port
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        startActivity(intent)
+
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        isRunning = false
+        stopSelf()
+    }
+
+    private fun onConnectServiceTimeout() {
+        retryHandler.post {
+            Log.w(tag, "连接服务搜索超时，尝试使用系统端口")
+
+            val systemPort = roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
+            if (systemPort in 1..65535) {
+                // 配对成功后自动授权 WRITE_SECURE_SETTINGS 权限
+                grantSecureSettingsPermission(systemPort)
+            } else {
+                val timeoutNotification = Notification.Builder(this, notificationChannel)
+                    .setSmallIcon(R.drawable.stellar_icon)
+                    .setContentTitle("搜索连接服务超时")
+                    .setContentText("请手动打开应用启动服务")
+                    .setAutoCancel(true)
+                    .build()
+
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                getSystemService(NotificationManager::class.java).notify(notificationId, timeoutNotification)
+                isRunning = false
+                stopSelf()
             }
         }
     }
@@ -480,18 +510,6 @@ class AdbPairingService : Service() {
             .setContentTitle("已找到配对服务")
             .setSmallIcon(R.drawable.stellar_icon)
             .addAction(replyNotificationAction(port))
-            .build()
-    }
-
-    private fun createDetectedNotification(): Notification {
-        return Notification.Builder(this, detectedNotificationChannel)
-            .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("检测到配对服务")
-            .setContentText("请准备输入配对码")
-            .setPriority(Notification.PRIORITY_HIGH)
-            .setCategory(Notification.CATEGORY_ALARM)
-            .setAutoCancel(true)
-            .setVibrate(longArrayOf(0, 200, 100, 200))
             .build()
     }
 
