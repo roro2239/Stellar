@@ -96,6 +96,7 @@ internal fun StarterScreen(
         factory = StarterViewModelFactory(context, isRoot, host, port, hasSecureSettings)
     )
     val state by viewModel.state.collectAsState()
+    val useMdnsDiscovery by viewModel.useMdnsDiscovery.collectAsState()
 
     LaunchedEffect(state) {
         if (state is StarterState.Loading && (state as StarterState.Loading).isSuccess) {
@@ -126,7 +127,8 @@ internal fun StarterScreen(
                     outputLines = viewModel.outputLines.collectAsState().value,
                     isSuccess = loadingState.isSuccess,
                     isRoot = isRoot,
-                    warningStepIndex = loadingState.warningStepIndex
+                    warningStepIndex = loadingState.warningStepIndex,
+                    useMdnsDiscovery = useMdnsDiscovery
                 )
             }
             is StarterState.Error -> {
@@ -154,7 +156,8 @@ private fun LoadingContent(
     outputLines: List<String>,
     isSuccess: Boolean,
     isRoot: Boolean,
-    warningStepIndex: Int? = null
+    warningStepIndex: Int? = null,
+    useMdnsDiscovery: Boolean = false
 ) {
     val context = LocalContext.current
     var countdown by remember { mutableIntStateOf(3) }
@@ -170,10 +173,20 @@ private fun LoadingContent(
     }
 
     // 根据输出解析当前步骤
-    val steps = remember(isRoot) {
+    val steps = remember(isRoot, useMdnsDiscovery) {
         if (isRoot) {
             listOf(
                 StartStep("检查 Root 权限", Icons.Filled.Security),
+                StartStep("检查现有服务", Icons.Filled.Search),
+                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
+                StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("启动完成", Icons.Filled.CheckCircle)
+            )
+        } else if (useMdnsDiscovery) {
+            // mDNS 模式：不需要切换端口步骤
+            listOf(
+                StartStep("连接 ADB 服务", Icons.Filled.Cable),
+                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
                 StartStep("检查现有服务", Icons.Filled.Search),
                 StartStep("启动服务进程", Icons.Filled.RocketLaunch),
                 StartStep("等待 Binder 响应", Icons.Filled.Sync),
@@ -194,22 +207,21 @@ private fun LoadingContent(
 
     // 根据输出判断当前步骤
     val totalSteps = steps.size
-    val currentStepIndex by remember(outputLines, isSuccess) {
+    val currentStepIndex by remember(outputLines, isSuccess, useMdnsDiscovery) {
         derivedStateOf {
             when {
                 isSuccess -> totalSteps - 1
-                // 切换端口 (Root: N/A, ADB: 5)
+                // 切换端口 (仅非 mDNS 的 ADB 模式有此步骤，index 5)
                 outputLines.any { it.contains("切换端口") || it.contains("restarting in TCP mode") } ->
-                    if (isRoot) 3 else 5
-                // 等待 Binder 响应 (Root: 3, ADB: 4)
+                    if (isRoot || useMdnsDiscovery) totalSteps - 2 else 5
+                // 等待 Binder 响应 (Root: 3, ADB mDNS: 4, ADB 普通: 4)
                 outputLines.any { it.contains("stellar_starter 正常退出") } ->
                     if (isRoot) 3 else 4
                 outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 3
                 outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
                     if (isRoot) 1 else 2
                 // ADB 模式: 连接 ADB 服务 (index 0)
-                outputLines.any { it.contains("Connecting") } ->
-                    if (isRoot) 0 else 0
+                outputLines.any { it.contains("Connecting") } -> 0
                 outputLines.any { it.startsWith("$") } -> 0
                 outputLines.isNotEmpty() -> 0
                 else -> 0
@@ -958,6 +970,10 @@ internal class StarterViewModel(
     private val _outputLines = MutableStateFlow<List<String>>(emptyList())
     val outputLines: StateFlow<List<String>> = _outputLines.asStateFlow()
 
+    // 是否使用 mDNS 发现模式（不需要切换端口步骤）
+    private val _useMdnsDiscovery = MutableStateFlow(false)
+    val useMdnsDiscovery: StateFlow<Boolean> = _useMdnsDiscovery.asStateFlow()
+
     private val lastCommand: String = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
 
     private val adbWirelessHelper = AdbWirelessHelper()
@@ -1058,30 +1074,66 @@ internal class StarterViewModel(
     }
 
     private fun startAdb(host: String, port: Int) {
-        // 有 WRITE_SECURE_SETTINGS 权限时，使用 mDNS 扫描端口
-        if (hasSecureSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            addOutputLine("正在扫描 ADB 端口...")
-            startWithMdnsDiscovery(host, port)
-            return
-        }
-        // 先切换端口到设置的端口，再启动服务
-        val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(port)
-        if (shouldChange) {
-            switchPortThenStart(host, port, newPort)
-        } else {
-            startAdbConnection(host, port)
+        viewModelScope.launch(Dispatchers.IO) {
+            // 获取自定义端口设置
+            val preferences = StellarSettings.getPreferences()
+            val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+            val customPort = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
+            val hasValidCustomPort = tcpipPortEnabled && customPort != null && customPort in 1..65535
+
+            if (hasValidCustomPort) {
+                // 1. 先尝试用自定义端口连接
+                addOutputLine("尝试连接自定义端口: $customPort")
+                val canConnect = adbWirelessHelper.hasAdbPermission(host, customPort!!)
+                if (canConnect) {
+                    // 自定义端口可用，直接激活服务
+                    addOutputLine("自定义端口可用")
+                    _useMdnsDiscovery.value = false
+                    launch(Dispatchers.Main) {
+                        startAdbConnection(host, customPort)
+                    }
+                    return@launch
+                }
+                addOutputLine("自定义端口不可用，切换到 mDNS 扫描")
+            }
+
+            // 2. 使用 mDNS 发现端口
+            if (hasSecureSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                addOutputLine("正在扫描 ADB 端口...")
+                launch(Dispatchers.Main) {
+                    startWithMdnsDiscovery(host, port, hasValidCustomPort, customPort ?: -1)
+                }
+            } else {
+                // 没有 WRITE_SECURE_SETTINGS 权限，使用传入的端口
+                _useMdnsDiscovery.value = false
+                launch(Dispatchers.Main) {
+                    startAdbConnection(host, port)
+                }
+            }
         }
     }
 
-    private fun startWithMdnsDiscovery(host: String, fallbackPort: Int) {
+    private fun startWithMdnsDiscovery(
+        host: String,
+        fallbackPort: Int,
+        shouldSwitchToCustomPort: Boolean = false,
+        customPort: Int = -1
+    ) {
         val portObserver = Observer<Int> { discoveredPort ->
             if (discoveredPort in 1..65535) {
                 addOutputLine("发现 ADB 端口: $discoveredPort")
                 adbMdns?.stop()
                 adbMdns = null
-                // 自动保存发现的端口
-                autoSavePortIfNeeded(discoveredPort)
-                startAdbConnection(host, discoveredPort)
+
+                if (shouldSwitchToCustomPort && customPort in 1..65535) {
+                    // 需要切换到自定义端口
+                    _useMdnsDiscovery.value = false
+                    switchPortThenStart(host, discoveredPort, customPort)
+                } else {
+                    // 直接使用发现的端口
+                    _useMdnsDiscovery.value = true
+                    startAdbConnection(host, discoveredPort)
+                }
             }
         }
 
@@ -1094,21 +1146,16 @@ internal class StarterViewModel(
                 val systemPort = EnvironmentUtils.getAdbTcpPort()
                 val finalPort = if (systemPort in 1..65535) systemPort else fallbackPort
                 addOutputLine("使用端口: $finalPort")
-                // 自动保存发现的端口
-                autoSavePortIfNeeded(finalPort)
-                startAdbConnection(host, finalPort)
+
+                if (shouldSwitchToCustomPort && customPort in 1..65535) {
+                    _useMdnsDiscovery.value = false
+                    switchPortThenStart(host, finalPort, customPort)
+                } else {
+                    _useMdnsDiscovery.value = true
+                    startAdbConnection(host, finalPort)
+                }
             }
         ).apply { start() }
-    }
-
-    private fun autoSavePortIfNeeded(port: Int) {
-        val preferences = StellarSettings.getPreferences()
-        val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
-        val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
-        if (tcpipPortEnabled && currentPort.isNullOrEmpty() && port in 1..65535) {
-            preferences.edit().putString(StellarSettings.TCPIP_PORT, port.toString()).apply()
-            addOutputLine("自动保存端口: $port")
-        }
     }
 
     private fun switchPortThenStart(host: String, currentPort: Int, newPort: Int) {
