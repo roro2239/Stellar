@@ -22,6 +22,7 @@ class ManagerActivity : ComponentActivity() {
         private const val EXTRA_IS_ROOT = "is_root"
         private const val EXTRA_HOST = "host"
         private const val EXTRA_PORT = "port"
+        private const val EXTRA_HAS_SECURE_SETTINGS = "has_secure_settings"
 
         fun createLogsIntent(context: Context): Intent {
             return Intent(context, ManagerActivity::class.java).apply {
@@ -29,12 +30,19 @@ class ManagerActivity : ComponentActivity() {
             }
         }
 
-        fun createStarterIntent(context: Context, isRoot: Boolean, host: String?, port: Int): Intent {
+        fun createStarterIntent(
+            context: Context,
+            isRoot: Boolean,
+            host: String?,
+            port: Int,
+            hasSecureSettings: Boolean = false
+        ): Intent {
             return Intent(context, ManagerActivity::class.java).apply {
                 putExtra(EXTRA_ROUTE, ManagerRoute.Starter.route)
                 putExtra(EXTRA_IS_ROOT, isRoot)
                 putExtra(EXTRA_HOST, host)
                 putExtra(EXTRA_PORT, port)
+                putExtra(EXTRA_HAS_SECURE_SETTINGS, hasSecureSettings)
             }
         }
 
@@ -54,6 +62,7 @@ class ManagerActivity : ComponentActivity() {
         val isRoot = intent.getBooleanExtra(EXTRA_IS_ROOT, true)
         val host = intent.getStringExtra(EXTRA_HOST)
         val port = intent.getIntExtra(EXTRA_PORT, 0)
+        val hasSecureSettings = intent.getBooleanExtra(EXTRA_HAS_SECURE_SETTINGS, false)
 
         setContent {
             val themeMode = ThemePreferences.themeMode.value
@@ -63,6 +72,7 @@ class ManagerActivity : ComponentActivity() {
                     isRoot = isRoot,
                     host = host,
                     port = port,
+                    hasSecureSettings = hasSecureSettings,
                     onClose = { finish() }
                 )
             }
@@ -76,6 +86,7 @@ private fun ManagerNavHost(
     isRoot: Boolean,
     host: String?,
     port: Int,
+    hasSecureSettings: Boolean = false,
     onClose: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -95,6 +106,7 @@ private fun ManagerNavHost(
                 isRoot = isRoot,
                 host = host,
                 port = port,
+                hasSecureSettings = hasSecureSettings,
                 onClose = onClose,
                 onNavigateToAdbPairing = {
                     navController.navigate(ManagerRoute.Pairing.route)
