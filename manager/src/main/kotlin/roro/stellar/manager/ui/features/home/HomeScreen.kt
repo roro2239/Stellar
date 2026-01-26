@@ -48,15 +48,15 @@ fun HomeScreen(
     val context = LocalContext.current
     val serviceStatusResource by homeViewModel.serviceStatus.observeAsState()
     val grantedCountResource by appsViewModel.grantedCount.observeAsState()
-    
+
     val serviceStatus = serviceStatusResource?.data
     grantedCountResource?.data ?: 0
-    
+
     val isRunning = serviceStatus?.isRunning ?: false
     val isRoot = serviceStatus?.uid == 0
     val isPrimaryUser = UserHandleCompat.myUserId() == 0
     val hasRoot = EnvironmentUtils.isRooted()
-    
+
     var showStopDialog by remember { mutableStateOf(false) }
     var showAdbCommandDialog by remember { mutableStateOf(false) }
     var triggerAdbAutoConnect by remember { mutableStateOf(false) }
@@ -107,11 +107,6 @@ fun HomeScreen(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || EnvironmentUtils.getAdbTcpPort() > 0) {
                     item {
                         StartWirelessAdbCard(
-                            onPairClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    onNavigateToAdbPairing()
-                                }
-                            },
                             onStartClick = {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     triggerAdbAutoConnect = true
@@ -135,7 +130,9 @@ fun HomeScreen(
                     item {
                         StartRootCard(
                             isRestart = isRunning && isRoot,
-                            onStartClick = { onNavigateToStarter(true, null, 0) }
+                            onStartClick = {
+                                Toast.makeText(context, "没有 Root 权限", Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                 }
@@ -191,6 +188,9 @@ fun HomeScreen(
             roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
                 onStartConnection = { port ->
                     onNavigateToStarter(false, "127.0.0.1", port)
+                },
+                onNeedsPairing = {
+                    onNavigateToAdbPairing()
                 },
                 onComplete = { triggerAdbAutoConnect = false }
             )
