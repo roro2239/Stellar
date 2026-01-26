@@ -9,7 +9,6 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,10 +62,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import kotlinx.coroutines.launch
-import roro.stellar.Stellar
 import roro.stellar.manager.BuildConfig
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT
@@ -74,16 +71,13 @@ import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT_WIRELESS
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
 import roro.stellar.manager.StellarSettings.DROP_PRIVILEGES
-import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.ktx.isComponentEnabled
 import roro.stellar.manager.ktx.setComponentEnabled
 import roro.stellar.manager.receiver.BootCompleteReceiver
-import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.components.SettingsContentCard
 import roro.stellar.manager.ui.components.SettingsSwitchCard
 import roro.stellar.manager.ui.components.SettingsClickableCard
-import roro.stellar.manager.ui.components.IconContainer
 import roro.stellar.manager.ui.features.settings.update.UpdateUtils
 import roro.stellar.manager.ui.features.settings.update.isNewerThan
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -93,7 +87,6 @@ import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.ui.theme.ThemeMode
 import roro.stellar.manager.ui.theme.ThemePreferences
 import roro.stellar.manager.util.PortBlacklistUtils
-import roro.stellar.manager.util.StellarSystemApis
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -117,15 +110,10 @@ fun SettingsScreen(
 
     var startOnBoot by remember { mutableStateOf(false) }
 
-    val hasSecurePermission = ContextCompat.checkSelfPermission(
-        context, Manifest.permission.WRITE_SECURE_SETTINGS
-    ) == PackageManager.PERMISSION_GRANTED
-
     var startOnBootWireless by remember {
         mutableStateOf(
             context.packageManager.isComponentEnabled(componentName) &&
-            preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false) &&
-            hasSecurePermission
+            preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false)
         )
     }
 
@@ -166,11 +154,6 @@ fun SettingsScreen(
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableIntStateOf(0) }
 
-    // 权限对话框状态
-    var showSecurePermissionDialog by remember { mutableStateOf(false) }
-    var showAdbCommandDialog by remember { mutableStateOf(false) }
-    var pendingPermissionCallback by remember { mutableStateOf<((Boolean) -> Unit)?>(null) }
-    
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -248,45 +231,20 @@ fun SettingsScreen(
             SettingsSwitchCard(
                 icon = Icons.Default.Wifi,
                 title = "开机启动（无线调试）",
-                subtitle = "Stellar 可以通过无线调试开机启动",
+                subtitle = "Stellar 可以通过无线调试开机启动（需要先配对获取权限）",
                 checked = startOnBootWireless,
                 onCheckedChange = { newValue ->
                     if (newValue) {
-                        if (!hasSecurePermission) {
-                            pendingPermissionCallback = { granted ->
-                                if (granted) {
-                                    startOnBoot = false
-                                    savePreference(KEEP_START_ON_BOOT, false)
-                                    startOnBootWireless = true
-                                    toggleBootComponent(
-                                        context,
-                                        componentName,
-                                        KEEP_START_ON_BOOT_WIRELESS,
-                                        true
-                                    )
-                                }
-                            }
-                            showSecurePermissionDialog = true
-                        } else {
-                            startOnBoot = false
-                            savePreference(KEEP_START_ON_BOOT, false)
-                            startOnBootWireless = newValue
-                            toggleBootComponent(
-                                context,
-                                componentName,
-                                KEEP_START_ON_BOOT_WIRELESS,
-                                newValue
-                            )
-                        }
-                    } else {
-                        startOnBootWireless = false
-                        toggleBootComponent(
-                            context,
-                            componentName,
-                            KEEP_START_ON_BOOT_WIRELESS,
-                            false
-                        )
+                        startOnBoot = false
+                        savePreference(KEEP_START_ON_BOOT, false)
                     }
+                    startOnBootWireless = newValue
+                    toggleBootComponent(
+                        context,
+                        componentName,
+                        KEEP_START_ON_BOOT_WIRELESS,
+                        newValue || startOnBoot
+                    )
                 }
             )
 
@@ -627,91 +585,6 @@ fun SettingsScreen(
              }
          }
     }
-
-    // 权限警告对话框
-    if (showSecurePermissionDialog) {
-        SecureSettingsPermissionDialog(
-            onDismiss = {
-                showSecurePermissionDialog = false
-                pendingPermissionCallback?.invoke(false)
-                pendingPermissionCallback = null
-            },
-            onManual = {
-                showSecurePermissionDialog = false
-                showAdbCommandDialog = true
-            },
-            onAuto = {
-                showSecurePermissionDialog = false
-                Thread {
-                    try {
-                        StellarSystemApis.grantRuntimePermission(
-                            BuildConfig.APPLICATION_ID,
-                            Manifest.permission.WRITE_SECURE_SETTINGS,
-                            0
-                        )
-                        Thread.sleep(500)
-                        val hasPermission = try {
-                            context.packageManager.checkPermission(
-                                Manifest.permission.WRITE_SECURE_SETTINGS,
-                                BuildConfig.APPLICATION_ID
-                            ) == PackageManager.PERMISSION_GRANTED
-                        } catch (e: Exception) { false }
-
-                        (context as? android.app.Activity)?.runOnUiThread {
-                            if (hasPermission) {
-                                Toast.makeText(context, "授权成功", Toast.LENGTH_SHORT).show()
-                                pendingPermissionCallback?.invoke(true)
-                            } else {
-                                Toast.makeText(context, "授权失败", Toast.LENGTH_LONG).show()
-                                pendingPermissionCallback?.invoke(false)
-                            }
-                            pendingPermissionCallback = null
-                        }
-                    } catch (e: Exception) {
-                        (context as? android.app.Activity)?.runOnUiThread {
-                            Toast.makeText(context, "自动授权失败", Toast.LENGTH_LONG).show()
-                            pendingPermissionCallback?.invoke(false)
-                            pendingPermissionCallback = null
-                        }
-                    }
-                }.start()
-            },
-            isServiceRunning = Stellar.pingBinder()
-        )
-    }
-
-    // ADB 命令对话框
-    if (showAdbCommandDialog) {
-        val command = "adb shell pm grant ${BuildConfig.APPLICATION_ID} android.permission.WRITE_SECURE_SETTINGS"
-        StellarDialog(
-            onDismissRequest = {
-                showAdbCommandDialog = false
-                pendingPermissionCallback?.invoke(false)
-                pendingPermissionCallback = null
-            },
-            title = "查看指令",
-            confirmText = "复制",
-            onConfirm = {
-                if (ClipboardUtils.put(context, command)) {
-                    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
-                }
-                showAdbCommandDialog = false
-                pendingPermissionCallback?.invoke(false)
-                pendingPermissionCallback = null
-            },
-            onDismiss = {
-                showAdbCommandDialog = false
-                pendingPermissionCallback?.invoke(false)
-                pendingPermissionCallback = null
-            }
-        ) {
-            Text(
-                text = command,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }
 
 @Composable
@@ -725,30 +598,6 @@ private fun ThemeSelectorWithAnimation(
         onItemSelected = onModeChange,
         itemLabel = { ThemePreferences.getThemeModeDisplayName(it) }
     )
-}
-
-@Composable
-private fun SecureSettingsPermissionDialog(
-    onDismiss: () -> Unit,
-    onManual: () -> Unit,
-    onAuto: () -> Unit,
-    isServiceRunning: Boolean
-) {
-    StellarDialog(
-        onDismissRequest = onDismiss,
-        title = "注意",
-        confirmText = if (isServiceRunning) "自动" else "手动",
-        dismissText = if (isServiceRunning) "手动" else "取消",
-        onConfirm = if (isServiceRunning) onAuto else onManual,
-        onDismiss = if (isServiceRunning) onManual else onDismiss
-    ) {
-        Text(
-            text = "此功能需要 WRITE_SECURE_SETTINGS 权限。\n\n" +
-                    "警告：这是高度敏感的权限，仅在明确操作风险时启用。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
 
 private fun savePreference(key: String, value: Boolean) {

@@ -20,7 +20,8 @@ class AdbMdns(
     context: Context,
     private val serviceType: String,
     private val observer: Observer<Int>,
-    private val onTimeout: (() -> Unit)? = null
+    private val onTimeout: (() -> Unit)? = null,
+    private val timeoutMillis: Long = TIMEOUT_MILLIS
 ) {
 
     @Volatile
@@ -44,7 +45,7 @@ class AdbMdns(
             if (!running) return
 
             val elapsedTime = System.currentTimeMillis() - startTime
-            if (elapsedTime >= TIMEOUT_MILLIS) {
+            if (elapsedTime >= timeoutMillis) {
                 Log.v(TAG, "搜索超时，自动停止")
                 stop()
                 onTimeout?.invoke()

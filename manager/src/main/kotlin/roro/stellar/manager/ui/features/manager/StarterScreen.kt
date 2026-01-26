@@ -1,5 +1,6 @@
 package roro.stellar.manager.ui.features.manager
 
+import android.content.Context
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,8 +39,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.adb.AdbKeyException
+import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.BuildConfig
+import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.features.starter.Starter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -47,6 +51,7 @@ import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.CommandExecutor
+import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 import javax.net.ssl.SSLException
 import javax.net.ssl.SSLProtocolException
@@ -81,12 +86,14 @@ internal fun StarterScreen(
     isRoot: Boolean,
     host: String?,
     port: Int,
+    hasSecureSettings: Boolean = false,
     onClose: () -> Unit,
     onNavigateToAdbPairing: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     val viewModel: StarterViewModel = viewModel(
-        key = "starter_${isRoot}_${host}_$port",
-        factory = StarterViewModelFactory(isRoot, host, port)
+        key = "starter_${isRoot}_${host}_${port}_$hasSecureSettings",
+        factory = StarterViewModelFactory(context, isRoot, host, port, hasSecureSettings)
     )
     val state by viewModel.state.collectAsState()
 
@@ -174,12 +181,12 @@ private fun LoadingContent(
             )
         } else {
             listOf(
-                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("连接 ADB 服务", Icons.Filled.Cable),
                 StartStep("验证连接状态", Icons.Filled.VerifiedUser),
                 StartStep("检查现有服务", Icons.Filled.Search),
                 StartStep("启动服务进程", Icons.Filled.RocketLaunch),
                 StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("启动完成", Icons.Filled.CheckCircle)
             )
         }
@@ -191,17 +198,17 @@ private fun LoadingContent(
         derivedStateOf {
             when {
                 isSuccess -> totalSteps - 1
-                // 等待 Binder 响应 (Root: 3, ADB: 5)
-                outputLines.any { it.contains("stellar_starter 正常退出") } ->
-                    if (isRoot) 3 else 5
-                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 4
-                outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
-                    if (isRoot) 1 else 3
-                // ADB 模式: 连接 ADB 服务 (index 1), 验证连接状态 (index 2)
-                outputLines.any { it.contains("Connecting") } ->
-                    if (isRoot) 0 else 1
-                // ADB 模式: 切换端口步骤 (index 0)
+                // 切换端口 (Root: N/A, ADB: 5)
                 outputLines.any { it.contains("切换端口") || it.contains("restarting in TCP mode") } ->
+                    if (isRoot) 3 else 5
+                // 等待 Binder 响应 (Root: 3, ADB: 4)
+                outputLines.any { it.contains("stellar_starter 正常退出") } ->
+                    if (isRoot) 3 else 4
+                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 3
+                outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
+                    if (isRoot) 1 else 2
+                // ADB 模式: 连接 ADB 服务 (index 0)
+                outputLines.any { it.contains("Connecting") } ->
                     if (isRoot) 0 else 0
                 outputLines.any { it.startsWith("$") } -> 0
                 outputLines.isNotEmpty() -> 0
@@ -326,7 +333,6 @@ private fun StepCard(step: StartStep, index: Int) {
         else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     }
 
-    // 完成时的缩放动画
     val scale by animateFloatAsState(
         targetValue = if (isCompleted) 1f else 1f,
         animationSpec = tween(200),
@@ -346,7 +352,6 @@ private fun StepCard(step: StartStep, index: Int) {
                 .padding(AppSpacing.cardPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 步骤图标
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -660,12 +665,12 @@ private fun ErrorContent(
             )
         } else {
             listOf(
-                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("连接 ADB 服务", Icons.Filled.Cable),
                 StartStep("验证连接状态", Icons.Filled.VerifiedUser),
                 StartStep("检查现有服务", Icons.Filled.Search),
                 StartStep("启动服务进程", Icons.Filled.RocketLaunch),
                 StartStep("等待 Binder 响应", Icons.Filled.Sync),
+                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
                 StartStep("启动完成", Icons.Filled.CheckCircle)
             )
         }
@@ -938,9 +943,11 @@ private fun ActionCard(
 }
 
 internal class StarterViewModel(
+    private val context: Context,
     private val isRoot: Boolean,
     private val host: String?,
-    private val port: Int
+    private val port: Int,
+    private val hasSecureSettings: Boolean = false
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<StarterState>(
@@ -954,6 +961,7 @@ internal class StarterViewModel(
     private val lastCommand: String = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
 
     private val adbWirelessHelper = AdbWirelessHelper()
+    private var adbMdns: AdbMdns? = null
 
     init { startService() }
 
@@ -1050,32 +1058,83 @@ internal class StarterViewModel(
     }
 
     private fun startAdb(host: String, port: Int) {
+        // 有 WRITE_SECURE_SETTINGS 权限时，使用 mDNS 扫描端口
+        if (hasSecureSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            addOutputLine("正在扫描 ADB 端口...")
+            startWithMdnsDiscovery(host, port)
+            return
+        }
+        // 先切换端口到设置的端口，再启动服务
         val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(port)
-
         if (shouldChange) {
-            addOutputLine("切换端口: $port -> $newPort")
-            adbWirelessHelper.changeTcpipPortAfterStart(
-                host = host,
-                port = port,
-                newPort = newPort,
-                coroutineScope = viewModelScope,
-                onOutput = { addOutputLine(it) },
-                onError = { error ->
-                    addOutputLine("端口切换失败: ${error.message}")
-                    addOutputLine("使用原端口 $port 继续启动...")
-                    startAdbConnection(host, port, warningOnSuccess = true)
-                },
-                onSuccess = {
-                    addOutputLine("端口切换成功，使用新端口 $newPort 启动...")
-                    startAdbConnection(host, newPort, warningOnSuccess = false)
-                }
-            )
+            switchPortThenStart(host, port, newPort)
         } else {
-            startAdbConnection(host, port, warningOnSuccess = false)
+            startAdbConnection(host, port)
         }
     }
 
-    private fun startAdbConnection(host: String, port: Int, warningOnSuccess: Boolean) {
+    private fun startWithMdnsDiscovery(host: String, fallbackPort: Int) {
+        val portObserver = Observer<Int> { discoveredPort ->
+            if (discoveredPort in 1..65535) {
+                addOutputLine("发现 ADB 端口: $discoveredPort")
+                adbMdns?.stop()
+                adbMdns = null
+                // 自动保存发现的端口
+                autoSavePortIfNeeded(discoveredPort)
+                startAdbConnection(host, discoveredPort)
+            }
+        }
+
+        adbMdns = AdbMdns(
+            context = context,
+            serviceType = AdbMdns.TLS_CONNECT,
+            observer = portObserver,
+            onTimeout = {
+                addOutputLine("mDNS 扫描超时，尝试使用系统端口")
+                val systemPort = EnvironmentUtils.getAdbTcpPort()
+                val finalPort = if (systemPort in 1..65535) systemPort else fallbackPort
+                addOutputLine("使用端口: $finalPort")
+                // 自动保存发现的端口
+                autoSavePortIfNeeded(finalPort)
+                startAdbConnection(host, finalPort)
+            }
+        ).apply { start() }
+    }
+
+    private fun autoSavePortIfNeeded(port: Int) {
+        val preferences = StellarSettings.getPreferences()
+        val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+        val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
+        if (tcpipPortEnabled && currentPort.isNullOrEmpty() && port in 1..65535) {
+            preferences.edit().putString(StellarSettings.TCPIP_PORT, port.toString()).apply()
+            addOutputLine("自动保存端口: $port")
+        }
+    }
+
+    private fun switchPortThenStart(host: String, currentPort: Int, newPort: Int) {
+        addOutputLine("切换端口: $currentPort -> $newPort")
+        adbWirelessHelper.changeTcpipPortAfterStart(
+            host = host,
+            port = currentPort,
+            newPort = newPort,
+            coroutineScope = viewModelScope,
+            onOutput = { addOutputLine(it) },
+            onError = { error ->
+                addOutputLine("端口切换失败: ${error.message}，使用当前端口启动")
+                startAdbConnection(host, currentPort)
+            },
+            onSuccess = {
+                addOutputLine("端口已切换到 $newPort")
+                // 等待端口生效后启动
+                viewModelScope.launch {
+                    delay(1000)
+                    startAdbConnection(host, newPort)
+                }
+            }
+        )
+    }
+
+    private fun startAdbConnection(host: String, port: Int) {
         addOutputLine("Connecting to $host:$port...")
         adbWirelessHelper.startStellarViaAdb(
             host = host, port = port, coroutineScope = viewModelScope,
@@ -1087,7 +1146,7 @@ internal class StarterViewModel(
                         setError(Exception(trimmedLine.substringAfter("错误：").trim()), 4)
                     }
                 }
-                if (output.contains("stellar_starter 正常退出")) waitForService(warningOnSuccess)
+                if (output.contains("stellar_starter 正常退出")) waitForService()
             },
             onError = { error ->
                 addOutputLine("错误：${error.message}")
@@ -1097,7 +1156,12 @@ internal class StarterViewModel(
         )
     }
 
-    private fun waitForService(warningOnSuccess: Boolean = false) {
+    private fun hasErrorInOutput(): Boolean = _outputLines.value.any {
+        it.contains("错误：") || it.contains("Error:") ||
+        it.contains("Exception") || it.contains("FATAL")
+    }
+
+    private fun waitForService() {
         viewModelScope.launch {
             var binderReceived = false
             val listener = object : Stellar.OnBinderReceivedListener {
@@ -1105,11 +1169,7 @@ internal class StarterViewModel(
                     if (!binderReceived) {
                         binderReceived = true
                         Stellar.removeBinderReceivedListener(this)
-                        if (warningOnSuccess) {
-                            setSuccessWithWarning(0)
-                        } else {
-                            setSuccess()
-                        }
+                        setSuccess()
                     }
                 }
             }
@@ -1118,16 +1178,12 @@ internal class StarterViewModel(
             if (Stellar.pingBinder()) {
                 binderReceived = true
                 Stellar.removeBinderReceivedListener(listener)
-                if (warningOnSuccess) {
-                    setSuccessWithWarning(0)
-                } else {
-                    setSuccess()
-                }
+                setSuccess()
                 return@launch
             }
 
-            val maxWaitTime = 10000L
-            val checkInterval = 500L
+            val maxWaitTime = 15000L
+            val checkInterval = 300L
             var elapsed = 0L
 
             while (elapsed < maxWaitTime && !binderReceived) {
@@ -1137,31 +1193,22 @@ internal class StarterViewModel(
                 if (!binderReceived && Stellar.pingBinder()) {
                     binderReceived = true
                     Stellar.removeBinderReceivedListener(listener)
-                    if (warningOnSuccess) {
-                        setSuccessWithWarning(0)
-                    } else {
-                        setSuccess()
-                    }
+                    setSuccess()
                     return@launch
                 }
 
                 if (hasErrorInOutput()) {
                     Stellar.removeBinderReceivedListener(listener)
-                    setError(Exception(getLastErrorMessage()), if (isRoot) 3 else 5)
+                    setError(Exception(getLastErrorMessage()), 3)
                     return@launch
                 }
             }
 
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 5)
+                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), 3)
             }
         }
-    }
-
-    private fun hasErrorInOutput(): Boolean = _outputLines.value.any {
-        it.contains("错误：") || it.contains("Error:") ||
-        it.contains("Exception") || it.contains("FATAL")
     }
 
     private fun getLastErrorMessage(): String {
@@ -1175,12 +1222,14 @@ internal class StarterViewModel(
 }
 
 internal class StarterViewModelFactory(
+    private val context: Context,
     private val isRoot: Boolean,
     private val host: String?,
-    private val port: Int
+    private val port: Int,
+    private val hasSecureSettings: Boolean = false
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return StarterViewModel(isRoot, host, port) as T
+        return StarterViewModel(context, isRoot, host, port, hasSecureSettings) as T
     }
 }
