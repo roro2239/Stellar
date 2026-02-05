@@ -20,6 +20,6 @@ subprojects {
 
 apply from: 'api/manifest.gradle'
 ext {
-    versionCode = 100071
-    versionName = "1.0.7-dev"
+    versionCode = 100072
+    versionName = "1.0.7"
 }
