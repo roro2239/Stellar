@@ -1141,8 +1141,8 @@ internal class StarterViewModel(
             context = context,
             serviceType = AdbMdns.TLS_CONNECT,
             observer = portObserver,
-            onTimeout = {
-                addOutputLine("mDNS 扫描超时，尝试使用系统端口")
+            onMaxRefresh = {
+                addOutputLine("mDNS 扫描次数已达上限，尝试使用系统端口")
                 val systemPort = EnvironmentUtils.getAdbTcpPort()
                 val finalPort = if (systemPort in 1..65535) systemPort else fallbackPort
                 addOutputLine("使用端口: $finalPort")

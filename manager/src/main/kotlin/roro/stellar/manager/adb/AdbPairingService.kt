@@ -30,10 +30,12 @@ class AdbPairingService : Service() {
     companion object {
 
         const val notificationChannel = "adb_pairing"
+        const val alertNotificationChannel = "adb_pairing_alert"
 
         private const val tag = "AdbPairingService"
 
         private const val notificationId = 1
+        private const val alertNotificationId = 2
         private const val replyRequestId = 1
         private const val stopRequestId = 2
         private const val retryRequestId = 3
@@ -71,6 +73,15 @@ class AdbPairingService : Service() {
 
         discoveredPort = port
 
+        val alertNotification = Notification.Builder(this, alertNotificationChannel)
+            .setSmallIcon(R.drawable.stellar_icon)
+            .setContentTitle("已找到配对服务")
+            .setContentText("请输入配对码")
+            .addAction(replyNotificationAction(port))
+            .setAutoCancel(true)
+            .build()
+        getSystemService(NotificationManager::class.java).notify(alertNotificationId, alertNotification)
+
         val notification = createInputNotification(port)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -79,8 +90,9 @@ class AdbPairingService : Service() {
             } else {
                 startForeground(notificationId, notification)
             }
+            Log.i(tag, "已更新通知为输入配对码")
         } catch (e: Exception) {
-            Log.e(tag, "更新前台通知失败", e)
+            Log.e(tag, "更新通知失败", e)
             getSystemService(NotificationManager::class.java).notify(notificationId, notification)
         }
     }
@@ -101,6 +113,16 @@ class AdbPairingService : Service() {
                 setSound(null, null)
                 setShowBadge(false)
                 setAllowBubbles(false)
+            })
+
+        notificationManager.createNotificationChannel(
+            NotificationChannel(
+                alertNotificationChannel,
+                "配对提醒",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                setShowBadge(true)
+                enableVibration(true)
             })
     }
 
@@ -148,9 +170,12 @@ class AdbPairingService : Service() {
     private fun startSearch() {
         if (started) return
         started = true
-        adbMdns = AdbMdns(this, AdbMdns.TLS_PAIRING, observer, onTimeout = {
-            onSearchTimeout()
-        }).apply { start() }
+        adbMdns = AdbMdns(
+            this,
+            AdbMdns.TLS_PAIRING,
+            observer,
+            onMaxRefresh = { onSearchMaxRefresh() }
+        ).apply { start() }
     }
 
     private fun stopSearch() {
@@ -168,12 +193,14 @@ class AdbPairingService : Service() {
         isRunning = false
         retryHandler.removeCallbacksAndMessages(null)
         stopSearch()
-        connectMdns?.stop()
+        adbMdns?.destroy()
+        adbMdns = null
+        connectMdns?.destroy()
         connectMdns = null
     }
 
     private fun onStart(): Notification {
-        if (isRunning) {
+        if (isRunning && started) {
             Log.i(tag, "服务已在运行，忽略重复启动")
             return searchingNotification
         }
@@ -187,10 +214,10 @@ class AdbPairingService : Service() {
         return createManualInputNotification(discoveredPort)
     }
 
-    private fun onSearchTimeout() {
-        Log.i(tag, "搜索超时")
+    private fun onSearchMaxRefresh() {
+        Log.i(tag, "搜索次数已达上限")
         stopSearch()
-        val notification = createTimeoutNotification()
+        val notification = createMaxRefreshNotification()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(notificationId, notification,
@@ -202,11 +229,6 @@ class AdbPairingService : Service() {
             Log.e(tag, "更新前台通知失败", e)
             getSystemService(NotificationManager::class.java).notify(notificationId, notification)
         }
-
-        retryHandler.postDelayed({
-            isRunning = false
-            stopSelf()
-        }, 3000)
     }
 
     private fun onInput(code: String, port: Int): Notification {
@@ -309,16 +331,21 @@ class AdbPairingService : Service() {
             Log.i(tag, "连接服务端口: $port")
             if (port <= 0) return@Observer
 
-            connectMdns?.stop()
+            connectMdns?.destroy()
             connectMdns = null
 
             onConnectServiceFound(port)
         }
 
-        connectMdns = AdbMdns(this, AdbMdns.TLS_CONNECT, connectObserver, onTimeout = {
-            Log.w(tag, "搜索连接服务超时")
-            onConnectServiceTimeout()
-        }).apply { start() }
+        connectMdns = AdbMdns(
+            this,
+            AdbMdns.TLS_CONNECT,
+            connectObserver,
+            onMaxRefresh = {
+                Log.w(tag, "搜索连接服务次数已达上限")
+                onConnectServiceMaxRefresh()
+            }
+        ).apply { start() }
     }
 
     private fun onConnectServiceFound(port: Int) {
@@ -336,7 +363,6 @@ class AdbPairingService : Service() {
                 Log.i(tag, "自动设置 TCP 端口: $port")
             }
 
-            // 配对成功后自动授权 WRITE_SECURE_SETTINGS 权限
             grantSecureSettingsPermission(port)
         }
     }
@@ -346,7 +372,6 @@ class AdbPairingService : Service() {
             try {
                 val key = AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
 
-                // 等待端口可用
                 val maxWait = 5000L
                 val interval = 200L
                 var elapsed = 0L
@@ -394,24 +419,23 @@ class AdbPairingService : Service() {
         stopSelf()
     }
 
-    private fun onConnectServiceTimeout() {
+    private fun onConnectServiceMaxRefresh() {
         retryHandler.post {
-            Log.w(tag, "连接服务搜索超时，尝试使用系统端口")
+            Log.w(tag, "连接服务搜索次数已达上限，尝试使用系统端口")
 
             val systemPort = roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
             if (systemPort in 1..65535) {
-                // 配对成功后自动授权 WRITE_SECURE_SETTINGS 权限
                 grantSecureSettingsPermission(systemPort)
             } else {
-                val timeoutNotification = Notification.Builder(this, notificationChannel)
+                val notification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
-                    .setContentTitle("搜索连接服务超时")
+                    .setContentTitle("未找到连接服务")
                     .setContentText("请手动打开应用启动服务")
                     .setAutoCancel(true)
                     .build()
 
                 stopForeground(STOP_FOREGROUND_REMOVE)
-                getSystemService(NotificationManager::class.java).notify(notificationId, timeoutNotification)
+                getSystemService(NotificationManager::class.java).notify(notificationId, notification)
                 isRunning = false
                 stopSelf()
             }
@@ -513,13 +537,12 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun createTimeoutNotification(): Notification {
+    private fun createMaxRefreshNotification(): Notification {
         return Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("搜索超时")
-            .setContentText("未找到配对服务，请确保已打开无线调试配对页面")
+            .setContentTitle("未找到配对服务")
+            .setContentText("请确保已打开无线调试配对页面")
             .addAction(retryNotificationAction)
-            .setAutoCancel(true)
             .build()
     }
 
