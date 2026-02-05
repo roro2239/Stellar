@@ -25,9 +25,7 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onStatusAction: () -> Unit,
     onRequestFollowPermission: () -> Unit,
-    onRequestBootPermission: () -> Unit,
-    hasFollowPermission: Boolean,
-    hasBootPermission: Boolean
+    hasFollowPermission: Boolean
 ) {
     val scrollState = rememberScrollState()
 
@@ -53,14 +51,6 @@ fun HomeScreen(
                     title = "跟随 Stellar 启动",
                     description = "允许应用在 Stellar 启动时自动启动",
                     onClick = onRequestFollowPermission
-                )
-            }
-
-            if (!hasBootPermission) {
-                PermissionCard(
-                    title = "开机跟随 Stellar 启动",
-                    description = "允许应用在开机时跟随 Stellar 自动启动",
-                    onClick = onRequestBootPermission
                 )
             }
         }

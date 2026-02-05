@@ -9,7 +9,6 @@ import roro.stellar.manager.StellarSettings
 
 enum class CommandMode {
     CLICK_EXECUTE,
-    AUTO_START,
     FOLLOW_SERVICE
 }
 
@@ -73,10 +72,6 @@ object CommandExecutor {
         } catch (e: Exception) {
             Log.e(AppConstants.TAG, "命令执行失败: ${cmd.title}", e)
         }
-    }
-
-    fun executeAutoStartCommands() {
-        executeCommandsByMode(CommandMode.AUTO_START)
     }
 
     fun executeFollowServiceCommands() {
