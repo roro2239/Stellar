@@ -319,17 +319,6 @@ fun AppListItem(
         )
     }
 
-    var followStartupOnBootFlag by remember {
-        mutableIntStateOf(
-            try {
-                Stellar.getFlagForUid(uid, "follow_stellar_startup_on_boot")
-            } catch (e: Exception) {
-                LOGGER.w("获取开机跟随启动权限状态异常", tr = e)
-                AuthorizationManager.FLAG_ASK
-            }
-        )
-    }
-
     var expanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
@@ -437,20 +426,6 @@ fun AppListItem(
                             Stellar.updateFlagForUid(uid, "follow_stellar_startup", newFlag)
                         } catch (e: Exception) {
                             LOGGER.e("更新跟随启动权限失败", tr = e)
-                        }
-                    }
-                )
-
-                PermissionItem(
-                    title = "开机启动",
-                    subtitle = "开机时随 Stellar 启动",
-                    currentFlag = followStartupOnBootFlag,
-                    onFlagChange = { newFlag ->
-                        try {
-                            followStartupOnBootFlag = newFlag
-                            Stellar.updateFlagForUid(uid, "follow_stellar_startup_on_boot", newFlag)
-                        } catch (e: Exception) {
-                            LOGGER.e("更新开机跟随启动权限失败", tr = e)
                         }
                     }
                 )

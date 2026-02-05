@@ -85,13 +85,12 @@ dependencies {
 ```xml
 <meta-data
     android:name="roro.stellar.permissions"
-    android:value="stellar,follow_stellar_startup,follow_stellar_startup_on_boot" />
+    android:value="stellar,follow_stellar_startup" />
 ```
 
 权限说明：
 - `stellar` - 基础 Stellar API 访问权限（必需）
 - `follow_stellar_startup` - 跟随 Stellar 服务启动
-- `follow_stellar_startup_on_boot` - 设备启动时跟随 Stellar 启动
 
 ### 3. 初始化 Stellar
 
@@ -740,8 +739,8 @@ Stellar 是基于 Shizuku 的分支项目，因此 API 设计高度相似，迁�
 |------|---------|---------|
 | **包名** | `roro.stellar.manager` | `moe.shizuku.privileged.api` |
 | **API 命名空间** | `roro.stellar.*` | `rikka.shizuku.*` |
-| **权限系统** | 多权限：`stellar`、`follow_stellar_startup`、`follow_stellar_startup_on_boot` | 单一权限模型 |
-| **启动钩子** | 内置支持跟随服务启动和开机启动 | 无内置支持 |
+| **权限系统** | 多权限：`stellar`、`follow_stellar_startup` | 单一权限模型 |
+| **启动钩子** | 内置支持跟随服务启动 | 无内置支持 |
 | **Provider Authority** | `${applicationId}.stellar` | `${applicationId}.shizuku` |
 
 ### 迁移步骤
