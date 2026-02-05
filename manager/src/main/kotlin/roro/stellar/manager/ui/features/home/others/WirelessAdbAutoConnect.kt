@@ -91,15 +91,14 @@ fun AdbAutoConnect(
                 context = context,
                 serviceType = AdbMdns.TLS_CONNECT,
                 observer = secondObserver,
-                onTimeout = {
+                onMaxRefresh = {
                     if (!handled) {
                         handled = true
-                        // 第二轮超时，直接进入配对页面
                         onNeedsPairing()
                         onComplete()
                     }
                 },
-                timeoutMillis = 500L
+                maxRefreshCount = 3
             ).apply { start() }
         }
 
@@ -128,10 +127,9 @@ fun AdbAutoConnect(
                 context = context,
                 serviceType = AdbMdns.TLS_CONNECT,
                 observer = portObserver,
-                onTimeout = {
+                onMaxRefresh = {
                     if (!handled) {
                         handled = true
-                        // 超时后尝试使用系统端口
                         if (systemPort in 1..65535) {
                             GlobalScope.launch(Dispatchers.IO) {
                                 val hasPermission = adbWirelessHelper.hasAdbPermission("127.0.0.1", systemPort)
@@ -140,7 +138,6 @@ fun AdbAutoConnect(
                                         onStartConnection(systemPort, hasSecureSettings)
                                         onComplete()
                                     } else if (hasSecureSettings) {
-                                        // 有权限但连接失败，询问是否开启无线调试
                                         onAskEnableWirelessAdb {
                                             enableWirelessAdb()
                                             startSecondRoundScan()
@@ -152,7 +149,6 @@ fun AdbAutoConnect(
                                 }
                             }
                         } else if (hasSecureSettings) {
-                            // 没有端口但有权限，询问是否开启无线调试
                             onAskEnableWirelessAdb {
                                 enableWirelessAdb()
                                 startSecondRoundScan()
@@ -163,7 +159,7 @@ fun AdbAutoConnect(
                         }
                     }
                 },
-                timeoutMillis = 500L
+                maxRefreshCount = 3
             ).apply { start() }
         }
 

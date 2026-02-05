@@ -3,7 +3,9 @@
     "allow": [
       "mcp__acp__Bash",
       "Edit",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find:*)",
+      "Bash(./gradlew:*)"
     ],
     "deny": []
   },
