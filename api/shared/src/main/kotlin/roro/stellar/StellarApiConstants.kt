@@ -7,8 +7,7 @@ object StellarApiConstants {
     const val PERMISSION_KEY = "roro.stellar.permissions"
     val PERMISSIONS = arrayOf(
         "stellar",
-        "follow_stellar_startup",
-        "follow_stellar_startup_on_boot"
+        "follow_stellar_startup"
     )
 
     fun isRuntimePermission(permission: String): Boolean {

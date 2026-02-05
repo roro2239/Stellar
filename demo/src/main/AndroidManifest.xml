@@ -33,14 +33,11 @@
             <intent-filter>
                 <action android:name="roro.stellar.intent.action.FOLLOW_STELLAR_STARTUP" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="roro.stellar.intent.action.FOLLOW_STELLAR_STARTUP_ON_BOOT" />
-            </intent-filter>
         </receiver>
 
         <meta-data
             android:name="roro.stellar.permissions"
-            android:value="stellar,follow_stellar_startup,follow_stellar_startup_on_boot" />
+            android:value="stellar,follow_stellar_startup" />
     </application>
 
 </manifest>
