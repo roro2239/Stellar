@@ -371,31 +371,6 @@ val args = UserServiceArgs.Builder(MyUserService::class.java)
 | `versionCode` | Long | `0` | 服务版本号 |
 | `tag` | String? | `null` | 可选标签 |
 | `serviceMode` | ServiceMode | `ONE_TIME` | 服务运行模式 |
-| `useStandaloneDex` | Boolean | `false` | 是否使用独立 DEX |
-
-#### 独立 DEX 模式配置
-
-如果使用独立 DEX 模式（`useStandaloneDex = true`），需要在应用的 `build.gradle` 中引用 Stellar 提供的构建脚本：
-
-```gradle
-// 在 plugins 块之后添加
-apply from: project(':userservice').file('userservice-standalone.gradle')
-```
-
-该脚本会自动：
-1. 扫描项目中以 `UserService` 结尾的类（如 `DemoUserService`）
-2. 将这些类及其 AIDL 接口编译为独立的 DEX 文件
-3. 将 `service.dex` 打包到 APK 的 `userservice/` 目录中
-
-如果需要包含额外的类，可以通过扩展配置：
-
-```gradle
-stellarUserService {
-    extraClasses = ['com.example.MyHelper', 'com.example.MyUtils']
-}
-```
-
-**命名约定：** 用户服务类必须以 `UserService` 结尾（如 `MyUserService`），对应的 AIDL 接口应命名为 `IMyUserService`。
 
 ### 服务模式：`ServiceMode`
 

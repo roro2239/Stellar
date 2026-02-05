@@ -37,7 +37,6 @@ class UserServiceManager {
         val use32Bit = args.getBoolean(UserServiceConstants.ARG_USE_32_BIT, false)
         val versionCode = args.getLong(UserServiceConstants.ARG_VERSION_CODE, 0)
         val serviceMode = args.getInt(UserServiceConstants.ARG_SERVICE_MODE, UserServiceConstants.MODE_ONE_TIME)
-        val useStandaloneDex = args.getBoolean(UserServiceConstants.ARG_USE_STANDALONE_DEX, false)
         val verificationToken = args.getString(UserServiceConstants.ARG_VERIFICATION_TOKEN) ?: ""
         val userId = UserHandleCompat.getUserId(callingUid)
 
@@ -106,7 +105,7 @@ class UserServiceManager {
 
         setupApkObserver(record, apkPath)
 
-        val cmd = generateStartCommand(record, apkPath, debug, use32Bit, useStandaloneDex)
+        val cmd = generateStartCommand(record, apkPath, debug, use32Bit)
         LOGGER.i("启动 UserService: %s", record.className)
 
         try {
@@ -222,8 +221,7 @@ class UserServiceManager {
         record: UserServiceRecord,
         apkPath: String,
         debug: Boolean,
-        use32Bit: Boolean,
-        useStandaloneDex: Boolean
+        use32Bit: Boolean
     ): String {
         val appProcess = if (use32Bit && File("/system/bin/app_process32").exists()) {
             "/system/bin/app_process32"
@@ -251,7 +249,6 @@ class UserServiceManager {
             record.className,
             record.callingUid,
             record.serviceMode,
-            useStandaloneDex,
             record.verificationToken,
             debugName
         )
