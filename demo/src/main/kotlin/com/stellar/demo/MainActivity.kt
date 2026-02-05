@@ -27,7 +27,6 @@ class MainActivity : ComponentActivity() {
 
     private var serviceStatus by mutableStateOf(ServiceStatus.CHECKING)
     private var startFollowServerPermission by mutableStateOf(false)
-    private var startFollowServerOnBootPermission by mutableStateOf(false)
     private var serviceInfo by mutableStateOf<ServiceInfo?>(null)
     private var logText by mutableStateOf("")
 
@@ -151,11 +150,7 @@ class MainActivity : ComponentActivity() {
                         onRequestFollowPermission = {
                             Stellar.requestPermission("follow_stellar_startup", 1002)
                         },
-                        onRequestBootPermission = {
-                            Stellar.requestPermission("follow_stellar_startup_on_boot", 1003)
-                        },
-                        hasFollowPermission = startFollowServerPermission,
-                        hasBootPermission = startFollowServerOnBootPermission
+                        hasFollowPermission = startFollowServerPermission
                     )
                     1 -> FunctionsScreen(
                         categories = getDemoCategories(),
@@ -235,7 +230,6 @@ class MainActivity : ComponentActivity() {
         log("[状态] 服务已就绪")
 
         startFollowServerPermission = Stellar.checkSelfPermission("follow_stellar_startup")
-        startFollowServerOnBootPermission = Stellar.checkSelfPermission("follow_stellar_startup_on_boot")
     }
 
     private fun handleStatusAction() {
@@ -273,7 +267,6 @@ class MainActivity : ComponentActivity() {
             when (requestCode) {
                 1001 -> serviceStatus = ServiceStatus.NO_PERMISSION
                 1002 -> startFollowServerPermission = false
-                1003 -> startFollowServerOnBootPermission = false
             }
         }
     }

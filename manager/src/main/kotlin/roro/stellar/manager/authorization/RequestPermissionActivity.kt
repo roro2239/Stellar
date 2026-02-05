@@ -199,7 +199,6 @@ fun PermissionRequestDialog(
                             when (permission) {
                                 "stellar" -> " 使用 Stellar 吗？"
                                 "follow_stellar_startup" -> " 每次都跟随 Stellar 一起启动吗？"
-                                "follow_stellar_startup_on_boot" -> " 开机时每次都跟随 Stellar 一起启动吗？"
                                 else -> " 使用 $permission 吗？"
                             }
                         )

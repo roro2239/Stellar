@@ -8,16 +8,12 @@ import roro.stellar.server.util.UserHandleCompat
 
 object FollowStellarStartupExt {
     const val ACTION_FOLLOW_STARTUP = "roro.stellar.intent.action.FOLLOW_STELLAR_STARTUP"
-    const val ACTION_FOLLOW_STARTUP_ON_BOOT =
-        "roro.stellar.intent.action.FOLLOW_STELLAR_STARTUP_ON_BOOT"
 
     const val PERMISSION_FOLLOW_STARTUP = "follow_stellar_startup"
-    const val PERMISSION_FOLLOW_STARTUP_ON_BOOT = "follow_stellar_startup_on_boot"
 
     private val LOGGER: Logger = Logger("FollowStellarStartupExt")
 
     fun schedule(configManager: ConfigManager) {
-        val onBoot = (System.getenv("STELLAR_STARTUP_ON_BOOT") ?: "false").toBoolean()
         for (entry in configManager.packages) {
             if (entry.value.permissions["stellar"] != ConfigManager.FLAG_GRANTED) continue
 
@@ -25,15 +21,6 @@ object FollowStellarStartupExt {
                 for (packageName in entry.value.packages) {
                     broadcast(
                         action = ACTION_FOLLOW_STARTUP,
-                        packageName = packageName,
-                        uid = entry.key
-                    )
-                }
-            }
-            if (onBoot && entry.value.permissions[PERMISSION_FOLLOW_STARTUP_ON_BOOT] == ConfigManager.FLAG_GRANTED) {
-                for (packageName in entry.value.packages) {
-                    broadcast(
-                        action = ACTION_FOLLOW_STARTUP_ON_BOOT,
                         packageName = packageName,
                         uid = entry.key
                     )

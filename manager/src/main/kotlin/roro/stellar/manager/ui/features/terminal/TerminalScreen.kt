@@ -43,7 +43,6 @@ import java.util.UUID
 
 enum class CommandMode(val title: String, val icon: ImageVector, val description: String) {
     CLICK_EXECUTE("点击执行", Icons.Outlined.PlayArrow, "手动点击执行命令"),
-    AUTO_START("开机自启", Icons.Outlined.PowerSettingsNew, "设备开机时自动执行"),
     FOLLOW_SERVICE("跟随服务", Icons.Outlined.Sync, "服务启动时自动执行")
 }
 
