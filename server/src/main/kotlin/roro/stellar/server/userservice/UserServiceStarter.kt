@@ -31,7 +31,6 @@ object UserServiceStarter {
         var className: String? = null
         var uid: Int = -1
         var serviceMode: Int = UserServiceConstants.MODE_ONE_TIME
-        var useStandaloneDex: Boolean = false
         var verificationToken: String? = null
 
         for (arg in args) {
@@ -47,8 +46,6 @@ object UserServiceStarter {
                 arg.startsWith("--mode=") ->
                     serviceMode = arg.substringAfter("--mode=").toIntOrNull()
                         ?: UserServiceConstants.MODE_ONE_TIME
-                arg.startsWith("--standalone-dex=") ->
-                    useStandaloneDex = arg.substringAfter("--standalone-dex=").toBooleanStrictOrNull() ?: false
                 arg.startsWith("--verification-token=") ->
                     verificationToken = arg.substringAfter("--verification-token=").trim('\'')
             }
@@ -60,9 +57,9 @@ object UserServiceStarter {
             return
         }
 
-        Log.i(TAG, "启动 UserService: package=$packageName, class=$className, uid=$uid, standaloneDex=$useStandaloneDex")
+        Log.i(TAG, "启动 UserService: package=$packageName, class=$className, uid=$uid")
 
-        val userBinder = createUserService(packageName, className, useStandaloneDex)
+        val userBinder = createUserService(packageName, className)
         if (userBinder == null) {
             Log.e(TAG, "创建 UserService 实例失败")
             System.exit(1)
@@ -86,9 +83,9 @@ object UserServiceStarter {
         System.exit(0)
     }
 
-    private fun createUserService(packageName: String, className: String, useStandaloneDex: Boolean): IBinder? {
+    private fun createUserService(packageName: String, className: String): IBinder? {
         return try {
-            val classLoader = createClassLoader(packageName, useStandaloneDex)
+            val classLoader = createClassLoader(packageName)
             val serviceClass = classLoader.loadClass(className)
 
             val constructor = serviceClass.getDeclaredConstructor()
@@ -108,7 +105,7 @@ object UserServiceStarter {
         }
     }
 
-    private fun createClassLoader(packageName: String, useStandaloneDex: Boolean): ClassLoader {
+    private fun createClassLoader(packageName: String): ClassLoader {
         val userId = 0
         val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
             ?: throw IllegalStateException("包未找到: $packageName")
@@ -116,65 +113,12 @@ object UserServiceStarter {
         val apkPath = ai.sourceDir
         val libraryPath = ai.nativeLibraryDir
 
-        if (useStandaloneDex) {
-            val standaloneDex = extractStandaloneDex(apkPath, packageName)
-                ?: throw IllegalStateException("独立 dex 不存在")
-
-            Log.i(TAG, "使用独立 dex 加载: ${standaloneDex.absolutePath}")
-            return dalvik.system.DexClassLoader(
-                standaloneDex.absolutePath,
-                getDexCacheDir(packageName),
-                libraryPath,
-                UserServiceStarter::class.java.classLoader
-            )
-        }
-
         Log.i(TAG, "使用 APK 直接加载: $apkPath")
         return dalvik.system.PathClassLoader(
             apkPath,
             libraryPath,
             UserServiceStarter::class.java.classLoader
         )
-    }
-
-    private fun extractStandaloneDex(apkPath: String, packageName: String): java.io.File? {
-        val cacheDir = java.io.File("/data/local/tmp/stellar/userservice/$packageName")
-        val targetDex = java.io.File(cacheDir, "service.dex")
-
-        try {
-            java.util.zip.ZipFile(apkPath).use { zip ->
-                val entry = zip.getEntry("userservice/service.dex")
-                    ?: zip.getEntry("assets/userservice/service.dex")
-
-                if (entry == null) {
-                    Log.w(TAG, "APK 中未找到 userservice/service.dex")
-                    return null
-                }
-
-                if (cacheDir.exists()) {
-                    cacheDir.listFiles()?.forEach { it.delete() }
-                }
-
-                cacheDir.mkdirs()
-                zip.getInputStream(entry).use { input ->
-                    targetDex.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                Log.i(TAG, "已提取 dex 到: ${targetDex.absolutePath}")
-                return targetDex
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "提取 userservice dex 失败", e)
-            return null
-        }
-    }
-
-    private fun getDexCacheDir(packageName: String): String {
-        val dir = java.io.File("/data/local/tmp/stellar/userservice/$packageName")
-        dir.mkdirs()
-        return dir.absolutePath
     }
 
     private fun sendBinderToServer(
