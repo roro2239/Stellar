@@ -4,8 +4,6 @@ plugins {
     id('org.jetbrains.kotlin.plugin.compose')
 }
 
-apply from: project(':userservice').file('userservice-standalone.gradle')
-
 android {
     namespace 'com.stellar.demo'
     compileSdk 36

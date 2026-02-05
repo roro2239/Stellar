@@ -9,7 +9,6 @@ object UserServiceConstants {
     const val ARG_VERSION_CODE = "stellar:userservice-version"
     const val ARG_TAG = "stellar:userservice-tag"
     const val ARG_SERVICE_MODE = "stellar:userservice-mode"
-    const val ARG_USE_STANDALONE_DEX = "stellar:userservice-standalone-dex"
     const val ARG_VERIFICATION_TOKEN = "stellar:userservice-verification-token"
 
     const val MODE_ONE_TIME = 0
@@ -21,7 +20,6 @@ object UserServiceConstants {
     const val OPT_UID = "stellar:userservice-opt-uid"
     const val OPT_PID = "stellar:userservice-opt-pid"
     const val OPT_SERVICE_MODE = "stellar:userservice-opt-mode"
-    const val OPT_USE_STANDALONE_DEX = "stellar:userservice-opt-standalone-dex"
     const val OPT_VERIFICATION_TOKEN = "stellar:userservice-opt-verification-token"
 
     const val ERROR_PERMISSION_DENIED = 1
@@ -44,5 +42,5 @@ object UserServiceConstants {
     const val USER_SERVICE_CMD_FORMAT =
         "(CLASSPATH='%s' %s%s /system/bin " +
         "--nice-name='%s' roro.stellar.server.userservice.UserServiceStarter " +
-        "--token='%s' --package='%s' --class='%s' --uid=%d --mode=%d --standalone-dex=%b --verification-token='%s'%s)&"
+        "--token='%s' --package='%s' --class='%s' --uid=%d --mode=%d --verification-token='%s'%s)&"
 }
