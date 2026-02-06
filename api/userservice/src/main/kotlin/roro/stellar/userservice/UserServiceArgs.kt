@@ -9,7 +9,8 @@ data class UserServiceArgs(
     val use32Bit: Boolean = false,
     val versionCode: Long = 0,
     val tag: String? = null,
-    val serviceMode: ServiceMode = ServiceMode.ONE_TIME
+    val serviceMode: ServiceMode = ServiceMode.ONE_TIME,
+    val useStandaloneDex: Boolean = false
 ) {
     companion object {
         internal const val ARG_PACKAGE_NAME = "stellar:userservice-package"
@@ -43,6 +44,7 @@ data class UserServiceArgs(
         private var versionCode: Long = 0
         private var tag: String? = null
         private var serviceMode: ServiceMode = ServiceMode.ONE_TIME
+        private var useStandaloneDex: Boolean = false
 
         fun processNameSuffix(suffix: String) = apply { this.processNameSuffix = suffix }
         fun debug(debug: Boolean) = apply { this.debug = debug }
@@ -50,6 +52,7 @@ data class UserServiceArgs(
         fun versionCode(code: Long) = apply { this.versionCode = code }
         fun tag(tag: String) = apply { this.tag = tag }
         fun serviceMode(mode: ServiceMode) = apply { this.serviceMode = mode }
+        fun useStandaloneDex(use: Boolean) = apply { this.useStandaloneDex = use }
 
         fun build(): UserServiceArgs {
             return UserServiceArgs(
@@ -59,7 +62,8 @@ data class UserServiceArgs(
                 use32Bit = use32Bit,
                 versionCode = versionCode,
                 tag = tag,
-                serviceMode = serviceMode
+                serviceMode = serviceMode,
+                useStandaloneDex = useStandaloneDex
             )
         }
     }
