@@ -4,6 +4,16 @@ plugins {
     id('org.jetbrains.kotlin.plugin.compose')
 }
 
+apply from: project(':userservice').file('userservice-standalone.gradle')
+
+// 独立 DEX 模式配置
+// 启用后会将 UserService 类编译为独立的 DEX 文件，避免加载整个 APK
+// 会自动生成 BuildConfig.STELLAR_USE_STANDALONE_DEX 字段
+stellarUserService {
+    enabled = true                                      // 是否启用独立 DEX 模式
+    serviceClass = 'com.stellar.demo.DemoUserService'   // 服务类的完整类名（启用时必填）
+}
+
 android {
     namespace 'com.stellar.demo'
     compileSdk 36
