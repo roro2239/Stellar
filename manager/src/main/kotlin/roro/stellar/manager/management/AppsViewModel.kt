@@ -18,6 +18,22 @@ import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.compat.Resource
 
+/**
+ * 应用类型枚举
+ */
+enum class AppType {
+    STELLAR,  // Stellar 原生应用
+    SHIZUKU   // Shizuku 兼容应用
+}
+
+/**
+ * 带类型标记的应用信息
+ */
+data class AppInfo(
+    val packageInfo: PackageInfo,
+    val appType: AppType
+)
+
 @MainThread
 fun ComponentActivity.appsViewModel() = viewModels<AppsViewModel> { 
     object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -40,8 +56,11 @@ fun Fragment.appsViewModel() = activityViewModels<AppsViewModel> {
 
 class AppsViewModel(context: Context) : ViewModel() {
 
-    private val _packages = MutableLiveData<Resource<List<PackageInfo>>>()
-    val packages = _packages as LiveData<Resource<List<PackageInfo>>>
+    private val _stellarApps = MutableLiveData<Resource<List<AppInfo>>>()
+    val stellarApps = _stellarApps as LiveData<Resource<List<AppInfo>>>
+
+    private val _shizukuApps = MutableLiveData<Resource<List<AppInfo>>>()
+    val shizukuApps = _shizukuApps as LiveData<Resource<List<AppInfo>>>
 
     private val _grantedCount = MutableLiveData<Resource<Int>>()
     val grantedCount = _grantedCount as LiveData<Resource<Int>>
@@ -49,19 +68,33 @@ class AppsViewModel(context: Context) : ViewModel() {
     fun load(onlyCount: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val list: MutableList<PackageInfo> = ArrayList()
+                val stellarList = mutableListOf<AppInfo>()
+                val shizukuList = mutableListOf<AppInfo>()
                 var count = 0
-                
+
                 for (pi in AuthorizationManager.getPackages()) {
-                    list.add(pi)
-                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == AuthorizationManager.FLAG_GRANTED) count++
+                    val appType = AuthorizationManager.getAppType(pi)
+                    val appInfo = AppInfo(pi, appType)
+
+                    when (appType) {
+                        AppType.STELLAR -> stellarList.add(appInfo)
+                        AppType.SHIZUKU -> shizukuList.add(appInfo)
+                    }
+
+                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == AuthorizationManager.FLAG_GRANTED) {
+                        count++
+                    }
                 }
-                
-                if (!onlyCount) _packages.postValue(Resource.success(list))
+
+                if (!onlyCount) {
+                    _stellarApps.postValue(Resource.success(stellarList))
+                    _shizukuApps.postValue(Resource.success(shizukuList))
+                }
                 _grantedCount.postValue(Resource.success(count))
             } catch (_: CancellationException) {
             } catch (e: Throwable) {
-                _packages.postValue(Resource.error(e, null))
+                _stellarApps.postValue(Resource.error(e, null))
+                _shizukuApps.postValue(Resource.error(e, null))
                 _grantedCount.postValue(Resource.error(e, 0))
             }
         }
