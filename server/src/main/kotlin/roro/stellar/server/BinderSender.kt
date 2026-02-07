@@ -13,7 +13,7 @@ import rikka.hidden.compat.adapter.UidObserverAdapter
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.ktx.mainHandler
-import roro.stellar.server.shizuku.ShizukuApiConstants
+import roro.stellar.shizuku.server.ShizukuApiConstants
 import roro.stellar.server.util.Logger
 import kotlin.system.exitProcess
 
