@@ -47,6 +47,9 @@ import roro.stellar.server.util.UserHandleCompat.getUserId
 import roro.stellar.server.userservice.UserServiceManager
 import com.stellar.server.IUserServiceCallback
 import android.os.FileObserver
+import roro.stellar.server.shizuku.ShizukuApiConstants
+import roro.stellar.server.shizuku.ShizukuServiceIntercept
+import moe.shizuku.api.BinderContainer as ShizukuBinderContainer
 import java.io.File
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -57,6 +60,9 @@ class StellarService : IStellarService.Stub() {
     private val configManager: ConfigManager
     private val userServiceManager: UserServiceManager
     private val managerAppId: Int
+
+    // Shizuku 兼容层
+    private var shizukuIntercept: ShizukuServiceIntercept? = null
 
     init {
         try {
@@ -114,6 +120,13 @@ class StellarService : IStellarService.Stub() {
                 try {
                     sendBinderToClient()
                     sendBinderToManager()
+
+                    // 初始化 Shizuku 兼容层
+                    LOGGER.i("初始化 Shizuku 兼容层...")
+                    shizukuIntercept = ShizukuServiceIntercept(this, configManager)
+                    sendShizukuBinderToClients()
+                    LOGGER.i("Shizuku 兼容层初始化完成")
+
                     FollowStellarStartupExt.schedule(configManager)
                     LOGGER.i("Stellar 服务启动完成")
                     System.err.println("Stellar 服务启动完成")
@@ -443,12 +456,18 @@ class StellarService : IStellarService.Stub() {
 
                 if (flag != -1) {
                     list.add(pi)
-                } else if (applicationInfo.metaData != null && applicationInfo.metaData.getString(
-                        PERMISSION_KEY,
-                        ""
-                    ).split(",").contains("stellar")
-                ) {
-                    list.add(pi)
+                } else if (applicationInfo.metaData != null) {
+                    // 检查 Stellar 应用
+                    if (applicationInfo.metaData.getString(PERMISSION_KEY, "")
+                            .split(",").contains("stellar")) {
+                        list.add(pi)
+                    } else {
+                        // 检查 Shizuku 应用
+                        val shizukuSupport = applicationInfo.metaData.get(ShizukuApiConstants.META_DATA_KEY)
+                        if (shizukuSupport == true || shizukuSupport == "true") {
+                            list.add(pi)
+                        }
+                    }
                 }
             }
         }
@@ -845,6 +864,35 @@ class StellarService : IStellarService.Stub() {
         return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
     }
 
+    // ============ Shizuku 兼容方法 ============
+
+    fun getShizukuBinder(): Binder? = shizukuIntercept
+
+    fun sendShizukuBinderToClients() {
+        val binder = shizukuIntercept ?: return
+        for (userId in UserManagerApis.getUserIdsNoThrow()) {
+            sendShizukuBinderToClients(binder, userId)
+        }
+    }
+
+    private fun sendShizukuBinderToClients(binder: Binder, userId: Int) {
+        try {
+            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
+                PackageManager.GET_META_DATA.toLong(), userId
+            )) {
+                if (pi?.applicationInfo?.metaData == null) continue
+
+                // 检查是否使用 Shizuku API (meta-data 值是字符串 "true")
+                val shizukuSupport = pi.applicationInfo!!.metaData.get(ShizukuApiConstants.META_DATA_KEY)
+                if (shizukuSupport == true || shizukuSupport == "true") {
+                    sendShizukuBinderToUserApp(binder, pi.packageName, userId)
+                }
+            }
+        } catch (tr: Throwable) {
+            LOGGER.e("发送 Shizuku Binder 时发生异常", tr = tr)
+        }
+    }
+
     companion object {
 
         private val LOGGER: Logger = Logger("StellarService")
@@ -968,6 +1016,63 @@ class StellarService : IStellarService.Stub() {
                     } catch (tr: Throwable) {
                         LOGGER.w(tr, "移除 ContentProvider 失败")
                     }
+                }
+            }
+        }
+
+        // ============ Shizuku 兼容方法 ============
+
+        fun sendShizukuBinderToUserApp(
+            binder: Binder?,
+            packageName: String?,
+            userId: Int,
+            retry: Boolean = true
+        ) {
+            try {
+                DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
+                    packageName, (30 * 1000).toLong(), userId, 316, "shell"
+                )
+            } catch (tr: Throwable) {
+                LOGGER.w(tr, "添加 Shizuku 应用到省电白名单失败")
+            }
+
+            // Shizuku 使用 .shizuku 后缀的 provider
+            val name = "$packageName${ShizukuApiConstants.PROVIDER_SUFFIX}"
+            var provider: IContentProvider? = null
+            val token: IBinder? = null
+
+            try {
+                provider = ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
+                if (provider == null) {
+                    LOGGER.d("Shizuku provider 为 null: %s %d", name, userId)
+                    return
+                }
+                if (!provider.asBinder().pingBinder()) {
+                    LOGGER.d("Shizuku provider 已失效: %s %d", name, userId)
+                    if (retry) {
+                        Thread.sleep(1000)
+                        sendShizukuBinderToUserApp(binder, packageName, userId, false)
+                    }
+                    return
+                }
+
+                val extra = Bundle()
+                extra.putParcelable(
+                    ShizukuApiConstants.EXTRA_BINDER,
+                    ShizukuBinderContainer(binder)
+                )
+
+                val reply = callCompat(provider, null, name, "sendBinder", null, extra)
+                if (reply != null) {
+                    LOGGER.i("已向 Shizuku 应用 %s 发送 binder (userId=%d)", packageName, userId)
+                }
+            } catch (tr: Throwable) {
+                LOGGER.d("向 Shizuku 应用发送 binder 失败: %s", tr.message)
+            } finally {
+                if (provider != null) {
+                    try {
+                        ActivityManagerApis.removeContentProviderExternal(name, token)
+                    } catch (_: Throwable) {}
                 }
             }
         }
