@@ -3,7 +3,6 @@ package roro.stellar.server.shizuku
 import android.os.IBinder.DeathRecipient
 import android.os.RemoteException
 import moe.shizuku.server.IShizukuApplication
-import roro.stellar.server.ConfigManager
 import roro.stellar.server.util.Logger
 import java.util.Collections
 
@@ -12,7 +11,7 @@ import java.util.Collections
  * 管理使用 Shizuku API 的客户端连接
  */
 class ShizukuClientManager(
-    private val configManager: ConfigManager
+    private val shizukuConfigManager: ShizukuConfigManager
 ) {
     private val clientRecords = Collections.synchronizedList(ArrayList<ShizukuClientRecord>())
 
@@ -62,11 +61,8 @@ class ShizukuClientManager(
 
         val record = ShizukuClientRecord(uid, pid, client, packageName, apiVersion)
 
-        // 从配置中加载权限状态
-        val entry = configManager.find(uid)
-        if (entry != null) {
-            record.allowed = entry.permissions["stellar"] == ConfigManager.FLAG_GRANTED
-        }
+        // 从 Shizuku 配置中加载权限状态
+        record.allowed = shizukuConfigManager.getFlag(uid) == ShizukuConfigManager.FLAG_GRANTED
 
         val binder = client.asBinder()
         val deathRecipient = DeathRecipient {

@@ -15,7 +15,6 @@ import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import moe.shizuku.server.IShizukuServiceConnection
 import rikka.hidden.compat.PackageManagerApis
-import roro.stellar.server.ConfigManager
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.StellarService
 import roro.stellar.server.util.Logger
@@ -29,11 +28,11 @@ import java.io.IOException
  * 实现 IShizukuService 接口，将 Shizuku API 调用转发到 Stellar 服务
  */
 class ShizukuServiceIntercept(
-    private val stellarService: StellarService,
-    private val configManager: ConfigManager
+    private val stellarService: StellarService
 ) : IShizukuService.Stub() {
 
-    private val clientManager = ShizukuClientManager(configManager)
+    private val shizukuConfigManager = ShizukuConfigManager()
+    private val clientManager = ShizukuClientManager(shizukuConfigManager)
     private val userServiceManager = ShizukuUserServiceManager()
 
     private val managerAppId: Int = UserHandleCompat.getAppId(
@@ -116,14 +115,12 @@ class ShizukuServiceIntercept(
             return true
         }
 
-        val entry = configManager.find(callingUid)
-        return entry?.permissions?.get("stellar") == ConfigManager.FLAG_GRANTED
+        return shizukuConfigManager.getFlag(callingUid) == ShizukuConfigManager.FLAG_GRANTED
     }
 
     override fun shouldShowRequestPermissionRationale(): Boolean {
         val callingUid = getCallingUid()
-        val entry = configManager.find(callingUid)
-        return entry?.permissions?.get("stellar") == ConfigManager.FLAG_DENIED
+        return shizukuConfigManager.getFlag(callingUid) == ShizukuConfigManager.FLAG_DENIED
     }
 
     override fun requestPermission(requestCode: Int) {
@@ -137,12 +134,12 @@ class ShizukuServiceIntercept(
 
         val clientRecord = clientManager.requireClient(callingUid, callingPid)
 
-        when (configManager.find(callingUid)?.permissions?.get("stellar")) {
-            ConfigManager.FLAG_GRANTED -> {
+        when (shizukuConfigManager.getFlag(callingUid)) {
+            ShizukuConfigManager.FLAG_GRANTED -> {
                 clientRecord.dispatchRequestPermissionResult(requestCode, true, false)
                 return
             }
-            ConfigManager.FLAG_DENIED -> {
+            ShizukuConfigManager.FLAG_DENIED -> {
                 clientRecord.dispatchRequestPermissionResult(requestCode, false, false)
                 return
             }
@@ -276,23 +273,65 @@ class ShizukuServiceIntercept(
             }
         }
 
-        configManager.updatePermission(
-            requestUid, "stellar",
-            if (onetime) ConfigManager.FLAG_ASK
-            else if (allowed) ConfigManager.FLAG_GRANTED
-            else ConfigManager.FLAG_DENIED
+        // 获取包名用于更新配置
+        val packageName = records.firstOrNull()?.packageName ?: return
+
+        // 更新 Shizuku 配置
+        shizukuConfigManager.updateFlag(
+            requestUid, packageName,
+            if (onetime) ShizukuConfigManager.FLAG_ASK
+            else if (allowed) ShizukuConfigManager.FLAG_GRANTED
+            else ShizukuConfigManager.FLAG_DENIED
         )
+    }
+
+    /**
+     * 供 StellarService 调用的权限确认结果处理方法
+     * @return 是否找到并处理了 Shizuku 客户端
+     */
+    fun handlePermissionResult(
+        requestUid: Int,
+        requestPid: Int,
+        requestCode: Int,
+        allowed: Boolean,
+        onetime: Boolean
+    ): Boolean {
+        val records = clientManager.findClients(requestUid)
+        if (records.isEmpty()) {
+            return false
+        }
+
+        for (record in records) {
+            record.allowed = allowed
+            if (record.pid == requestPid) {
+                record.dispatchRequestPermissionResult(requestCode, allowed, onetime)
+            }
+        }
+
+        // 获取包名用于更新配置
+        val packageName = records.firstOrNull()?.packageName ?: return false
+
+        // 更新 Shizuku 配置
+        shizukuConfigManager.updateFlag(
+            requestUid, packageName,
+            if (onetime) ShizukuConfigManager.FLAG_ASK
+            else if (allowed) ShizukuConfigManager.FLAG_GRANTED
+            else ShizukuConfigManager.FLAG_DENIED
+        )
+
+        LOGGER.i("handlePermissionResult: uid=%d, allowed=%s, package=%s",
+            requestUid, allowed, packageName)
+        return true
     }
 
     override fun getFlagsForUid(uid: Int, mask: Int): Int {
         if (UserHandleCompat.getAppId(getCallingUid()) != managerAppId) {
             return 0
         }
-        val entry = configManager.find(uid) ?: return 0
-        val flag = entry.permissions["stellar"] ?: return 0
+        val flag = shizukuConfigManager.getFlag(uid)
         return when (flag) {
-            ConfigManager.FLAG_GRANTED -> ShizukuApiConstants.FLAG_ALLOWED
-            ConfigManager.FLAG_DENIED -> ShizukuApiConstants.FLAG_DENIED
+            ShizukuConfigManager.FLAG_GRANTED -> ShizukuApiConstants.FLAG_ALLOWED
+            ShizukuConfigManager.FLAG_DENIED -> ShizukuApiConstants.FLAG_DENIED
             else -> 0
         } and mask
     }
@@ -302,18 +341,47 @@ class ShizukuServiceIntercept(
             return
         }
         val newFlag = when {
-            (value and ShizukuApiConstants.FLAG_ALLOWED) != 0 -> ConfigManager.FLAG_GRANTED
-            (value and ShizukuApiConstants.FLAG_DENIED) != 0 -> ConfigManager.FLAG_DENIED
-            else -> ConfigManager.FLAG_ASK
+            (value and ShizukuApiConstants.FLAG_ALLOWED) != 0 -> ShizukuConfigManager.FLAG_GRANTED
+            (value and ShizukuApiConstants.FLAG_DENIED) != 0 -> ShizukuConfigManager.FLAG_DENIED
+            else -> ShizukuConfigManager.FLAG_ASK
         }
-        configManager.updatePermission(uid, "stellar", newFlag)
 
-        for (record in clientManager.findClients(uid)) {
-            record.allowed = newFlag == ConfigManager.FLAG_GRANTED
+        // 从客户端记录或现有配置获取包名
+        val records = clientManager.findClients(uid)
+        val packageName = records.firstOrNull()?.packageName
+            ?: shizukuConfigManager.find(uid)?.packageName
+            ?: return
+
+        shizukuConfigManager.updateFlag(uid, packageName, newFlag)
+
+        for (record in records) {
+            record.allowed = newFlag == ShizukuConfigManager.FLAG_GRANTED
         }
     }
 
     // ============ 辅助方法 ============
+
+    /**
+     * 获取 Shizuku 应用的权限标志
+     * 供 StellarService 调用
+     */
+    fun getShizukuFlagForUid(uid: Int): Int {
+        return shizukuConfigManager.getFlag(uid)
+    }
+
+    /**
+     * 更新 Shizuku 应用的权限标志
+     * 供 StellarService 调用
+     */
+    fun updateShizukuFlagForUid(uid: Int, packageName: String, flag: Int) {
+        shizukuConfigManager.updateFlag(uid, packageName, flag)
+
+        // 同步更新客户端记录
+        val records = clientManager.findClients(uid)
+        for (record in records) {
+            record.allowed = flag == ShizukuConfigManager.FLAG_GRANTED
+        }
+    }
 
     private fun checkCallerManagerPermission(callingUid: Int): Boolean {
         return UserHandleCompat.getAppId(callingUid) == managerAppId

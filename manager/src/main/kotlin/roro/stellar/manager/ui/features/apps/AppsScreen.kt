@@ -59,6 +59,8 @@ import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.compat.Status
 import roro.stellar.manager.management.AppsViewModel
+import roro.stellar.manager.management.AppInfo
+import roro.stellar.manager.management.AppType
 import roro.stellar.manager.ui.components.StellarInfoDialog
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -76,7 +78,8 @@ fun AppsScreen(
     appsViewModel: AppsViewModel
 ) {
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
-    val packagesResource by appsViewModel.packages.observeAsState()
+    val stellarAppsResource by appsViewModel.stellarApps.observeAsState()
+    val shizukuAppsResource by appsViewModel.shizukuApps.observeAsState()
     var showPermissionError by remember { mutableStateOf(false) }
     val isServiceRunning = Stellar.pingBinder()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -134,7 +137,7 @@ fun AppsScreen(
                     }
                 }
             }
-        } else when (packagesResource?.status) {
+        } else when (stellarAppsResource?.status) {
             Status.LOADING -> {
                 Box(
                     modifier = Modifier
@@ -171,7 +174,7 @@ fun AppsScreen(
                             )
 
                             Text(
-                                text = packagesResource?.error?.message ?: "未知错误",
+                                text = stellarAppsResource?.error?.message ?: "未知错误",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -183,9 +186,10 @@ fun AppsScreen(
             }
 
             Status.SUCCESS -> {
-                val packages = packagesResource?.data ?: emptyList()
+                val stellarApps = stellarAppsResource?.data ?: emptyList()
+                val shizukuApps = shizukuAppsResource?.data ?: emptyList()
 
-                if (packages.isEmpty()) {
+                if (stellarApps.isEmpty() && shizukuApps.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -229,18 +233,54 @@ fun AppsScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(
-                            count = packages.size,
-                            key = { index -> "${packages[index].packageName}_${packages[index].applicationInfo?.uid}" }
-                        ) { index ->
-                            val packageInfo = packages[index]
-                            AppListItem(
-                                packageInfo = packageInfo,
-                                flag = AuthorizationManager.FLAG_ASK,
-                                onUpdateFlag = { _ ->
-                                    appsViewModel.load(true)
-                                }
-                            )
+                        // Stellar 原生应用分组
+                        if (stellarApps.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Stellar 应用",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            items(
+                                count = stellarApps.size,
+                                key = { index -> "stellar_${stellarApps[index].packageInfo.packageName}_${stellarApps[index].packageInfo.applicationInfo?.uid}" }
+                            ) { index ->
+                                val appInfo = stellarApps[index]
+                                AppListItem(
+                                    appInfo = appInfo,
+                                    onUpdateFlag = { _ ->
+                                        appsViewModel.load(true)
+                                    }
+                                )
+                            }
+                        }
+
+                        // Shizuku 兼容应用分组
+                        if (shizukuApps.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "Shizuku 兼容应用",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                                )
+                            }
+                            items(
+                                count = shizukuApps.size,
+                                key = { index -> "shizuku_${shizukuApps[index].packageInfo.packageName}_${shizukuApps[index].packageInfo.applicationInfo?.uid}" }
+                            ) { index ->
+                                val appInfo = shizukuApps[index]
+                                AppListItem(
+                                    appInfo = appInfo,
+                                    onUpdateFlag = { _ ->
+                                        appsViewModel.load(true)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -262,17 +302,18 @@ fun AppsScreen(
 
 @Composable
 fun AppListItem(
-    packageInfo: PackageInfo,
-    flag: Int,
+    appInfo: AppInfo,
     onUpdateFlag: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val pm = context.packageManager
+    val packageInfo = appInfo.packageInfo
     val ai = packageInfo.applicationInfo ?: return
 
     val uid = ai.uid
     val userId = UserHandleCompat.getUserId(uid)
     val packageName = packageInfo.packageName
+    val isShizukuApp = appInfo.appType == AppType.SHIZUKU
 
     val appName = remember(ai) {
         if (userId != UserHandleCompat.myUserId()) {
@@ -416,19 +457,22 @@ fun AppListItem(
                     }
                 )
 
-                PermissionItem(
-                    title = "跟随启动",
-                    subtitle = "随 Stellar 一起启动",
-                    currentFlag = followStartupFlag,
-                    onFlagChange = { newFlag ->
-                        try {
-                            followStartupFlag = newFlag
-                            Stellar.updateFlagForUid(uid, "follow_stellar_startup", newFlag)
-                        } catch (e: Exception) {
-                            LOGGER.e("更新跟随启动权限失败", tr = e)
+                // 只有 Stellar 原生应用才显示"跟随启动"选项
+                if (!isShizukuApp) {
+                    PermissionItem(
+                        title = "跟随启动",
+                        subtitle = "随 Stellar 一起启动",
+                        currentFlag = followStartupFlag,
+                        onFlagChange = { newFlag ->
+                            try {
+                                followStartupFlag = newFlag
+                                Stellar.updateFlagForUid(uid, "follow_stellar_startup", newFlag)
+                            } catch (e: Exception) {
+                                LOGGER.e("更新跟随启动权限失败", tr = e)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

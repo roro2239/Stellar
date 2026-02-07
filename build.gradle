@@ -19,7 +19,20 @@ subprojects {
 }
 
 apply from: 'api/manifest.gradle'
+
+/**
+ * 版本号规则:
+ * versionCode: XYYZZZ
+ *   - X: 主版本号 (1-9)
+ *   - YY: 次版本号 (00-99)
+ *   - ZZZ: 修订号 (000-999)
+ *   例: 100081 = 1.0.81, 200000 = 2.0.0
+ *
+ * versionName: X.Y.Z[-suffix]
+ *   - X.Y.Z: 语义化版本号
+ *   - suffix: 可选后缀 (dev=开发版, alpha=内测版, beta=公测版, rc=候选版)
+ */
 ext {
-    versionCode = 100072
-    versionName = "1.0.7"
+    versionCode = 100081
+    versionName = "1.0.8-dev"
 }

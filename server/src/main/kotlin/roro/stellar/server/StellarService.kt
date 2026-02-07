@@ -123,7 +123,7 @@ class StellarService : IStellarService.Stub() {
 
                     // 初始化 Shizuku 兼容层
                     LOGGER.i("初始化 Shizuku 兼容层...")
-                    shizukuIntercept = ShizukuServiceIntercept(this, configManager)
+                    shizukuIntercept = ShizukuServiceIntercept(this)
                     sendShizukuBinderToClients()
                     LOGGER.i("Shizuku 兼容层初始化完成")
 
@@ -324,6 +324,13 @@ class StellarService : IStellarService.Stub() {
         val records: MutableList<ClientRecord> = clientManager.findClients(requestUid)
         val packages = ArrayList<String>()
         if (records.isEmpty()) {
+            // 尝试查找 Shizuku 客户端
+            if (shizukuIntercept?.handlePermissionResult(
+                    requestUid, requestPid, requestCode, allowed, onetime
+                ) == true) {
+                LOGGER.i("dispatchPermissionConfirmationResult：已通过 Shizuku 兼容层处理 uid %d", requestUid)
+                return
+            }
             LOGGER.w("dispatchPermissionConfirmationResult：未找到 uid %d 的客户端", requestUid)
         } else {
             for (record in records) {
@@ -361,6 +368,12 @@ class StellarService : IStellarService.Stub() {
             LOGGER.w("getFlagsForUid 只允许从管理器调用")
             return 0
         }
+
+        // 检查是否为 Shizuku 应用
+        if (isShizukuApp(uid)) {
+            return shizukuIntercept?.getShizukuFlagForUid(uid) ?: ConfigManager.FLAG_ASK
+        }
+
         return getFlagForUidInternal(uid, permission)
     }
 
@@ -368,6 +381,13 @@ class StellarService : IStellarService.Stub() {
     override fun updateFlagForUid(uid: Int, permission: String, newFlag: Int) {
         if (getAppId(getCallingUid()) != managerAppId) {
             LOGGER.w("updateFlagsForUid 只允许从管理器调用")
+            return
+        }
+
+        // 检查是否为 Shizuku 应用
+        if (isShizukuApp(uid)) {
+            val packageName = getPackageNameForUid(uid) ?: return
+            shizukuIntercept?.updateShizukuFlagForUid(uid, packageName, newFlag)
             return
         }
 
@@ -427,6 +447,33 @@ class StellarService : IStellarService.Stub() {
     private fun onPermissionRevoked(packageName: String?) {
     }
 
+    /**
+     * 检查指定 UID 的应用是否为 Shizuku 应用
+     */
+    private fun isShizukuApp(uid: Int): Boolean {
+        val userId = getUserId(uid)
+        for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
+            PackageManager.GET_META_DATA.toLong(), userId
+        )) {
+            val applicationInfo = pi.applicationInfo ?: continue
+            if (applicationInfo.uid != uid) continue
+            val metaData = applicationInfo.metaData ?: continue
+            val shizukuSupport = metaData.get(ShizukuApiConstants.META_DATA_KEY)
+            if (shizukuSupport == true || shizukuSupport == "true") {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * 获取指定 UID 应用的包名
+     */
+    private fun getPackageNameForUid(uid: Int): String? {
+        val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
+        return packages.firstOrNull()
+    }
+
     private fun getApplications(userId: Int): ParcelableListSlice<PackageInfo?> {
         val list = ArrayList<PackageInfo?>()
         val users = ArrayList<Int?>()
@@ -443,31 +490,38 @@ class StellarService : IStellarService.Stub() {
             )) {
                 if (MANAGER_APPLICATION_ID == pi.packageName) continue
                 val applicationInfo = pi.applicationInfo ?: continue
-
                 val uid = applicationInfo.uid
-                var flag = -1
+                val metaData = applicationInfo.metaData
 
-                configManager.find(uid)?.let {
-                    if (!it.packages.contains(pi.packageName)) continue
-                    it.permissions["stellar"]?.let { configFlag ->
-                        flag = configFlag
+                // 检查是否为 Shizuku 应用（优先检查，不受 ConfigManager 影响）
+                if (metaData != null) {
+                    val shizukuSupport = metaData.get(ShizukuApiConstants.META_DATA_KEY)
+                    if (shizukuSupport == true || shizukuSupport == "true") {
+                        list.add(pi)
+                        continue
                     }
                 }
 
-                if (flag != -1) {
-                    list.add(pi)
-                } else if (applicationInfo.metaData != null) {
-                    // 检查 Stellar 应用
-                    if (applicationInfo.metaData.getString(PERMISSION_KEY, "")
-                            .split(",").contains("stellar")) {
-                        list.add(pi)
-                    } else {
-                        // 检查 Shizuku 应用
-                        val shizukuSupport = applicationInfo.metaData.get(ShizukuApiConstants.META_DATA_KEY)
-                        if (shizukuSupport == true || shizukuSupport == "true") {
-                            list.add(pi)
-                        }
+                // 检查 Stellar 原生应用
+                var isStellarApp = false
+
+                // 检查 ConfigManager 中的配置
+                configManager.find(uid)?.let {
+                    if (it.packages.contains(pi.packageName)) {
+                        isStellarApp = true
                     }
+                }
+
+                // 检查 meta-data 中的 Stellar 权限声明
+                if (!isStellarApp && metaData != null) {
+                    if (metaData.getString(PERMISSION_KEY, "")
+                            .split(",").contains("stellar")) {
+                        isStellarApp = true
+                    }
+                }
+
+                if (isStellarApp) {
+                    list.add(pi)
                 }
             }
         }

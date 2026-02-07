@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
         
         checkServerStatus()
         
-        if (Stellar.pingBinder() && appsModel.packages.value == null) {
+        if (Stellar.pingBinder() && appsModel.stellarApps.value == null) {
             appsModel.load()
         }
     }
