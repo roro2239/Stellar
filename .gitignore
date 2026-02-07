@@ -34,4 +34,7 @@ google-services.json
 *.hprof
 
 /out
-/.kotlin.claude/settings.local.json
+/.kotlin
+/AGENTS.md
+/CLAUDE.md
+.claude/settings.local.json
