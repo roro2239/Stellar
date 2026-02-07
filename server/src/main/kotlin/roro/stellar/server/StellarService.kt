@@ -47,8 +47,8 @@ import roro.stellar.server.util.UserHandleCompat.getUserId
 import roro.stellar.server.userservice.UserServiceManager
 import com.stellar.server.IUserServiceCallback
 import android.os.FileObserver
-import roro.stellar.server.shizuku.ShizukuApiConstants
-import roro.stellar.server.shizuku.ShizukuServiceIntercept
+import roro.stellar.shizuku.server.ShizukuApiConstants
+import roro.stellar.shizuku.server.ShizukuServiceIntercept
 import moe.shizuku.api.BinderContainer as ShizukuBinderContainer
 import java.io.File
 import java.io.IOException
@@ -123,7 +123,7 @@ class StellarService : IStellarService.Stub() {
 
                     // 初始化 Shizuku 兼容层
                     LOGGER.i("初始化 Shizuku 兼容层...")
-                    shizukuIntercept = ShizukuServiceIntercept(this)
+                    shizukuIntercept = createShizukuIntercept()
                     sendShizukuBinderToClients()
                     LOGGER.i("Shizuku 兼容层初始化完成")
 
@@ -919,6 +919,79 @@ class StellarService : IStellarService.Stub() {
     }
 
     // ============ Shizuku 兼容方法 ============
+
+    private fun createShizukuIntercept(): ShizukuServiceIntercept {
+        val callback = object : roro.stellar.shizuku.server.ShizukuServiceCallback {
+            override fun showPermissionConfirmation(
+                requestCode: Int,
+                uid: Int,
+                pid: Int,
+                userId: Int,
+                packageName: String
+            ) {
+                // 直接启动权限确认 Activity，不依赖 Stellar 的 ClientRecord
+                showShizukuPermissionConfirmation(requestCode, uid, pid, userId, packageName)
+            }
+
+            override fun getManagerAppId(): Int = managerAppId
+            override fun getServiceUid(): Int = OsUtils.uid
+            override fun getServicePid(): Int = OsUtils.pid
+            override fun getSELinuxContext(): String? = OsUtils.sELinuxContext
+        }
+
+        val pfdUtil = object : roro.stellar.shizuku.server.ParcelFileDescriptorUtil {
+            override fun pipeTo(outputStream: java.io.OutputStream) =
+                roro.stellar.server.util.ParcelFileDescriptorUtil.pipeTo(outputStream)!!
+
+            override fun pipeFrom(inputStream: java.io.InputStream) =
+                roro.stellar.server.util.ParcelFileDescriptorUtil.pipeFrom(inputStream)!!
+        }
+
+        return ShizukuServiceIntercept(callback, pfdUtil) { uid ->
+            PackageManagerApis.getPackagesForUidNoThrow(uid)
+        }
+    }
+
+    /**
+     * Shizuku 专用的权限确认方法，不依赖 Stellar 的 ClientRecord
+     */
+    private fun showShizukuPermissionConfirmation(
+        requestCode: Int,
+        callingUid: Int,
+        callingPid: Int,
+        userId: Int,
+        packageName: String
+    ) {
+        val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
+            ?: return
+
+        val pi = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, userId)
+        val userInfo = UserManagerApis.getUserInfo(userId)
+        val isWorkProfileUser =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                "android.os.usertype.profile.MANAGED" == userInfo.userType
+            } else {
+                (userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE) != 0
+            }
+
+        if (pi == null && !isWorkProfileUser) {
+            LOGGER.w("在非工作配置文件用户 %d 中未找到管理器，撤销 Shizuku 权限", userId)
+            shizukuIntercept?.handlePermissionResult(callingUid, callingPid, requestCode, false, false)
+            return
+        }
+
+        val intent = Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
+            .setPackage(MANAGER_APPLICATION_ID)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+            .putExtra("uid", callingUid)
+            .putExtra("pid", callingPid)
+            .putExtra("requestCode", requestCode)
+            .putExtra("applicationInfo", ai)
+            .putExtra("denyOnce", true)
+            .putExtra("permission", "shizuku")
+
+        ActivityManagerApis.startActivityNoThrow(intent, null, if (isWorkProfileUser) 0 else userId)
+    }
 
     fun getShizukuBinder(): Binder? = shizukuIntercept
 
