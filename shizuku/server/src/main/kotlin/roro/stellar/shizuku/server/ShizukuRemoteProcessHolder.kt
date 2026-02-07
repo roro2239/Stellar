@@ -1,12 +1,11 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 import android.os.IBinder
 import android.os.IBinder.DeathRecipient
 import android.os.ParcelFileDescriptor
 import android.os.RemoteException
+import android.util.Log
 import moe.shizuku.server.IRemoteProcess
-import roro.stellar.server.util.Logger
-import roro.stellar.server.util.ParcelFileDescriptorUtil
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
@@ -17,7 +16,8 @@ import kotlin.math.min
  */
 class ShizukuRemoteProcessHolder(
     private val process: Process,
-    token: IBinder?
+    token: IBinder?,
+    private val pfdUtil: ParcelFileDescriptorUtil
 ) : IRemoteProcess.Stub() {
 
     private var inputPfd: ParcelFileDescriptor? = null
@@ -30,15 +30,15 @@ class ShizukuRemoteProcessHolder(
                     try {
                         if (alive()) {
                             destroy()
-                            LOGGER.i("进程所有者已死亡，销毁进程")
+                            Log.i(TAG, "进程所有者已死亡，销毁进程")
                         }
                     } catch (e: Throwable) {
-                        LOGGER.w(e, "销毁进程失败")
+                        Log.w(TAG, "销毁进程失败", e)
                     }
                 }
                 token.linkToDeath(deathRecipient, 0)
             } catch (e: Throwable) {
-                LOGGER.w(e, "linkToDeath 失败")
+                Log.w(TAG, "linkToDeath 失败", e)
             }
         }
     }
@@ -46,7 +46,7 @@ class ShizukuRemoteProcessHolder(
     override fun getOutputStream(): ParcelFileDescriptor? {
         if (outputPfd == null) {
             try {
-                outputPfd = ParcelFileDescriptorUtil.pipeTo(process.outputStream)
+                outputPfd = pfdUtil.pipeTo(process.outputStream)
             } catch (e: IOException) {
                 throw IllegalStateException(e)
             }
@@ -57,7 +57,7 @@ class ShizukuRemoteProcessHolder(
     override fun getInputStream(): ParcelFileDescriptor? {
         if (inputPfd == null) {
             try {
-                inputPfd = ParcelFileDescriptorUtil.pipeFrom(process.inputStream)
+                inputPfd = pfdUtil.pipeFrom(process.inputStream)
             } catch (e: IOException) {
                 throw IllegalStateException(e)
             }
@@ -67,7 +67,7 @@ class ShizukuRemoteProcessHolder(
 
     override fun getErrorStream(): ParcelFileDescriptor? {
         try {
-            return ParcelFileDescriptorUtil.pipeFrom(process.errorStream)
+            return pfdUtil.pipeFrom(process.errorStream)
         } catch (e: IOException) {
             throw IllegalStateException(e)
         }
@@ -124,6 +124,6 @@ class ShizukuRemoteProcessHolder(
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuRemoteProcess")
+        private const val TAG = "ShizukuRemoteProcess"
     }
 }

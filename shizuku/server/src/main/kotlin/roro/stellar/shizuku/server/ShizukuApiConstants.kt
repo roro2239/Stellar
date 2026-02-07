@@ -1,4 +1,4 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 /**
  * Shizuku API 常量定义

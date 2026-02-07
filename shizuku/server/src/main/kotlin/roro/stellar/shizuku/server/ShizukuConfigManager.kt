@@ -1,8 +1,8 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import roro.stellar.server.util.Logger
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -31,7 +31,7 @@ class ShizukuConfigManager {
                 ShizukuConfig()
             }
         } catch (e: Exception) {
-            LOGGER.w(e, "加载 Shizuku 配置失败")
+            Log.w(TAG, "加载 Shizuku 配置失败", e)
             ShizukuConfig()
         }
     }
@@ -42,9 +42,9 @@ class ShizukuConfigManager {
             FileWriter(configFile).use { writer ->
                 GSON.toJson(config, writer)
             }
-            LOGGER.v("Shizuku 配置已保存")
+            Log.v(TAG, "Shizuku 配置已保存")
         } catch (e: Exception) {
-            LOGGER.w(e, "保存 Shizuku 配置失败")
+            Log.w(TAG, "保存 Shizuku 配置失败", e)
         }
     }
 
@@ -81,7 +81,7 @@ class ShizukuConfigManager {
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuConfigManager")
+        private const val TAG = "ShizukuConfigManager"
         private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
 
         const val FLAG_ASK = 0

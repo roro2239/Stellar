@@ -1,10 +1,9 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 import android.os.Bundle
-import android.os.IBinder
 import android.os.RemoteException
+import android.util.Log
 import moe.shizuku.server.IShizukuApplication
-import roro.stellar.server.util.Logger
 
 /**
  * Shizuku 客户端记录
@@ -40,11 +39,11 @@ class ShizukuClientRecord(
         try {
             client.dispatchRequestPermissionResult(requestCode, data)
         } catch (e: RemoteException) {
-            LOGGER.w(e, "dispatchRequestPermissionResult 失败")
+            Log.w(TAG, "dispatchRequestPermissionResult 失败", e)
         }
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuClientRecord")
+        private const val TAG = "ShizukuClientRecord"
     }
 }
