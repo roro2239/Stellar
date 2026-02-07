@@ -1,4 +1,4 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -7,19 +7,11 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.Parcel
 import android.os.RemoteException
-import android.os.SELinux
-import android.os.SystemProperties
-import android.system.Os
+import android.util.Log
 import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import moe.shizuku.server.IShizukuServiceConnection
-import rikka.hidden.compat.PackageManagerApis
-import roro.stellar.server.ServerConstants
-import roro.stellar.server.StellarService
-import roro.stellar.server.util.Logger
-import roro.stellar.server.util.OsUtils
-import roro.stellar.server.util.UserHandleCompat
 import java.io.File
 import java.io.IOException
 
@@ -28,18 +20,17 @@ import java.io.IOException
  * 实现 IShizukuService 接口，将 Shizuku API 调用转发到 Stellar 服务
  */
 class ShizukuServiceIntercept(
-    private val stellarService: StellarService
+    private val callback: ShizukuServiceCallback,
+    private val pfdUtil: ParcelFileDescriptorUtil,
+    private val packagesForUidProvider: (Int) -> List<String>
 ) : IShizukuService.Stub() {
 
     private val shizukuConfigManager = ShizukuConfigManager()
     private val clientManager = ShizukuClientManager(shizukuConfigManager)
     private val userServiceManager = ShizukuUserServiceManager()
 
-    private val managerAppId: Int = UserHandleCompat.getAppId(
-        PackageManagerApis.getApplicationInfoNoThrow(
-            ServerConstants.MANAGER_APPLICATION_ID, 0, 0
-        )?.uid ?: -1
-    )
+    private val managerAppId: Int
+        get() = callback.getManagerAppId()
 
     override fun getVersion(): Int {
         enforceCallingPermission("getVersion")
@@ -48,12 +39,12 @@ class ShizukuServiceIntercept(
 
     override fun getUid(): Int {
         enforceCallingPermission("getUid")
-        return Os.getuid()
+        return callback.getServiceUid()
     }
 
     override fun checkPermission(permission: String?): Int {
         enforceCallingPermission("checkPermission")
-        return if (Os.getuid() == 0) {
+        return if (callback.getServiceUid() == 0) {
             PackageManager.PERMISSION_GRANTED
         } else {
             PackageManager.PERMISSION_DENIED
@@ -62,17 +53,16 @@ class ShizukuServiceIntercept(
 
     override fun getSELinuxContext(): String? {
         enforceCallingPermission("getSELinuxContext")
-        return try {
-            SELinux.getContext()
-        } catch (e: Throwable) {
-            throw IllegalStateException(e.message)
-        }
+        return callback.getSELinuxContext()
+            ?: throw IllegalStateException("无法获取 SELinux 上下文")
     }
 
     override fun getSystemProperty(name: String?, defaultValue: String?): String {
         enforceCallingPermission("getSystemProperty")
         return try {
-            SystemProperties.get(name, defaultValue)
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java, String::class.java)
+            method.invoke(null, name, defaultValue) as String
         } catch (e: Throwable) {
             throw IllegalStateException(e.message)
         }
@@ -81,7 +71,9 @@ class ShizukuServiceIntercept(
     override fun setSystemProperty(name: String?, value: String?) {
         enforceCallingPermission("setSystemProperty")
         try {
-            SystemProperties.set(name, value)
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("set", String::class.java, String::class.java)
+            method.invoke(null, name, value)
         } catch (e: Throwable) {
             throw IllegalStateException(e.message)
         }
@@ -89,7 +81,7 @@ class ShizukuServiceIntercept(
 
     override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
         enforceCallingPermission("newProcess")
-        LOGGER.d("newProcess: uid=%d, cmd=%s", getCallingUid(), cmd?.contentToString())
+        Log.d(TAG, "newProcess: uid=${getCallingUid()}, cmd=${cmd?.contentToString()}")
 
         val process: Process = try {
             Runtime.getRuntime().exec(cmd, env, if (dir != null) File(dir) else null)
@@ -100,14 +92,14 @@ class ShizukuServiceIntercept(
         val clientRecord = clientManager.findClient(getCallingUid(), getCallingPid())
         val token = clientRecord?.client?.asBinder()
 
-        return ShizukuRemoteProcessHolder(process, token)
+        return ShizukuRemoteProcessHolder(process, token, pfdUtil)
     }
 
     override fun checkSelfPermission(): Boolean {
         val callingUid = getCallingUid()
         val callingPid = getCallingPid()
 
-        if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
+        if (callingUid == callback.getServiceUid() || callingPid == callback.getServicePid()) {
             return true
         }
 
@@ -126,9 +118,9 @@ class ShizukuServiceIntercept(
     override fun requestPermission(requestCode: Int) {
         val callingUid = getCallingUid()
         val callingPid = getCallingPid()
-        val userId = UserHandleCompat.getUserId(callingUid)
+        val userId = callingUid / 100000
 
-        if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
+        if (callingUid == callback.getServiceUid() || callingPid == callback.getServicePid()) {
             return
         }
 
@@ -144,34 +136,26 @@ class ShizukuServiceIntercept(
                 return
             }
             else -> {
-                stellarService.showPermissionConfirmation(
-                    requestCode,
-                    createStellarClientRecord(clientRecord),
-                    callingUid,
-                    callingPid,
-                    userId,
-                    "stellar"
+                callback.showPermissionConfirmation(
+                    requestCode, callingUid, callingPid, userId, clientRecord.packageName
                 )
             }
         }
     }
 
     override fun attachApplication(application: IShizukuApplication?, args: Bundle?) {
-        LOGGER.d("attachApplication: application=%s, args=%s", application, args)
+        Log.d(TAG, "attachApplication: application=$application, args=$args")
         if (application == null || args == null) {
-            LOGGER.w("attachApplication: application 或 args 为 null")
+            Log.w(TAG, "attachApplication: application 或 args 为 null")
             return
         }
 
-        // 设置 ClassLoader 以确保 Bundle 能正确解析
         args.classLoader = this.javaClass.classLoader
 
-        val requestPackageName = args.getString(
-            ShizukuApiConstants.ATTACH_APPLICATION_PACKAGE_NAME
-        )
-        LOGGER.d("attachApplication: requestPackageName=%s", requestPackageName)
+        val requestPackageName = args.getString(ShizukuApiConstants.ATTACH_APPLICATION_PACKAGE_NAME)
+        Log.d(TAG, "attachApplication: requestPackageName=$requestPackageName")
         if (requestPackageName == null) {
-            LOGGER.w("attachApplication: requestPackageName 为 null, args keys=%s", args.keySet())
+            Log.w(TAG, "attachApplication: requestPackageName 为 null")
             return
         }
         val apiVersion = args.getInt(ShizukuApiConstants.ATTACH_APPLICATION_API_VERSION, -1)
@@ -179,32 +163,29 @@ class ShizukuServiceIntercept(
         val callingPid = getCallingPid()
         val callingUid = getCallingUid()
 
-        val packages = PackageManagerApis.getPackagesForUidNoThrow(callingUid)
+        val packages = packagesForUidProvider(callingUid)
         if (!packages.contains(requestPackageName)) {
-            LOGGER.w("请求包 %s 不属于 uid %d", requestPackageName, callingUid)
+            Log.w(TAG, "请求包 $requestPackageName 不属于 uid $callingUid")
             throw SecurityException("请求包 $requestPackageName 不属于 uid $callingUid")
         }
 
         var clientRecord = clientManager.findClient(callingUid, callingPid)
         if (clientRecord == null) {
-            LOGGER.i("创建 Shizuku 客户端: uid=%d, pid=%d, package=%s",
-                callingUid, callingPid, requestPackageName)
-            clientRecord = clientManager.addClient(
-                callingUid, callingPid, application, requestPackageName, apiVersion
-            )
+            Log.i(TAG, "创建 Shizuku 客户端: uid=$callingUid, pid=$callingPid, package=$requestPackageName")
+            clientRecord = clientManager.addClient(callingUid, callingPid, application, requestPackageName, apiVersion)
         }
 
         if (clientRecord == null) {
-            LOGGER.w("添加 Shizuku 客户端失败")
+            Log.w(TAG, "添加 Shizuku 客户端失败")
             return
         }
 
-        LOGGER.i("Shizuku attachApplication: %s %d %d", requestPackageName, callingUid, callingPid)
+        Log.i(TAG, "Shizuku attachApplication: $requestPackageName $callingUid $callingPid")
 
         val reply = Bundle()
-        reply.putInt(ShizukuApiConstants.BIND_APPLICATION_SERVER_UID, OsUtils.uid)
+        reply.putInt(ShizukuApiConstants.BIND_APPLICATION_SERVER_UID, callback.getServiceUid())
         reply.putInt(ShizukuApiConstants.BIND_APPLICATION_SERVER_VERSION, ShizukuApiConstants.SERVER_VERSION)
-        reply.putString(ShizukuApiConstants.BIND_APPLICATION_SERVER_SECONTEXT, OsUtils.sELinuxContext)
+        reply.putString(ShizukuApiConstants.BIND_APPLICATION_SERVER_SECONTEXT, callback.getSELinuxContext())
         reply.putInt(ShizukuApiConstants.BIND_APPLICATION_SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION)
         reply.putBoolean(ShizukuApiConstants.BIND_APPLICATION_PERMISSION_GRANTED, clientRecord.allowed)
         reply.putBoolean(ShizukuApiConstants.BIND_APPLICATION_SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE, false)
@@ -212,23 +193,19 @@ class ShizukuServiceIntercept(
         try {
             application.bindApplication(reply)
         } catch (e: Throwable) {
-            LOGGER.w(e, "Shizuku bindApplication 失败")
+            Log.w(TAG, "Shizuku bindApplication 失败", e)
         }
     }
 
     override fun addUserService(conn: IShizukuServiceConnection?, args: Bundle?): Int {
         enforceCallingPermission("addUserService")
         if (conn == null || args == null) return 1
-
-        return userServiceManager.addUserService(
-            getCallingUid(), getCallingPid(), conn, args
-        )
+        return userServiceManager.addUserService(getCallingUid(), getCallingPid(), conn, args)
     }
 
     override fun removeUserService(conn: IShizukuServiceConnection?, args: Bundle?): Int {
         enforceCallingPermission("removeUserService")
         if (conn == null || args == null) return 1
-
         return userServiceManager.removeUserService(conn, args)
     }
 
@@ -239,7 +216,7 @@ class ShizukuServiceIntercept(
 
     override fun exit() {
         enforceManagerPermission("exit")
-        LOGGER.i("Shizuku exit called")
+        Log.i(TAG, "Shizuku exit called")
     }
 
     override fun dispatchPackageChanged(intent: Intent?) {
@@ -256,8 +233,8 @@ class ShizukuServiceIntercept(
         requestCode: Int,
         data: Bundle?
     ) {
-        if (UserHandleCompat.getAppId(getCallingUid()) != managerAppId) {
-            LOGGER.w("dispatchPermissionConfirmationResult 不是从管理器调用的")
+        if (getAppId(getCallingUid()) != managerAppId) {
+            Log.w(TAG, "dispatchPermissionConfirmationResult 不是从管理器调用的")
             return
         }
         if (data == null) return
@@ -265,29 +242,11 @@ class ShizukuServiceIntercept(
         val allowed = data.getBoolean(ShizukuApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED)
         val onetime = data.getBoolean(ShizukuApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME)
 
-        val records = clientManager.findClients(requestUid)
-        for (record in records) {
-            record.allowed = allowed
-            if (record.pid == requestPid) {
-                record.dispatchRequestPermissionResult(requestCode, allowed, onetime)
-            }
-        }
-
-        // 获取包名用于更新配置
-        val packageName = records.firstOrNull()?.packageName ?: return
-
-        // 更新 Shizuku 配置
-        shizukuConfigManager.updateFlag(
-            requestUid, packageName,
-            if (onetime) ShizukuConfigManager.FLAG_ASK
-            else if (allowed) ShizukuConfigManager.FLAG_GRANTED
-            else ShizukuConfigManager.FLAG_DENIED
-        )
+        handlePermissionResultInternal(requestUid, requestPid, requestCode, allowed, onetime)
     }
 
     /**
-     * 供 StellarService 调用的权限确认结果处理方法
-     * @return 是否找到并处理了 Shizuku 客户端
+     * 供外部调用的权限确认结果处理方法
      */
     fun handlePermissionResult(
         requestUid: Int,
@@ -296,10 +255,18 @@ class ShizukuServiceIntercept(
         allowed: Boolean,
         onetime: Boolean
     ): Boolean {
+        return handlePermissionResultInternal(requestUid, requestPid, requestCode, allowed, onetime)
+    }
+
+    private fun handlePermissionResultInternal(
+        requestUid: Int,
+        requestPid: Int,
+        requestCode: Int,
+        allowed: Boolean,
+        onetime: Boolean
+    ): Boolean {
         val records = clientManager.findClients(requestUid)
-        if (records.isEmpty()) {
-            return false
-        }
+        if (records.isEmpty()) return false
 
         for (record in records) {
             record.allowed = allowed
@@ -308,10 +275,8 @@ class ShizukuServiceIntercept(
             }
         }
 
-        // 获取包名用于更新配置
         val packageName = records.firstOrNull()?.packageName ?: return false
 
-        // 更新 Shizuku 配置
         shizukuConfigManager.updateFlag(
             requestUid, packageName,
             if (onetime) ShizukuConfigManager.FLAG_ASK
@@ -319,13 +284,12 @@ class ShizukuServiceIntercept(
             else ShizukuConfigManager.FLAG_DENIED
         )
 
-        LOGGER.i("handlePermissionResult: uid=%d, allowed=%s, package=%s",
-            requestUid, allowed, packageName)
+        Log.i(TAG, "handlePermissionResult: uid=$requestUid, allowed=$allowed, package=$packageName")
         return true
     }
 
     override fun getFlagsForUid(uid: Int, mask: Int): Int {
-        if (UserHandleCompat.getAppId(getCallingUid()) != managerAppId) {
+        if (getAppId(getCallingUid()) != managerAppId) {
             return 0
         }
         val flag = shizukuConfigManager.getFlag(uid)
@@ -337,7 +301,7 @@ class ShizukuServiceIntercept(
     }
 
     override fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
-        if (UserHandleCompat.getAppId(getCallingUid()) != managerAppId) {
+        if (getAppId(getCallingUid()) != managerAppId) {
             return
         }
         val newFlag = when {
@@ -346,7 +310,6 @@ class ShizukuServiceIntercept(
             else -> ShizukuConfigManager.FLAG_ASK
         }
 
-        // 从客户端记录或现有配置获取包名
         val records = clientManager.findClients(uid)
         val packageName = records.firstOrNull()?.packageName
             ?: shizukuConfigManager.find(uid)?.packageName
@@ -361,30 +324,22 @@ class ShizukuServiceIntercept(
 
     // ============ 辅助方法 ============
 
-    /**
-     * 获取 Shizuku 应用的权限标志
-     * 供 StellarService 调用
-     */
     fun getShizukuFlagForUid(uid: Int): Int {
         return shizukuConfigManager.getFlag(uid)
     }
 
-    /**
-     * 更新 Shizuku 应用的权限标志
-     * 供 StellarService 调用
-     */
     fun updateShizukuFlagForUid(uid: Int, packageName: String, flag: Int) {
         shizukuConfigManager.updateFlag(uid, packageName, flag)
-
-        // 同步更新客户端记录
         val records = clientManager.findClients(uid)
         for (record in records) {
             record.allowed = flag == ShizukuConfigManager.FLAG_GRANTED
         }
     }
 
+    private fun getAppId(uid: Int): Int = uid % 100000
+
     private fun checkCallerManagerPermission(callingUid: Int): Boolean {
-        return UserHandleCompat.getAppId(callingUid) == managerAppId
+        return getAppId(callingUid) == managerAppId
     }
 
     private fun enforceManagerPermission(func: String) {
@@ -398,7 +353,7 @@ class ShizukuServiceIntercept(
         val callingUid = getCallingUid()
         val callingPid = getCallingPid()
 
-        if (callingUid == OsUtils.uid) return
+        if (callingUid == callback.getServiceUid()) return
         if (checkCallerManagerPermission(callingUid)) return
 
         val clientRecord = clientManager.findClient(callingUid, callingPid)
@@ -410,35 +365,11 @@ class ShizukuServiceIntercept(
         }
     }
 
-    private fun createStellarClientRecord(
-        shizukuRecord: ShizukuClientRecord
-    ): roro.stellar.server.ClientRecord {
-        val stellarApp = object : com.stellar.server.IStellarApplication.Stub() {
-            override fun bindApplication(data: Bundle?) {}
-            override fun dispatchRequestPermissionResult(requestCode: Int, data: Bundle?) {
-                val allowed = data?.getBoolean(
-                    roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false
-                ) ?: false
-                val onetime = data?.getBoolean(
-                    roro.stellar.StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, false
-                ) ?: false
-                shizukuRecord.dispatchRequestPermissionResult(requestCode, allowed, onetime)
-            }
-        }
-        return roro.stellar.server.ClientRecord(
-            shizukuRecord.uid,
-            shizukuRecord.pid,
-            stellarApp,
-            shizukuRecord.packageName,
-            shizukuRecord.apiVersion
-        )
-    }
-
     // ============ Binder 事务处理 ============
 
     @Throws(RemoteException::class)
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-        LOGGER.d("onTransact: code=%d, callingUid=%d, callingPid=%d", code, getCallingUid(), getCallingPid())
+        Log.d(TAG, "onTransact: code=$code, callingUid=${getCallingUid()}, callingPid=${getCallingPid()}")
 
         if (code == ShizukuApiConstants.BINDER_TRANSACTION_transact) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
@@ -449,24 +380,17 @@ class ShizukuServiceIntercept(
             try {
                 data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
                 val binder = data.readStrongBinder()
-                LOGGER.d("attachApplication V13: binder=%s", binder)
                 val hasArgs = data.readInt() != 0
-                LOGGER.d("attachApplication V13: hasArgs=%s", hasArgs)
-                val args = if (hasArgs) {
-                    Bundle.CREATOR.createFromParcel(data)
-                } else {
-                    Bundle()
-                }
-                LOGGER.d("attachApplication V13: args=%s", args)
+                val args = if (hasArgs) Bundle.CREATOR.createFromParcel(data) else Bundle()
                 attachApplication(IShizukuApplication.Stub.asInterface(binder), args)
                 reply?.writeNoException()
             } catch (e: Exception) {
-                LOGGER.e(e, "attachApplication V13 失败")
+                Log.e(TAG, "attachApplication V13 失败", e)
                 reply?.writeException(e)
             }
             return true
         } else if (code == 14) {
-            // 旧版本 (v12 及以下) 的 attachApplication 兼容处理
+            // 旧版本 (v12 及以下) 的 attachApplication
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
             val binder = data.readStrongBinder()
             val packageName = data.readString()
@@ -487,7 +411,7 @@ class ShizukuServiceIntercept(
         val targetCode = data.readInt()
         val targetFlags = data.readInt()
 
-        LOGGER.d("transactRemote: uid=%d, code=%d", getCallingUid(), targetCode)
+        Log.d(TAG, "transactRemote: uid=${getCallingUid()}, code=$targetCode")
 
         val newData = Parcel.obtain()
         try {
@@ -501,6 +425,6 @@ class ShizukuServiceIntercept(
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuIntercept")
+        private const val TAG = "ShizukuIntercept"
     }
 }

@@ -1,0 +1,21 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'roro.stellar.shizuku.server'
+    buildFeatures {
+        buildConfig = false
+    }
+    kotlin {
+        jvmToolchain(21)
+    }
+}
+
+dependencies {
+    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'com.google.code.gson:gson:2.13.1'
+
+    api project(':shizuku-aidl')
+}

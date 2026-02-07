@@ -24,6 +24,8 @@ dependencies {
     implementation project(':shared')
     compileOnly project(':provider')
 
+    implementation project(':shizuku-server')
+
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
 }

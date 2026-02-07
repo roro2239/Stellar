@@ -1,10 +1,10 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 import android.os.Bundle
 import android.os.IBinder
 import android.os.RemoteException
+import android.util.Log
 import moe.shizuku.server.IShizukuServiceConnection
-import roro.stellar.server.util.Logger
 import java.util.Collections
 import java.util.UUID
 
@@ -42,7 +42,7 @@ class ShizukuUserServiceManager {
         )
 
         services[token] = record
-        LOGGER.i("添加 Shizuku 用户服务: token=%s, uid=%d", token, callingUid)
+        Log.i(TAG, "添加 Shizuku 用户服务: token=$token, uid=$callingUid")
 
         return 0
     }
@@ -56,7 +56,7 @@ class ShizukuUserServiceManager {
             val entry = iterator.next()
             if (entry.value.connection.asBinder() == conn.asBinder()) {
                 iterator.remove()
-                LOGGER.i("移除 Shizuku 用户服务: token=%s", entry.key)
+                Log.i(TAG, "移除 Shizuku 用户服务: token=${entry.key}")
                 return 0
             }
         }
@@ -71,14 +71,14 @@ class ShizukuUserServiceManager {
             record.binder = binder
             try {
                 record.connection.connected(binder)
-                LOGGER.i("Shizuku 用户服务已连接: token=%s", token)
+                Log.i(TAG, "Shizuku 用户服务已连接: token=$token")
             } catch (e: RemoteException) {
-                LOGGER.w(e, "通知用户服务连接失败")
+                Log.w(TAG, "通知用户服务连接失败", e)
             }
         }
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuUserService")
+        private const val TAG = "ShizukuUserService"
     }
 }

@@ -1,9 +1,9 @@
-package roro.stellar.server.shizuku
+package roro.stellar.shizuku.server
 
 import android.os.IBinder.DeathRecipient
 import android.os.RemoteException
+import android.util.Log
 import moe.shizuku.server.IShizukuApplication
-import roro.stellar.server.util.Logger
 import java.util.Collections
 
 /**
@@ -39,7 +39,7 @@ class ShizukuClientManager(
     fun requireClient(callingUid: Int, callingPid: Int): ShizukuClientRecord {
         val record = findClient(callingUid, callingPid)
         if (record == null) {
-            LOGGER.w("Caller (uid %d, pid %d) is not an attached Shizuku client", callingUid, callingPid)
+            Log.w(TAG, "Caller (uid $callingUid, pid $callingPid) is not an attached Shizuku client")
             throw IllegalStateException("非已连接的 Shizuku 客户端")
         }
         return record
@@ -55,7 +55,7 @@ class ShizukuClientManager(
         // 清理同一 UID 的旧客户端
         val oldClients = findClients(uid)
         for (oldClient in oldClients) {
-            LOGGER.i("清理旧 Shizuku 客户端: uid=%d, pid=%d", oldClient.uid, oldClient.pid)
+            Log.i(TAG, "清理旧 Shizuku 客户端: uid=${oldClient.uid}, pid=${oldClient.pid}")
             clientRecords.remove(oldClient)
         }
 
@@ -66,23 +66,23 @@ class ShizukuClientManager(
 
         val binder = client.asBinder()
         val deathRecipient = DeathRecipient {
-            LOGGER.i("Shizuku 客户端死亡: uid=%d, pid=%d", uid, pid)
+            Log.i(TAG, "Shizuku 客户端死亡: uid=$uid, pid=$pid")
             clientRecords.remove(record)
         }
 
         try {
             binder.linkToDeath(deathRecipient, 0)
         } catch (e: RemoteException) {
-            LOGGER.w(e, "linkToDeath 失败")
+            Log.w(TAG, "linkToDeath 失败", e)
             return null
         }
 
         clientRecords.add(record)
-        LOGGER.i("Shizuku 客户端已添加: uid=%d, pid=%d, package=%s", uid, pid, packageName)
+        Log.i(TAG, "Shizuku 客户端已添加: uid=$uid, pid=$pid, package=$packageName")
         return record
     }
 
     companion object {
-        private val LOGGER = Logger("ShizukuClientManager")
+        private const val TAG = "ShizukuClientManager"
     }
 }
