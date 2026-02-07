@@ -13,6 +13,7 @@ import rikka.hidden.compat.adapter.UidObserverAdapter
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.ktx.mainHandler
+import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.util.Logger
 import kotlin.system.exitProcess
 
@@ -62,9 +63,21 @@ object BinderSender {
                     LOGGER.i("sendBinder: 发送 Binder 到用户应用: %s (通过 metaData)", packageName)
                     StellarService.sendBinderToUserApp(stellarService, packageName, userId)
                     return
-                } else {
-                    LOGGER.d("sendBinder: 包 %s 的 metaData 不包含 stellar 权限: %s", packageName, permissions)
                 }
+
+                // 检查是否是 Shizuku 应用 (meta-data 值是字符串 "true")
+                val shizukuSupport = metaData.get(ShizukuApiConstants.META_DATA_KEY)
+                if (shizukuSupport == true || shizukuSupport == "true") {
+                    LOGGER.i("sendBinder: 发送 Shizuku Binder 到应用: %s", packageName)
+                    StellarService.sendShizukuBinderToUserApp(
+                        stellarService?.getShizukuBinder(),
+                        packageName,
+                        userId
+                    )
+                    return
+                }
+
+                LOGGER.d("sendBinder: 包 %s 不满足条件", packageName)
             } else {
                 LOGGER.w("sendBinder: 包 %s 的 metaData 为 null，跳过", packageName)
             }
