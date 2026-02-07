@@ -5,7 +5,13 @@
       "Edit",
       "Bash(cd:*)",
       "Bash(find:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Read(//d/StudioProjects/Shizuku/api/**)",
+      "Read(//d/StudioProjects/Shizuku-API/aidl/src/main/aidl/moe/shizuku/server/**)",
+      "Read(//d/StudioProjects/AxManager/api/aidl/src/main/aidl/frb/axeron/server/**)",
+      "Read(//d/StudioProjects/AxManager/api/server-shared/src/main/java/frb/axeron/server/**)",
+      "Read(//d/StudioProjects/AxManager/**)",
+      "Read(//d/StudioProjects/Shizuku-API/demo/src/main/aidl/rikka/shizuku/demo/**)"
     ],
     "deny": []
   },
