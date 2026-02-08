@@ -56,19 +56,29 @@ class ShizukuConfigManager {
 
     fun getFlag(uid: Int): Int {
         synchronized(this) {
-            return config.apps[uid]?.flag ?: FLAG_ASK
+            val entry = config.apps[uid]
+            if (entry != null && entry.packageName == ShizukuApiConstants.SHIZUKU_APP_PACKAGE_NAME) {
+                return FLAG_DENIED
+            }
+            return entry?.flag ?: FLAG_ASK
         }
     }
 
     fun updateFlag(uid: Int, packageName: String, flag: Int) {
         synchronized(this) {
+            val finalFlag = if (packageName == ShizukuApiConstants.SHIZUKU_APP_PACKAGE_NAME) {
+                FLAG_DENIED
+            } else {
+                flag
+            }
+            
             var entry = config.apps[uid]
             if (entry == null) {
-                entry = ShizukuAppEntry(packageName, flag)
+                entry = ShizukuAppEntry(packageName, finalFlag)
                 config.apps[uid] = entry
             } else {
                 entry.packageName = packageName
-                entry.flag = flag
+                entry.flag = finalFlag
             }
             save()
         }

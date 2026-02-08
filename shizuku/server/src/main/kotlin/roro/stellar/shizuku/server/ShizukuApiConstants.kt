@@ -22,6 +22,9 @@ object ShizukuApiConstants {
     // Shizuku 管理器包名
     const val SHIZUKU_MANAGER_APPLICATION_ID = "moe.shizuku.manager"
 
+    // Shizuku APP 包名
+    const val SHIZUKU_APP_PACKAGE_NAME = "moe.shizuku.privileged.api"
+
     // 权限名称
     const val SHIZUKU_PERMISSION = "moe.shizuku.manager.permission.API_V23"
 
