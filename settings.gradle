@@ -33,6 +33,22 @@ dependencyResolutionManagement {
     }
 
     versionCatalogs {
+        demoLibs {
+            from(files('demo/demo.versions.toml'))
+        }
+
+        serverLibs {
+            from(files('server/server.versions.toml'))
+        }
+
+        apiLibs {
+            from(files('api/api.versions.toml'))
+        }
+
+        shizukuLibs {
+            from(files('shizuku/shizuku.versions.toml'))
+        }
+
         managerLibs {
             from(files('manager/manager.versions.toml'))
         }
