@@ -14,8 +14,8 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.annotation:annotation:1.9.1'
-    implementation 'com.google.code.gson:gson:2.13.1'
+    implementation shizukuLibs.androidxAnnotation
+    implementation shizukuLibs.gson
 
     api project(':shizuku-aidl')
     api project(':aidl')
