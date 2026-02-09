@@ -247,7 +247,7 @@ class ShizukuServiceIntercept(
         requestPid: Int,
         requestCode: Int,
         data: Bundle?
-    ) { r
+    ) {
         withClearedIdentity {
             stellarService.dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data)
         }
