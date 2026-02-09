@@ -324,11 +324,13 @@ class StellarService : IStellarService.Stub() {
         val records: MutableList<ClientRecord> = clientManager.findClients(requestUid)
         val packages = ArrayList<String>()
         if (records.isEmpty()) {
-            // 尝试查找 Shizuku 客户端
-            if (shizukuIntercept?.handlePermissionResult(
-                    requestUid, requestPid, requestCode, allowed, onetime
-                ) == true) {
-                LOGGER.i("dispatchPermissionConfirmationResult：已通过 Shizuku 兼容层处理 uid %d", requestUid)
+            if (permission == ShizukuServiceIntercept.SHIZUKU_PERMISSION) {
+                LOGGER.i("dispatchPermissionConfirmationResult：处理 Shizuku 权限 uid %d, allowed=%s", requestUid, allowed)
+                val newFlag = if (onetime) ShizukuServiceIntercept.FLAG_ASK
+                    else if (allowed) ShizukuServiceIntercept.FLAG_GRANTED
+                    else ShizukuServiceIntercept.FLAG_DENIED
+                shizukuConfigManager?.updateFlagForUid(requestUid, newFlag)
+                shizukuIntercept?.notifyPermissionResult(requestUid, requestCode, allowed)
                 return
             }
             LOGGER.w("dispatchPermissionConfirmationResult：未找到 uid %d 的客户端", requestUid)
@@ -369,9 +371,8 @@ class StellarService : IStellarService.Stub() {
             return 0
         }
 
-        // 检查是否为 Shizuku 应用
-        if (isShizukuApp(uid)) {
-            return shizukuIntercept?.getShizukuFlagForUid(uid) ?: ConfigManager.FLAG_ASK
+        if (permission == "stellar" && isShizukuApp(uid)) {
+            return shizukuConfigManager?.getFlagForUid(uid) ?: ConfigManager.FLAG_ASK
         }
 
         return getFlagForUidInternal(uid, permission)
@@ -384,10 +385,8 @@ class StellarService : IStellarService.Stub() {
             return
         }
 
-        // 检查是否为 Shizuku 应用
-        if (isShizukuApp(uid)) {
-            val packageName = getPackageNameForUid(uid) ?: return
-            shizukuIntercept?.updateShizukuFlagForUid(uid, packageName, newFlag)
+        if (permission == "stellar" && isShizukuApp(uid)) {
+            shizukuConfigManager?.updateFlagForUid(uid, newFlag)
             return
         }
 
@@ -447,9 +446,6 @@ class StellarService : IStellarService.Stub() {
     private fun onPermissionRevoked(packageName: String?) {
     }
 
-    /**
-     * 检查指定 UID 的应用是否为 Shizuku 应用
-     */
     private fun isShizukuApp(uid: Int): Boolean {
         val userId = getUserId(uid)
         for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
@@ -465,10 +461,6 @@ class StellarService : IStellarService.Stub() {
         }
         return false
     }
-
-    /**
-     * 获取指定 UID 应用的包名
-     */
     private fun getPackageNameForUid(uid: Int): String? {
         val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
         return packages.firstOrNull()
@@ -920,8 +912,30 @@ class StellarService : IStellarService.Stub() {
 
     // ============ Shizuku 兼容方法 ============
 
+    // Shizuku 独立配置管理器
+    private var shizukuConfigManager: roro.stellar.shizuku.server.ShizukuConfigManager? = null
+
     private fun createShizukuIntercept(): ShizukuServiceIntercept {
+        // 初始化 Shizuku 配置管理器
+        shizukuConfigManager = roro.stellar.shizuku.server.ShizukuConfigManager()
+
         val callback = object : roro.stellar.shizuku.server.ShizukuServiceCallback {
+            override fun getStellarService() = this@StellarService
+            override fun getManagerAppId(): Int = managerAppId
+            override fun getServicePid(): Int = OsUtils.pid
+
+            override fun getPackagesForUid(uid: Int): List<String> {
+                return PackageManagerApis.getPackagesForUidNoThrow(uid)
+            }
+
+            override fun checkShizukuPermission(uid: Int): Int {
+                return shizukuConfigManager?.getFlagForUid(uid) ?: ShizukuServiceIntercept.FLAG_ASK
+            }
+
+            override fun updateShizukuPermission(uid: Int, flag: Int) {
+                shizukuConfigManager?.updateFlagForUid(uid, flag)
+            }
+
             override fun showPermissionConfirmation(
                 requestCode: Int,
                 uid: Int,
@@ -929,32 +943,23 @@ class StellarService : IStellarService.Stub() {
                 userId: Int,
                 packageName: String
             ) {
-                // 直接启动权限确认 Activity，不依赖 Stellar 的 ClientRecord
                 showShizukuPermissionConfirmation(requestCode, uid, pid, userId, packageName)
             }
 
-            override fun getManagerAppId(): Int = managerAppId
-            override fun getServiceUid(): Int = OsUtils.uid
-            override fun getServicePid(): Int = OsUtils.pid
-            override fun getSELinuxContext(): String? = OsUtils.sELinuxContext
+            override fun dispatchPermissionResult(uid: Int, requestCode: Int, allowed: Boolean) {
+                shizukuIntercept?.notifyPermissionResult(uid, requestCode, allowed)
+            }
         }
 
-        val pfdUtil = object : roro.stellar.shizuku.server.ParcelFileDescriptorUtil {
-            override fun pipeTo(outputStream: java.io.OutputStream) =
-                roro.stellar.server.util.ParcelFileDescriptorUtil.pipeTo(outputStream)!!
-
-            override fun pipeFrom(inputStream: java.io.InputStream) =
-                roro.stellar.server.util.ParcelFileDescriptorUtil.pipeFrom(inputStream)!!
-        }
-
-        return ShizukuServiceIntercept(callback, pfdUtil) { uid ->
-            PackageManagerApis.getPackagesForUidNoThrow(uid)
+        return ShizukuServiceIntercept(callback, {
+            PackageManagerApis.getApplicationInfoNoThrow(
+                ServerConstants.MANAGER_APPLICATION_ID, 0, 0
+            )?.sourceDir ?: ""
+        }) { packageName, flags, userId ->
+            PackageManagerApis.getPackageInfoNoThrow(packageName, flags, userId)
         }
     }
 
-    /**
-     * Shizuku 专用的权限确认方法，不依赖 Stellar 的 ClientRecord
-     */
     private fun showShizukuPermissionConfirmation(
         requestCode: Int,
         callingUid: Int,
@@ -976,7 +981,7 @@ class StellarService : IStellarService.Stub() {
 
         if (pi == null && !isWorkProfileUser) {
             LOGGER.w("在非工作配置文件用户 %d 中未找到管理器，撤销 Shizuku 权限", userId)
-            shizukuIntercept?.handlePermissionResult(callingUid, callingPid, requestCode, false, false)
+            updateFlagForUid(callingUid, ShizukuServiceIntercept.SHIZUKU_PERMISSION, ShizukuServiceIntercept.FLAG_DENIED)
             return
         }
 
@@ -1009,7 +1014,6 @@ class StellarService : IStellarService.Stub() {
             )) {
                 if (pi?.applicationInfo?.metaData == null) continue
 
-                // 检查是否使用 Shizuku API (meta-data 值是字符串 "true")
                 val shizukuSupport = pi.applicationInfo!!.metaData.get(ShizukuApiConstants.META_DATA_KEY)
                 if (shizukuSupport == true || shizukuSupport == "true") {
                     sendShizukuBinderToUserApp(binder, pi.packageName, userId)
@@ -1147,8 +1151,6 @@ class StellarService : IStellarService.Stub() {
             }
         }
 
-        // ============ Shizuku 兼容方法 ============
-
         fun sendShizukuBinderToUserApp(
             binder: Binder?,
             packageName: String?,
@@ -1163,7 +1165,6 @@ class StellarService : IStellarService.Stub() {
                 LOGGER.w(tr, "添加 Shizuku 应用到省电白名单失败")
             }
 
-            // Shizuku 使用 .shizuku 后缀的 provider
             val name = "$packageName${ShizukuApiConstants.PROVIDER_SUFFIX}"
             var provider: IContentProvider? = null
             val token: IBinder? = null
