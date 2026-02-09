@@ -67,14 +67,14 @@ dependencies {
 
     implementation demoLibs.bundles.coroutines
 
-    implementation demoLibs.bundles.androidxBase
+    implementation demoLibs.bundles.base
 
-    implementation demoLibs.googleMaterial
+    implementation demoLibs.material
 
-    def composeBom = platform(demoLibs.androidxComposeBom)
+    def composeBom = platform(demoLibs.composeBom)
     implementation composeBom
-    implementation demoLibs.bundles.composeUi
-    debugImplementation demoLibs.androidxComposeUiTooling
+    implementation demoLibs.bundles.compose
+    debugImplementation demoLibs.composeUiTooling
 
     implementation demoLibs.capsule
 }
