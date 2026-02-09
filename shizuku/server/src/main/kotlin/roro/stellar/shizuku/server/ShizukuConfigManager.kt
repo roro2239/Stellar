@@ -1,106 +1,125 @@
 package roro.stellar.shizuku.server
 
+import android.util.AtomicFile
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import java.io.BufferedReader
+import rikka.hidden.compat.PackageManagerApis
 import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
 
-/**
- * Shizuku 应用配置管理器
- * 单独存储 Shizuku 兼容应用的授权配置
- */
 class ShizukuConfigManager {
 
     private val config: ShizukuConfig
-    private val configFile = File("/data/local/tmp/shizuku_config.json")
 
     init {
-        config = load()
-    }
+        this.config = load()
 
-    private fun load(): ShizukuConfig {
-        return try {
-            if (configFile.exists()) {
-                BufferedReader(FileReader(configFile)).use { reader ->
-                    GSON.fromJson(reader, ShizukuConfig::class.java) ?: ShizukuConfig()
-                }
-            } else {
-                ShizukuConfig()
+        var changed = false
+        for (entry in LinkedHashMap(config.permissions)) {
+            val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
+            if (packages.isEmpty()) {
+                Log.i(TAG, "移除不存在的 uid $entry.key 的配置")
+                config.permissions.remove(entry.key)
+                changed = true
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "加载 Shizuku 配置失败", e)
-            ShizukuConfig()
+        }
+
+        if (changed) {
+            scheduleWrite()
         }
     }
 
-    private fun save() {
-        try {
-            configFile.parentFile?.mkdirs()
-            FileWriter(configFile).use { writer ->
-                GSON.toJson(config, writer)
-            }
-            Log.v(TAG, "Shizuku 配置已保存")
-        } catch (e: Exception) {
-            Log.w(TAG, "保存 Shizuku 配置失败", e)
-        }
-    }
-
-    fun find(uid: Int): ShizukuAppEntry? {
+    fun getFlagForUid(uid: Int): Int {
         synchronized(this) {
-            return config.apps[uid]
+            return config.permissions[uid] ?: FLAG_ASK
         }
     }
 
-    fun getFlag(uid: Int): Int {
+    fun updateFlagForUid(uid: Int, flag: Int) {
         synchronized(this) {
-            return config.apps[uid]?.flag ?: FLAG_ASK
+            config.permissions[uid] = flag
+            scheduleWrite()
+            Log.i(TAG, "更新 uid $uid 的权限为 $flag")
         }
     }
 
-    fun updateFlag(uid: Int, packageName: String, flag: Int) {
+    fun removeUid(uid: Int) {
         synchronized(this) {
-            var entry = config.apps[uid]
-            if (entry == null) {
-                entry = ShizukuAppEntry(packageName, flag)
-                config.apps[uid] = entry
-            } else {
-                entry.packageName = packageName
-                entry.flag = flag
-            }
-            save()
+            config.permissions.remove(uid)
+            scheduleWrite()
         }
     }
 
-    fun getAllEntries(): Map<Int, ShizukuAppEntry> {
-        synchronized(this) {
-            return config.apps.toMap()
-        }
+    private fun scheduleWrite() {
+        write(config)
     }
 
     companion object {
         private const val TAG = "ShizukuConfigManager"
-        private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
 
         const val FLAG_ASK = 0
         const val FLAG_GRANTED = 1
         const val FLAG_DENIED = 2
+
+        private val GSON: Gson = GsonBuilder().setPrettyPrinting().create()
+        private val FILE = File("/data/user_de/0/com.android.shell/shizuku_compat.json")
+        private val ATOMIC_FILE = AtomicFile(FILE)
+
+        private fun load(): ShizukuConfig {
+            val stream: FileInputStream
+            try {
+                stream = ATOMIC_FILE.openRead()
+            } catch (_: FileNotFoundException) {
+                Log.i(TAG, "配置文件不存在，创建新配置")
+                return ShizukuConfig()
+            }
+
+            var config: ShizukuConfig? = null
+            try {
+                config = GSON.fromJson(
+                    InputStreamReader(stream),
+                    ShizukuConfig::class.java
+                )
+            } catch (tr: Throwable) {
+                Log.w(TAG, "加载配置失败", tr)
+            } finally {
+                try {
+                    stream.close()
+                } catch (e: IOException) {
+                    Log.w(TAG, "关闭配置文件失败: $e")
+                }
+            }
+            return config ?: ShizukuConfig()
+        }
+
+        private fun write(config: ShizukuConfig) {
+            synchronized(ATOMIC_FILE) {
+                val stream: FileOutputStream
+                try {
+                    stream = ATOMIC_FILE.startWrite()
+                } catch (e: IOException) {
+                    Log.w(TAG, "写入配置失败: $e")
+                    return
+                }
+                try {
+                    val json = GSON.toJson(config)
+                    stream.write(json.toByteArray())
+                    ATOMIC_FILE.finishWrite(stream)
+                    Log.v(TAG, "配置已保存")
+                } catch (tr: Throwable) {
+                    Log.w(TAG, "保存配置失败", tr)
+                    ATOMIC_FILE.failWrite(stream)
+                }
+            }
+        }
     }
 }
 
-/**
- * Shizuku 配置数据类
- */
 data class ShizukuConfig(
-    val apps: MutableMap<Int, ShizukuAppEntry> = mutableMapOf()
-)
-
-/**
- * Shizuku 应用条目
- */
-data class ShizukuAppEntry(
-    var packageName: String,
-    var flag: Int = 0
+    val permissions: MutableMap<Int, Int> = mutableMapOf()
 )
