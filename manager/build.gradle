@@ -94,7 +94,7 @@ def collapseReleaseResourceNames = task('collapseReleaseResourceNames').doLast {
     }
 }
 afterEvaluate {
-    tasks.getByName('optimizeReleaseResources').finalizedBy(collapseReleaseResourceNames)
+    tasks.findByName('optimizeReleaseResources')?.finalizedBy(collapseReleaseResourceNames)
 }
 android.applicationVariants.configureEach { variant ->
     variant.outputs.configureEach {
@@ -127,8 +127,7 @@ configurations.configureEach {
     exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
 dependencies {
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation managerLibs.bundles.kotlinxCoroutines
 
     implementation project(':server')
     implementation project(':api')
@@ -137,44 +136,24 @@ dependencies {
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
 
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.browser:browser:1.8.0'
-    implementation 'androidx.core:core-ktx:1.17.0'
-    implementation 'androidx.fragment:fragment-ktx:1.8.9'
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.10.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0'
-    implementation 'androidx.preference:preference-ktx:1.2.1'
+    implementation managerLibs.bundles.androidxCore
+    implementation managerLibs.bundles.androidxLifecycle
 
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation managerLibs.googleMaterial
 
-    def composeBom = platform('androidx.compose:compose-bom:2026.01.01')
+    def composeBom = platform(managerLibs.androidxComposeBom)
     implementation composeBom
-    implementation 'androidx.compose.ui:ui'
-    implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.activity:activity-compose:1.9.3'
-    implementation 'androidx.compose.material:material-icons-extended'
-    implementation 'androidx.compose.runtime:runtime-livedata'
-    implementation 'androidx.compose.ui:ui-graphics'
-    implementation 'androidx.navigation:navigation-compose:2.9.7'
-    implementation 'androidx.core:core-splashscreen:1.0.1'
-    debugImplementation 'androidx.compose.ui:ui-tooling'
+    implementation managerLibs.bundles.composeUi
+    debugImplementation managerLibs.androidxComposeUiTooling
 
-    implementation 'com.github.topjohnwu.libsu:core:6.0.0'
+    implementation managerLibs.libsuCore
 
-    implementation 'org.lsposed.libcxx:libcxx:27.0.12077973'
-    implementation 'io.github.vvb2060.ndk:boringssl:20250114'
+    implementation managerLibs.bundles.nativeCrypto
 
-    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
+    implementation managerLibs.appiconloader
 
-    implementation 'org.bouncycastle:bcpkix-jdk18on:1.80'
+    implementation managerLibs.okhttp
 
-    implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
-
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-
-    implementation 'com.github.Kyant0:Capsule:2.1.0'
+    implementation managerLibs.capsule
 }
 apply from: rootProject.file('signing.gradle')
