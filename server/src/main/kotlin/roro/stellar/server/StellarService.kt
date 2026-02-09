@@ -481,6 +481,7 @@ class StellarService : IStellarService.Stub() {
                 user!!
             )) {
                 if (MANAGER_APPLICATION_ID == pi.packageName) continue
+                if (pi.packageName == ShizukuApiConstants.SHIZUKU_APP_PACKAGE_NAME) continue
                 val applicationInfo = pi.applicationInfo ?: continue
                 val uid = applicationInfo.uid
                 val metaData = applicationInfo.metaData
