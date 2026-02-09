@@ -136,15 +136,15 @@ dependencies {
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
 
-    implementation managerLibs.bundles.androidxCore
-    implementation managerLibs.bundles.androidxLifecycle
+    implementation managerLibs.bundles.core
+    implementation managerLibs.bundles.lifecycle
 
-    implementation managerLibs.googleMaterial
+    implementation managerLibs.material
 
-    def composeBom = platform(managerLibs.androidxComposeBom)
+    def composeBom = platform(managerLibs.composeBom)
     implementation composeBom
     implementation managerLibs.bundles.composeUi
-    debugImplementation managerLibs.androidxComposeUiTooling
+    debugImplementation managerLibs.composeUiTooling
 
     implementation managerLibs.libsuCore
 

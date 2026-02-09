@@ -27,7 +27,7 @@ dependencies {
     api project(':shared')
 
     implementation apiLibs.androidxAnnotation
-    implementation apiLibs.androidxCoreKtx
+    implementation apiLibs.coreKtx
 }
 
 apply from: rootProject.file('publish.gradle')

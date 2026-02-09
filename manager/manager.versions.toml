@@ -1,17 +1,17 @@
 [versions]
 kotlinxCoroutines = "1.10.2"
-androidxAppcompat = "1.7.1"
-androidxBrowser = "1.8.0"
-androidxCoreKtx = "1.17.0"
-androidxFragmentKtx = "1.8.9"
-androidxRecyclerview = "1.4.0"
-androidxLifecycle = "2.10.0"
-androidxPreferenceKtx = "1.2.1"
-googleMaterial = "1.13.0"
-androidxComposeBom = "2026.01.01"
-androidxActivityCompose = "1.12.3"
-androidxNavigationCompose = "2.9.7"
-androidxCoreSplashscreen = "1.0.1"
+appcompat = "1.7.1"
+browser = "1.8.0"
+coreKtx = "1.17.0"
+fragmentKtx = "1.8.9"
+recyclerview = "1.4.0"
+lifecycle = "2.10.0"
+preferenceKtx = "1.2.1"
+material = "1.13.0"
+composeBom = "2026.01.01"
+activityCompose = "1.12.3"
+navigationCompose = "2.9.7"
+coreSplashscreen = "1.0.1"
 libsuCore = "6.0.0"
 libcxx = "27.0.12077973"
 boringssl = "20250114"
@@ -25,29 +25,29 @@ capsule = "2.1.0"
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinxCoroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 
-androidxAppcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidxAppcompat" }
-androidxBrowser = { module = "androidx.browser:browser", version.ref = "androidxBrowser" }
-androidxCoreKtx = { module = "androidx.core:core-ktx", version.ref = "androidxCoreKtx" }
-androidxFragmentKtx = { module = "androidx.fragment:fragment-ktx", version.ref = "androidxFragmentKtx" }
-androidxRecyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidxRecyclerview" }
-androidxLifecycleViewmodelKtx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
-androidxLifecycleLivedataKtx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "androidxLifecycle" }
-androidxLifecycleViewmodelCompose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
-androidxPreferenceKtx = { module = "androidx.preference:preference-ktx", version.ref = "androidxPreferenceKtx" }
-androidxCoreSplashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidxCoreSplashscreen" }
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+browser = { module = "androidx.browser:browser", version.ref = "browser" }
+coreKtx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+fragmentKtx = { module = "androidx.fragment:fragment-ktx", version.ref = "fragmentKtx" }
+recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+lifecycleViewmodelKtx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+lifecycleLivedataKtx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycle" }
+lifecycleViewmodelCompose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+preferenceKtx = { module = "androidx.preference:preference-ktx", version.ref = "preferenceKtx" }
+coreSplashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 
-googleMaterial = { module = "com.google.android.material:material", version.ref = "googleMaterial" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
 
-androidxComposeBom = { module = "androidx.compose:compose-bom", version.ref = "androidxComposeBom" }
-androidxComposeUi = { module = "androidx.compose.ui:ui" }
-androidxComposeUiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
-androidxComposeMaterial3 = { module = "androidx.compose.material3:material3" }
-androidxActivityCompose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
-androidxComposeMaterialIconsExtended = { module = "androidx.compose.material:material-icons-extended" }
-androidxComposeRuntimeLivedata = { module = "androidx.compose.runtime:runtime-livedata" }
-androidxComposeUiGraphics = { module = "androidx.compose.ui:ui-graphics" }
-androidxNavigationCompose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigationCompose" }
-androidxComposeUiTooling = { module = "androidx.compose.ui:ui-tooling" }
+composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+composeUi = { module = "androidx.compose.ui:ui" }
+composeUiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
+composeMaterial3 = { module = "androidx.compose.material3:material3" }
+activityCompose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+composeMaterialIconsExtended = { module = "androidx.compose.material:material-icons-extended" }
+composeRuntimeLivedata = { module = "androidx.compose.runtime:runtime-livedata" }
+composeUiGraphics = { module = "androidx.compose.ui:ui-graphics" }
+navigationCompose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+composeUiTooling = { module = "androidx.compose.ui:ui-tooling" }
 
 libsuCore = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsuCore" }
 libcxx = { module = "org.lsposed.libcxx:libcxx", version.ref = "libcxx" }
@@ -60,7 +60,7 @@ capsule = { module = "com.github.Kyant0:Capsule", version.ref = "capsule" }
 
 [bundles]
 kotlinxCoroutines = ["kotlinxCoroutinesCore", "kotlinxCoroutinesAndroid"]
-androidxCore = ["androidxAppcompat", "androidxBrowser", "androidxCoreKtx", "androidxFragmentKtx", "androidxRecyclerview", "androidxPreferenceKtx", "androidxCoreSplashscreen"]
-androidxLifecycle = ["androidxLifecycleViewmodelKtx", "androidxLifecycleLivedataKtx", "androidxLifecycleViewmodelCompose"]
-composeUi = ["androidxComposeUi", "androidxComposeUiToolingPreview", "androidxComposeMaterial3", "androidxActivityCompose", "androidxComposeMaterialIconsExtended", "androidxComposeRuntimeLivedata", "androidxComposeUiGraphics", "androidxNavigationCompose"]
+core = ["appcompat", "browser", "coreKtx", "fragmentKtx", "recyclerview", "preferenceKtx", "coreSplashscreen"]
+lifecycle = ["lifecycleViewmodelKtx", "lifecycleLivedataKtx", "lifecycleViewmodelCompose"]
+composeUi = ["composeUi", "composeUiToolingPreview", "composeMaterial3", "activityCompose", "composeMaterialIconsExtended", "composeRuntimeLivedata", "composeUiGraphics", "navigationCompose"]
 nativeCrypto = ["libcxx", "boringssl", "hiddenApiBypass", "bcpkix"]
