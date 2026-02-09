@@ -18,4 +18,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.13.1'
 
     api project(':shizuku-aidl')
+    api project(':aidl')
+    implementation libs.hidden.compat
+    compileOnly libs.hidden.stub
 }
