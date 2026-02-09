@@ -14,11 +14,11 @@ android {
     }
 }
 dependencies {
-    implementation "androidx.annotation:annotation:1.9.1"
+    implementation serverLibs.androidxAnnotation
     
-    implementation 'com.google.code.gson:gson:2.13.1'
+    implementation serverLibs.gson
     
-    api 'dev.rikka.rikkax.parcelablelist:parcelablelist:2.0.1'
+    api serverLibs.parcelablelist
 
     implementation project(':aidl')
     implementation project(':shared')
