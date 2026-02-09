@@ -26,8 +26,8 @@ dependencies {
     api project(':aidl')
     api project(':shared')
 
-    implementation 'androidx.annotation:annotation:1.9.1'
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation apiLibs.androidxAnnotation
+    implementation apiLibs.androidxCoreKtx
 }
 
 apply from: rootProject.file('publish.gradle')

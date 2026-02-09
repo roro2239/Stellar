@@ -22,7 +22,7 @@ android {
 dependencies {
     implementation project(':aidl')
 
-    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation apiLibs.androidxAnnotation
 }
 
 apply from: rootProject.file('publish.gradle')
