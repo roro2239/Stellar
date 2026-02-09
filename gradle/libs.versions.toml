@@ -1,0 +1,11 @@
+[versions]
+hiddenApi = "4.4.0"
+refine = "4.4.0"
+
+[libraries]
+hidden-compat = { module = "dev.rikka.hidden:compat", version.ref = "hiddenApi" }
+hidden-stub = { module = "dev.rikka.hidden:stub", version.ref = "hiddenApi" }
+
+refine-runtime = { module = "dev.rikka.tools.refine:runtime", version.ref = "refine" }
+refine-annotation = { module = "dev.rikka.tools.refine:annotation", version.ref = "refine" }
+refine-annotation-processor = { module = "dev.rikka.tools.refine:annotation-processor", version.ref = "refine" }
