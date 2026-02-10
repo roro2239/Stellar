@@ -45,10 +45,6 @@ dependencyResolutionManagement {
             from(files('api/api.versions.toml'))
         }
 
-        shizukuLibs {
-            from(files('shizuku/shizuku.versions.toml'))
-        }
-
         managerLibs {
             from(files('manager/manager.versions.toml'))
         }
@@ -91,13 +87,3 @@ project(':hidden-api-stub').projectDir = file("$root${File.separator}hidden-api-
 
 include ':userservice'
 project(':userservice').projectDir = file("$root${File.separator}userservice")
-
-// Shizuku 兼容层模块
-include ':shizuku-aidl'
-project(':shizuku-aidl').projectDir = file("shizuku${File.separator}aidl")
-
-include ':shizuku-api'
-project(':shizuku-api').projectDir = file("shizuku${File.separator}api")
-
-include ':shizuku-server'
-project(':shizuku-server').projectDir = file("shizuku${File.separator}server")

@@ -1,59 +1,50 @@
 package roro.stellar.server
 
 import android.content.Context
-import android.content.IContentProvider
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.content.pm.UserInfo
 import android.ddm.DdmHandleAppName
 import android.os.Binder
-import android.os.Build
 import android.os.Bundle
+import android.os.FileObserver
 import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.os.RemoteException
-import android.os.SELinux
 import android.os.ServiceManager
-import android.os.SystemProperties
-import android.system.Os
-import androidx.annotation.CallSuper
-import com.stellar.api.BinderContainer
 import com.stellar.server.IRemoteProcess
 import com.stellar.server.IStellarApplication
 import com.stellar.server.IStellarService
-import rikka.hidden.compat.ActivityManagerApis
-import rikka.hidden.compat.DeviceIdleControllerApis
+import com.stellar.server.IUserServiceCallback
 import rikka.hidden.compat.PackageManagerApis
-import rikka.hidden.compat.PermissionManagerApis
 import rikka.hidden.compat.UserManagerApis
 import rikka.parcelablelist.ParcelableListSlice
 import roro.stellar.StellarApiConstants
-import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ApkChangedObservers.start
 import roro.stellar.server.BinderSender.register
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
-import roro.stellar.server.api.IContentProviderUtils.callCompat
-import roro.stellar.server.api.RemoteProcessHolder
+import roro.stellar.server.communication.CallerContext
+import roro.stellar.server.communication.PermissionEnforcer
+import roro.stellar.server.communication.StellarCommunicationBridge
 import roro.stellar.server.ext.FollowStellarStartupExt
 import roro.stellar.server.ktx.mainHandler
-import roro.stellar.server.util.Logger
-import roro.stellar.server.util.OsUtils
-import roro.stellar.server.util.UserHandleCompat.getAppId
-import roro.stellar.server.util.UserHandleCompat.getUserId
+import roro.stellar.server.service.StellarServiceCore
 import roro.stellar.server.userservice.UserServiceManager
-import com.stellar.server.IUserServiceCallback
-import android.os.FileObserver
-import roro.stellar.shizuku.server.ShizukuApiConstants
-import roro.stellar.shizuku.server.ShizukuServiceIntercept
-import moe.shizuku.api.BinderContainer as ShizukuBinderContainer
+import roro.stellar.server.util.Logger
+import roro.stellar.server.util.UserHandleCompat.getAppId
 import java.io.File
-import java.io.IOException
 import kotlin.system.exitProcess
 
+/**
+ * Stellar 服务 - 通讯层入口
+ * 职责：
+ * 1. 接收 AIDL 调用
+ * 2. 委托给通讯桥接层处理
+ * 3. 管理服务生命周期
+ */
 class StellarService : IStellarService.Stub() {
 
     private val clientManager: ClientManager
@@ -61,8 +52,9 @@ class StellarService : IStellarService.Stub() {
     private val userServiceManager: UserServiceManager
     private val managerAppId: Int
 
-    // Shizuku 兼容层
-    private var shizukuIntercept: ShizukuServiceIntercept? = null
+    private val serviceCore: StellarServiceCore
+    internal val permissionEnforcer: PermissionEnforcer
+    private val bridge: StellarCommunicationBridge
 
     init {
         try {
@@ -94,6 +86,12 @@ class StellarService : IStellarService.Stub() {
             clientManager = ClientManager(configManager)
             userServiceManager = UserServiceManager()
 
+            LOGGER.i("初始化服务核心...")
+            System.err.println("初始化服务核心...")
+            serviceCore = StellarServiceCore(clientManager, configManager, userServiceManager)
+            permissionEnforcer = PermissionEnforcer(clientManager, configManager, managerAppId)
+            bridge = StellarCommunicationBridge(serviceCore, permissionEnforcer)
+
             LOGGER.i("启动文件监听...")
             System.err.println("启动文件监听...")
             start(ai.sourceDir) {
@@ -120,13 +118,6 @@ class StellarService : IStellarService.Stub() {
                 try {
                     sendBinderToClient()
                     sendBinderToManager()
-
-                    // 初始化 Shizuku 兼容层
-                    LOGGER.i("初始化 Shizuku 兼容层...")
-                    shizukuIntercept = createShizukuIntercept()
-                    sendShizukuBinderToClients()
-                    LOGGER.i("Shizuku 兼容层初始化完成")
-
                     FollowStellarStartupExt.schedule(configManager)
                     LOGGER.i("Stellar 服务启动完成")
                     System.err.println("Stellar 服务启动完成")
@@ -144,38 +135,148 @@ class StellarService : IStellarService.Stub() {
         }
     }
 
-    fun checkCallerManagerPermission(
-        callingUid: Int
-    ): Boolean {
-        return getAppId(callingUid) == managerAppId
+    // ========== AIDL 接口实现 - 服务信息 ==========
+
+    override fun getVersion(): Int {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetVersion(caller)
     }
 
-    val managerVersionName: String?
-        get() {
-            val pi: PackageInfo = managerPackageInfo ?: return "unknown"
-            return if (pi.versionName != null) pi.versionName else "unknown"
-        }
+    override fun getUid(): Int {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetUid(caller)
+    }
 
-    val managerVersionCode: Int
-        get() {
-            val pi: PackageInfo = managerPackageInfo ?: return -1
-            return try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    pi.longVersionCode.toInt()
-                } else {
-                    pi.versionCode
-                }
-            } catch (_: Exception) {
-                -1
-            }
-        }
+    override fun getSELinuxContext(): String? {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetSELinuxContext(caller)
+    }
+
+    override fun getVersionName(): String? {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetVersionName(caller)
+    }
+
+    override fun getVersionCode(): Int {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetVersionCode(caller)
+    }
+
+    // ========== AIDL 接口实现 - 权限管理 ==========
+
+    override fun checkSelfPermission(permission: String?): Boolean {
+        if (permission == null) return false
+        val caller = CallerContext.fromBinder()
+        return bridge.handleCheckSelfPermission(caller, permission)
+    }
+
+    override fun requestPermission(permission: String, requestCode: Int) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleRequestPermission(caller, permission, requestCode)
+    }
+
+    override fun shouldShowRequestPermissionRationale(): Boolean {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleShouldShowRequestPermissionRationale(caller)
+    }
+
+    override fun getSupportedPermissions(): Array<String> {
+        return bridge.handleGetSupportedPermissions()
+    }
+
+    override fun dispatchPermissionConfirmationResult(
+        requestUid: Int,
+        requestPid: Int,
+        requestCode: Int,
+        data: Bundle?
+    ) {
+        if (data == null) return
+        val caller = CallerContext.fromBinder()
+        bridge.handleDispatchPermissionConfirmationResult(caller, requestUid, requestPid, requestCode, data)
+    }
+
+    override fun getFlagForUid(uid: Int, permission: String): Int {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetFlagForUid(caller, uid, permission)
+    }
+
+    override fun updateFlagForUid(uid: Int, permission: String, flag: Int) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleUpdateFlagForUid(caller, uid, permission, flag)
+    }
+
+    override fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleGrantRuntimePermission(caller, packageName, permissionName, userId)
+    }
+
+    override fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleRevokeRuntimePermission(caller, packageName, permissionName, userId)
+    }
+
+    // ========== AIDL 接口实现 - 进程管理 ==========
+
+    override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleNewProcess(caller, cmd ?: emptyArray(), env, dir)
+    }
+
+    // ========== AIDL 接口实现 - 系统属性 ==========
+
+    override fun getSystemProperty(name: String?, defaultValue: String?): String {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetSystemProperty(caller, name ?: "", defaultValue ?: "")
+    }
+
+    override fun setSystemProperty(name: String?, value: String?) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleSetSystemProperty(caller, name ?: "", value ?: "")
+    }
+
+    // ========== AIDL 接口实现 - 用户服务 ==========
+
+    override fun startUserService(args: Bundle?, callback: IUserServiceCallback?): String? {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleStartUserService(caller, args, callback)
+    }
+
+    override fun stopUserService(token: String?) {
+        val caller = CallerContext.fromBinder()
+        bridge.handleStopUserService(caller, token)
+    }
+
+    override fun attachUserService(binder: IBinder?, options: Bundle?) {
+        bridge.handleAttachUserService(binder, options)
+    }
+
+    override fun getUserServiceCount(): Int {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetUserServiceCount(caller)
+    }
+
+    // ========== AIDL 接口实现 - 日志管理 ==========
+
+    override fun getLogs(): List<String> {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetLogs(caller)
+    }
+
+    override fun clearLogs() {
+        val caller = CallerContext.fromBinder()
+        bridge.handleClearLogs(caller)
+    }
+
+    // ========== AIDL 接口实现 - 服务控制 ==========
 
     override fun exit() {
-        enforceManagerPermission("exit")
+        val caller = CallerContext.fromBinder()
+        permissionEnforcer.enforceManager(caller, "exit")
         LOGGER.i("exit")
         exitProcess(0)
     }
 
+    // ========== 客户端连接管理 ==========
 
     override fun attachApplication(application: IStellarApplication?, args: Bundle?) {
         if (application == null || args == null) {
@@ -221,14 +322,14 @@ class StellarService : IStellarService.Stub() {
         LOGGER.i("attachApplication 完成: %s %d %d", requestPackageName, callingUid, callingPid)
 
         val reply = Bundle()
-        reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_UID, OsUtils.uid)
+        reply.putInt(StellarApiConstants.BIND_APPLICATION_SERVER_UID, serviceCore.serviceInfo.getUid())
         reply.putInt(
             StellarApiConstants.BIND_APPLICATION_SERVER_VERSION,
             StellarApiConstants.SERVER_VERSION
         )
         reply.putString(
             StellarApiConstants.BIND_APPLICATION_SERVER_SECONTEXT,
-            OsUtils.sELinuxContext
+            serviceCore.serviceInfo.getSELinuxContext()
         )
         reply.putInt(
             StellarApiConstants.BIND_APPLICATION_SERVER_PATCH_VERSION,
@@ -255,591 +356,8 @@ class StellarService : IStellarService.Stub() {
         }
     }
 
-    fun showPermissionConfirmation(
-        requestCode: Int,
-        clientRecord: ClientRecord,
-        callingUid: Int,
-        callingPid: Int,
-        userId: Int,
-        permission: String = "stellar"
-    ) {
-        val ai = PackageManagerApis.getApplicationInfoNoThrow(clientRecord.packageName, 0, userId)
-            ?: return
+    // ========== 自定义事务处理 ==========
 
-        val pi = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, userId)
-        val userInfo = UserManagerApis.getUserInfo(userId)
-        val isWorkProfileUser =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ("android.os.usertype.profile.MANAGED" == userInfo.userType) else (userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE) != 0
-        if (pi == null && !isWorkProfileUser) {
-            LOGGER.w("在非工作配置文件用户 %d 中未找到管理器，撤销权限", userId)
-            clientRecord.dispatchRequestPermissionResult(
-                requestCode,
-                allowed = false,
-                onetime = false
-            )
-            return
-        }
-
-        val intent = Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
-            .setPackage(MANAGER_APPLICATION_ID)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-            .putExtra("uid", callingUid)
-            .putExtra("pid", callingPid)
-            .putExtra("requestCode", requestCode)
-            .putExtra("applicationInfo", ai)
-            .putExtra(
-                "denyOnce",
-                (System.currentTimeMillis() - (clientRecord.lastDenyTimeMap[permission]
-                    ?: 0)) > 10000
-            )
-            .putExtra("permission", permission)
-        ActivityManagerApis.startActivityNoThrow(intent, null, if (isWorkProfileUser) 0 else userId)
-    }
-
-    @Throws(RemoteException::class)
-    override fun dispatchPermissionConfirmationResult(
-        requestUid: Int,
-        requestPid: Int,
-        requestCode: Int,
-        data: Bundle?
-    ) {
-        if (getAppId(getCallingUid()) != managerAppId) {
-            LOGGER.w("dispatchPermissionConfirmationResult 不是从管理器调用的")
-            return
-        }
-
-        if (data == null) {
-            return
-        }
-
-        val allowed = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED)
-        val onetime = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME)
-        val permission =
-            data.getString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, "stellar")
-
-        LOGGER.i(
-            "dispatchPermissionConfirmationResult: uid=$requestUid, pid=$requestPid, requestCode=$requestCode, allowed=$allowed, onetime=$onetime, permission=$permission"
-        )
-
-        val records: MutableList<ClientRecord> = clientManager.findClients(requestUid)
-        val packages = ArrayList<String>()
-        if (records.isEmpty()) {
-            if (permission == ShizukuServiceIntercept.SHIZUKU_PERMISSION) {
-                LOGGER.i("dispatchPermissionConfirmationResult：处理 Shizuku 权限 uid %d, allowed=%s", requestUid, allowed)
-                val newFlag = if (onetime) ShizukuServiceIntercept.FLAG_ASK
-                    else if (allowed) ShizukuServiceIntercept.FLAG_GRANTED
-                    else ShizukuServiceIntercept.FLAG_DENIED
-                shizukuConfigManager?.updateFlagForUid(requestUid, newFlag)
-                shizukuIntercept?.notifyPermissionResult(requestUid, requestCode, allowed)
-                return
-            }
-            LOGGER.w("dispatchPermissionConfirmationResult：未找到 uid %d 的客户端", requestUid)
-        } else {
-            for (record in records) {
-                packages.add(record.packageName)
-                if (StellarApiConstants.isRuntimePermission(permission)) {
-                    record.allowedMap[permission] = allowed
-                }
-                if (record.pid == requestPid) {
-                    record.dispatchRequestPermissionResult(
-                        requestCode, allowed, onetime,
-                        permission
-                    )
-                }
-            }
-        }
-
-        configManager.update(
-            requestUid,
-            packages
-        )
-        configManager.updatePermission(
-            requestUid,
-            permission,
-            if (onetime) ConfigManager.FLAG_ASK else if (allowed) ConfigManager.FLAG_GRANTED else ConfigManager.FLAG_DENIED
-        )
-    }
-
-    private fun getFlagForUidInternal(uid: Int, permission: String): Int {
-        val entry = configManager.find(uid)
-        return entry?.permissions[permission] ?: ConfigManager.FLAG_ASK
-    }
-
-    override fun getFlagForUid(uid: Int, permission: String): Int {
-        if (getAppId(getCallingUid()) != managerAppId) {
-            LOGGER.w("getFlagsForUid 只允许从管理器调用")
-            return 0
-        }
-
-        if (permission == "stellar" && isShizukuApp(uid)) {
-            return shizukuConfigManager?.getFlagForUid(uid) ?: ConfigManager.FLAG_ASK
-        }
-
-        return getFlagForUidInternal(uid, permission)
-    }
-
-    @Throws(RemoteException::class)
-    override fun updateFlagForUid(uid: Int, permission: String, newFlag: Int) {
-        if (getAppId(getCallingUid()) != managerAppId) {
-            LOGGER.w("updateFlagsForUid 只允许从管理器调用")
-            return
-        }
-
-        if (permission == "stellar" && isShizukuApp(uid)) {
-            shizukuConfigManager?.updateFlagForUid(uid, newFlag)
-            return
-        }
-
-        val records: MutableList<ClientRecord> = clientManager.findClients(uid)
-        for (record in records) {
-            fun stopApp() {
-                if (StellarApiConstants.isRuntimePermission(permission) && record.allowedMap[permission] == true) {
-                    ActivityManagerApis.forceStopPackageNoThrow(
-                        record.packageName,
-                        getUserId(uid)
-                    )
-                    onPermissionRevoked(record.packageName)
-                }
-            }
-
-            when (newFlag) {
-                ConfigManager.FLAG_ASK -> {
-                    stopApp()
-                    record.allowedMap[permission] = false
-                    record.onetimeMap[permission] = false
-                }
-
-                ConfigManager.FLAG_DENIED -> {
-                    stopApp()
-                    record.allowedMap[permission] = false
-                    record.onetimeMap[permission] = false
-                }
-
-                ConfigManager.FLAG_GRANTED -> {
-                    record.allowedMap[permission] = true
-                    record.onetimeMap[permission] = false
-                }
-            }
-        }
-
-        configManager.updatePermission(uid, permission, newFlag)
-    }
-
-    @Throws(RemoteException::class)
-    override fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
-        try {
-            PermissionManagerApis.grantRuntimePermission(packageName, permissionName, userId)
-        } catch (e: Exception) {
-            throw RemoteException("授予权限失败: ${e.message}")
-        }
-    }
-
-    @Throws(RemoteException::class)
-    override fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
-        try {
-            PermissionManagerApis.revokeRuntimePermission(packageName, permissionName, userId)
-        } catch (e: Exception) {
-            throw RemoteException("撤销权限失败: ${e.message}")
-        }
-    }
-
-    private fun onPermissionRevoked(packageName: String?) {
-    }
-
-    private fun isShizukuApp(uid: Int): Boolean {
-        val userId = getUserId(uid)
-        for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-            PackageManager.GET_META_DATA.toLong(), userId
-        )) {
-            val applicationInfo = pi.applicationInfo ?: continue
-            if (applicationInfo.uid != uid) continue
-            val metaData = applicationInfo.metaData ?: continue
-            val shizukuSupport = metaData.get(ShizukuApiConstants.META_DATA_KEY)
-            if (shizukuSupport == true || shizukuSupport == "true") {
-                return true
-            }
-        }
-        return false
-    }
-    private fun getPackageNameForUid(uid: Int): String? {
-        val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
-        return packages.firstOrNull()
-    }
-
-    private fun getApplications(userId: Int): ParcelableListSlice<PackageInfo?> {
-        val list = ArrayList<PackageInfo?>()
-        val users = ArrayList<Int?>()
-        if (userId == -1) {
-            users.addAll(UserManagerApis.getUserIdsNoThrow())
-        } else {
-            users.add(userId)
-        }
-
-        for (user in users) {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                PackageManager.GET_META_DATA.toLong(),
-                user!!
-            )) {
-                if (MANAGER_APPLICATION_ID == pi.packageName) continue
-                if (pi.packageName == ShizukuApiConstants.SHIZUKU_APP_PACKAGE_NAME) continue
-                val applicationInfo = pi.applicationInfo ?: continue
-                val uid = applicationInfo.uid
-                val metaData = applicationInfo.metaData
-
-                // 检查是否为 Shizuku 应用（优先检查，不受 ConfigManager 影响）
-                if (metaData != null) {
-                    val shizukuSupport = metaData.get(ShizukuApiConstants.META_DATA_KEY)
-                    if (shizukuSupport == true || shizukuSupport == "true") {
-                        list.add(pi)
-                        continue
-                    }
-                }
-
-                // 检查 Stellar 原生应用
-                var isStellarApp = false
-
-                // 检查 ConfigManager 中的配置
-                configManager.find(uid)?.let {
-                    if (it.packages.contains(pi.packageName)) {
-                        isStellarApp = true
-                    }
-                }
-
-                // 检查 meta-data 中的 Stellar 权限声明
-                if (!isStellarApp && metaData != null) {
-                    if (metaData.getString(PERMISSION_KEY, "")
-                            .split(",").contains("stellar")) {
-                        isStellarApp = true
-                    }
-                }
-
-                if (isStellarApp) {
-                    list.add(pi)
-                }
-            }
-        }
-        return ParcelableListSlice<PackageInfo?>(list)
-    }
-
-    fun enforceManagerPermission(func: String) {
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-
-        if (callingPid == Os.getpid()) {
-            return
-        }
-
-        if (checkCallerManagerPermission(callingUid)) {
-            return
-        }
-
-        val msg = ("Permission Denial: " + func + " from pid="
-                + getCallingPid()
-                + " is not manager ")
-        LOGGER.w(msg)
-        throw SecurityException(msg)
-    }
-
-    fun enforceCallingPermission(func: String) {
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-
-        if (callingUid == OsUtils.uid) {
-            return
-        }
-
-        if (checkCallerManagerPermission(callingUid)) {
-            return
-        }
-
-        val clientRecord = clientManager.findClient(callingUid, callingPid)
-
-        if (clientRecord == null) {
-            val msg = ("Permission Denial: " + func + " from pid="
-                    + getCallingPid()
-                    + " is not an attached client")
-            LOGGER.w(msg)
-            throw SecurityException(msg)
-        }
-
-        if (clientRecord.allowedMap["stellar"] != true) {
-            val msg = ("Permission Denial: " + func + " from pid="
-                    + getCallingPid()
-                    + " requires permission")
-            LOGGER.w(msg)
-            throw SecurityException(msg)
-        }
-    }
-
-    fun transactRemote(data: Parcel, reply: Parcel?, flags: Int) {
-        enforceCallingPermission("transactRemote")
-
-        val targetBinder = data.readStrongBinder()
-        val targetCode = data.readInt()
-        val targetFlags: Int
-
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-        val clientRecord = clientManager.findClient(callingUid, callingPid)
-
-        targetFlags = if (clientRecord != null && clientRecord.apiVersion >= 13) {
-            data.readInt()
-        } else {
-            flags
-        }
-
-        LOGGER.d(
-            "transact: uid=%d, descriptor=%s, code=%d",
-            getCallingUid(),
-            targetBinder.interfaceDescriptor,
-            targetCode
-        )
-
-
-        val newData = Parcel.obtain()
-        try {
-            newData.appendFrom(data, data.dataPosition(), data.dataAvail())
-        } catch (tr: Throwable) {
-            LOGGER.w(tr, "appendFrom")
-            return
-        }
-        try {
-            val id = clearCallingIdentity()
-            targetBinder.transact(targetCode, newData, reply, targetFlags)
-            restoreCallingIdentity(id)
-        } finally {
-            newData.recycle()
-        }
-    }
-
-    override fun getVersion(): Int {
-        enforceCallingPermission("getVersion")
-        return StellarApiConstants.SERVER_VERSION
-    }
-
-    override fun getUid(): Int {
-        enforceCallingPermission("getUid")
-        return Os.getuid()
-    }
-
-    override fun checkPermission(permission: String?): Int {
-        enforceCallingPermission("checkPermission")
-        return PermissionManagerApis.checkPermission(permission, Os.getuid())
-    }
-
-    override fun getSELinuxContext(): String? {
-        enforceCallingPermission("getSELinuxContext")
-
-        try {
-            return SELinux.getContext()
-        } catch (tr: Throwable) {
-            throw IllegalStateException(tr.message)
-        }
-    }
-
-    override fun getVersionName(): String? {
-        enforceCallingPermission("getVersionName")
-        return this.managerVersionName
-    }
-
-    override fun getVersionCode(): Int {
-        enforceCallingPermission("getVersionCode")
-        return this.managerVersionCode
-    }
-
-    override fun getSystemProperty(name: String?, defaultValue: String?): String {
-        enforceCallingPermission("getSystemProperty")
-
-        try {
-            return SystemProperties.get(name, defaultValue)
-        } catch (tr: Throwable) {
-            throw IllegalStateException(tr.message)
-        }
-    }
-
-    override fun setSystemProperty(name: String?, value: String?) {
-        enforceCallingPermission("setSystemProperty")
-
-        try {
-            SystemProperties.set(name, value)
-        } catch (tr: Throwable) {
-            throw IllegalStateException(tr.message)
-        }
-    }
-
-    override fun getSupportedPermissions(): Array<out String> {
-        return StellarApiConstants.PERMISSIONS
-    }
-
-    override fun checkSelfPermission(permission: String?): Boolean {
-        if (!supportedPermissions.contains(permission)) return false
-
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-
-        if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
-            return true
-        }
-
-        if (checkCallerManagerPermission(callingUid)) {
-            return true
-        }
-
-        return when (configManager.find(callingUid)?.permissions?.get(permission)) {
-            ConfigManager.FLAG_GRANTED -> true
-            ConfigManager.FLAG_DENIED -> false
-            else -> {
-                if (StellarApiConstants.isRuntimePermission(permission!!))
-                    clientManager.requireClient(callingUid, callingPid).allowedMap[permission]
-                        ?: false
-                else false
-            }
-        }
-    }
-
-    override fun requestPermission(
-        permission: String,
-        requestCode: Int
-    ) {
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-        val userId = getUserId(callingUid)
-
-        if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
-            return
-        }
-
-        val clientRecord = clientManager.requireClient(callingUid, callingPid)
-
-        if (!supportedPermissions.contains(permission)) {
-            clientRecord.dispatchRequestPermissionResult(
-                requestCode,
-                allowed = false,
-                onetime = false,
-                permission
-            )
-            return
-        }
-
-        when (configManager.find(callingUid)?.permissions?.get(permission) ?: return) {
-            ConfigManager.FLAG_GRANTED -> {
-                clientRecord.dispatchRequestPermissionResult(
-                    requestCode,
-                    allowed = true,
-                    onetime = false,
-                    permission
-                )
-                return
-            }
-
-            ConfigManager.FLAG_DENIED -> {
-                clientRecord.dispatchRequestPermissionResult(
-                    requestCode,
-                    allowed = false,
-                    onetime = false,
-                    permission
-                )
-                return
-            }
-
-            else -> {
-                showPermissionConfirmation(
-                    requestCode,
-                    clientRecord,
-                    callingUid,
-                    callingPid,
-                    userId,
-                    permission
-                )
-            }
-        }
-    }
-
-    override fun shouldShowRequestPermissionRationale(): Boolean {
-        val callingUid = getCallingUid()
-        val callingPid = getCallingPid()
-
-        if (callingUid == OsUtils.uid || callingPid == OsUtils.pid) {
-            return true
-        }
-
-        clientManager.requireClient(callingUid, callingPid)
-
-        val entry = configManager.find(callingUid)
-        return entry != null && entry.permissions["stellar"] == ConfigManager.FLAG_DENIED
-    }
-
-    override fun newProcess(
-        cmd: Array<String?>?,
-        env: Array<String?>?,
-        dir: String?
-    ): IRemoteProcess {
-        enforceCallingPermission("newProcess")
-
-        LOGGER.d(
-            "newProcess: uid=%d, cmd=%s, env=%s, dir=%s",
-            getCallingUid(),
-            cmd.contentToString(),
-            env.contentToString(),
-            dir
-        )
-
-        val process: Process
-        try {
-            process = Runtime.getRuntime().exec(cmd, env, if (dir != null) File(dir) else null)
-        } catch (e: IOException) {
-            throw IllegalStateException(e.message)
-        }
-
-        val clientRecord = clientManager.findClient(getCallingUid(), getCallingPid())
-        val token = clientRecord?.client?.asBinder()
-
-        return RemoteProcessHolder(process, token)
-    }
-
-    override fun startUserService(args: Bundle?, callback: IUserServiceCallback?): String? {
-        enforceCallingPermission("startUserService")
-        if (args == null) return null
-
-        return userServiceManager.startUserService(
-            getCallingUid(),
-            getCallingPid(),
-            args,
-            callback
-        )
-    }
-
-    override fun stopUserService(token: String?) {
-        enforceCallingPermission("stopUserService")
-        if (token == null) return
-
-        userServiceManager.stopUserService(token)
-    }
-
-    override fun attachUserService(binder: IBinder?, options: Bundle?) {
-        if (binder == null || options == null) return
-
-        userServiceManager.attachUserService(binder, options)
-    }
-
-    override fun getUserServiceCount(): Int {
-        enforceCallingPermission("getUserServiceCount")
-
-        return userServiceManager.getUserServiceCount(getCallingUid())
-    }
-
-    override fun getLogs(): List<String> {
-        enforceManagerPermission("getLogs")
-        return Logger.getLogsFormatted()
-    }
-
-    override fun clearLogs() {
-        enforceManagerPermission("clearLogs")
-        Logger.clearLogs()
-    }
-
-    @CallSuper
-    @Throws(RemoteException::class)
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(StellarApiConstants.BINDER_DESCRIPTOR)
@@ -858,15 +376,95 @@ class StellarService : IStellarService.Stub() {
         return super.onTransact(code, data, reply, flags)
     }
 
-    fun sendBinderToClient() {
-        for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendBinderToClient(this, userId)
+    private fun transactRemote(data: Parcel, reply: Parcel?, flags: Int) {
+        val caller = CallerContext.fromBinder()
+        permissionEnforcer.enforcePermission(caller, "transactRemote")
+
+        val targetBinder = data.readStrongBinder()
+        val targetCode = data.readInt()
+        val targetFlags: Int
+
+        val clientRecord = clientManager.findClient(caller.uid, caller.pid)
+
+        targetFlags = if (clientRecord != null && clientRecord.apiVersion >= 13) {
+            data.readInt()
+        } else {
+            flags
+        }
+
+        LOGGER.d(
+            "transact: uid=%d, descriptor=%s, code=%d",
+            caller.uid,
+            targetBinder.interfaceDescriptor,
+            targetCode
+        )
+
+        val newData = Parcel.obtain()
+        try {
+            newData.appendFrom(data, data.dataPosition(), data.dataAvail())
+        } catch (tr: Throwable) {
+            LOGGER.w(tr, "appendFrom")
+            return
+        }
+        try {
+            val id = clearCallingIdentity()
+            targetBinder.transact(targetCode, newData, reply, targetFlags)
+            restoreCallingIdentity(id)
+        } finally {
+            newData.recycle()
         }
     }
 
-    fun sendBinderToManager() {
-        sendBinderToManger(this)
+    override fun checkPermission(permission: String?): Int {
+        val caller = CallerContext.fromBinder()
+        permissionEnforcer.enforcePermission(caller, "checkPermission")
+        return rikka.hidden.compat.PermissionManagerApis.checkPermission(permission, serviceCore.serviceInfo.getUid())
     }
+
+    // ========== 应用列表管理 ==========
+
+    private fun getApplications(userId: Int): ParcelableListSlice<PackageInfo?> {
+        val list = ArrayList<PackageInfo?>()
+        val users = ArrayList<Int?>()
+        if (userId == -1) {
+            users.addAll(UserManagerApis.getUserIdsNoThrow())
+        } else {
+            users.add(userId)
+        }
+
+        for (user in users) {
+            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
+                PackageManager.GET_META_DATA.toLong(),
+                user!!
+            )) {
+                if (MANAGER_APPLICATION_ID == pi.packageName) continue
+                val applicationInfo = pi.applicationInfo ?: continue
+
+                val uid = applicationInfo.uid
+                var flag = -1
+
+                configManager.find(uid)?.let {
+                    if (!it.packages.contains(pi.packageName)) continue
+                    it.permissions["stellar"]?.let { configFlag ->
+                        flag = configFlag
+                    }
+                }
+
+                if (flag != -1) {
+                    list.add(pi)
+                } else if (applicationInfo.metaData != null && applicationInfo.metaData.getString(
+                        StellarApiConstants.PERMISSION_KEY,
+                        ""
+                    ).split(",").contains("stellar")
+                ) {
+                    list.add(pi)
+                }
+            }
+        }
+        return ParcelableListSlice<PackageInfo?>(list)
+    }
+
+    // ========== 文件监听 ==========
 
     @Suppress("DEPRECATION")
     private fun registerPackageRemovedReceiver(ai: ApplicationInfo) {
@@ -911,122 +509,21 @@ class StellarService : IStellarService.Stub() {
         return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
     }
 
-    // ============ Shizuku 兼容方法 ============
+    // ========== Binder 发送 ==========
 
-    // Shizuku 独立配置管理器
-    private var shizukuConfigManager: roro.stellar.shizuku.server.ShizukuConfigManager? = null
-
-    private fun createShizukuIntercept(): ShizukuServiceIntercept {
-        // 初始化 Shizuku 配置管理器
-        shizukuConfigManager = roro.stellar.shizuku.server.ShizukuConfigManager()
-
-        val callback = object : roro.stellar.shizuku.server.ShizukuServiceCallback {
-            override fun getStellarService() = this@StellarService
-            override fun getManagerAppId(): Int = managerAppId
-            override fun getServicePid(): Int = OsUtils.pid
-
-            override fun getPackagesForUid(uid: Int): List<String> {
-                return PackageManagerApis.getPackagesForUidNoThrow(uid)
-            }
-
-            override fun checkShizukuPermission(uid: Int): Int {
-                return shizukuConfigManager?.getFlagForUid(uid) ?: ShizukuServiceIntercept.FLAG_ASK
-            }
-
-            override fun updateShizukuPermission(uid: Int, flag: Int) {
-                shizukuConfigManager?.updateFlagForUid(uid, flag)
-            }
-
-            override fun showPermissionConfirmation(
-                requestCode: Int,
-                uid: Int,
-                pid: Int,
-                userId: Int,
-                packageName: String
-            ) {
-                showShizukuPermissionConfirmation(requestCode, uid, pid, userId, packageName)
-            }
-
-            override fun dispatchPermissionResult(uid: Int, requestCode: Int, allowed: Boolean) {
-                shizukuIntercept?.notifyPermissionResult(uid, requestCode, allowed)
-            }
-        }
-
-        return ShizukuServiceIntercept(callback, {
-            PackageManagerApis.getApplicationInfoNoThrow(
-                ServerConstants.MANAGER_APPLICATION_ID, 0, 0
-            )?.sourceDir ?: ""
-        }) { packageName, flags, userId ->
-            PackageManagerApis.getPackageInfoNoThrow(packageName, flags, userId)
-        }
-    }
-
-    private fun showShizukuPermissionConfirmation(
-        requestCode: Int,
-        callingUid: Int,
-        callingPid: Int,
-        userId: Int,
-        packageName: String
-    ) {
-        val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
-            ?: return
-
-        val pi = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, userId)
-        val userInfo = UserManagerApis.getUserInfo(userId)
-        val isWorkProfileUser =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                "android.os.usertype.profile.MANAGED" == userInfo.userType
-            } else {
-                (userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE) != 0
-            }
-
-        if (pi == null && !isWorkProfileUser) {
-            LOGGER.w("在非工作配置文件用户 %d 中未找到管理器，撤销 Shizuku 权限", userId)
-            updateFlagForUid(callingUid, ShizukuServiceIntercept.SHIZUKU_PERMISSION, ShizukuServiceIntercept.FLAG_DENIED)
-            return
-        }
-
-        val intent = Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
-            .setPackage(MANAGER_APPLICATION_ID)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-            .putExtra("uid", callingUid)
-            .putExtra("pid", callingPid)
-            .putExtra("requestCode", requestCode)
-            .putExtra("applicationInfo", ai)
-            .putExtra("denyOnce", true)
-            .putExtra("permission", "shizuku")
-
-        ActivityManagerApis.startActivityNoThrow(intent, null, if (isWorkProfileUser) 0 else userId)
-    }
-
-    fun getShizukuBinder(): Binder? = shizukuIntercept
-
-    fun sendShizukuBinderToClients() {
-        val binder = shizukuIntercept ?: return
+    fun sendBinderToClient() {
         for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendShizukuBinderToClients(binder, userId)
+            sendBinderToClient(this, userId)
         }
     }
 
-    private fun sendShizukuBinderToClients(binder: Binder, userId: Int) {
-        try {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                PackageManager.GET_META_DATA.toLong(), userId
-            )) {
-                if (pi?.applicationInfo?.metaData == null) continue
-
-                val shizukuSupport = pi.applicationInfo!!.metaData.get(ShizukuApiConstants.META_DATA_KEY)
-                if (shizukuSupport == true || shizukuSupport == "true") {
-                    sendShizukuBinderToUserApp(binder, pi.packageName, userId)
-                }
-            }
-        } catch (tr: Throwable) {
-            LOGGER.e("发送 Shizuku Binder 时发生异常", tr = tr)
-        }
+    fun sendBinderToManager() {
+        sendBinderToManger(this)
     }
+
+    // ========== Companion Object ==========
 
     companion object {
-
         private val LOGGER: Logger = Logger("StellarService")
 
         @JvmStatic
@@ -1052,9 +549,6 @@ class StellarService : IStellarService.Stub() {
         val managerApplicationInfo: ApplicationInfo?
             get() = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
 
-        val managerPackageInfo: PackageInfo?
-            get() = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
-
         private fun sendBinderToClient(binder: Binder?, userId: Int) {
             try {
                 for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
@@ -1063,7 +557,7 @@ class StellarService : IStellarService.Stub() {
                 )) {
                     if (pi == null || pi.applicationInfo == null || pi.applicationInfo!!.metaData == null) continue
 
-                    if (pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",")
+                    if (pi.applicationInfo!!.metaData.getString(StellarApiConstants.PERMISSION_KEY, "").split(",")
                             .contains("stellar")
                     ) {
                         sendBinderToUserApp(binder, pi.packageName, userId)
@@ -1091,7 +585,7 @@ class StellarService : IStellarService.Stub() {
             retry: Boolean = true
         ) {
             try {
-                DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
+                rikka.hidden.compat.DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
                     packageName, (30 * 1000).toLong(), userId,
                     316, "shell"
                 )
@@ -1101,12 +595,11 @@ class StellarService : IStellarService.Stub() {
             }
 
             val name = "$packageName.stellar"
-            var provider: IContentProvider? = null
-
+            var provider: android.content.IContentProvider? = null
             val token: IBinder? = null
 
             try {
-                provider = ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
+                provider = rikka.hidden.compat.ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
                 if (provider == null) {
                     LOGGER.e("provider 为 null %s %d", name, userId)
                     return
@@ -1115,7 +608,7 @@ class StellarService : IStellarService.Stub() {
                     LOGGER.e("provider 已失效 %s %d", name, userId)
 
                     if (retry) {
-                        ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
+                        rikka.hidden.compat.ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
                         LOGGER.e("终止用户 %d 中的 %s 并重试", userId, packageName)
                         Thread.sleep(1000)
                         sendBinderToUserApp(binder, packageName, userId, false)
@@ -1130,10 +623,10 @@ class StellarService : IStellarService.Stub() {
                 val extra = Bundle()
                 extra.putParcelable(
                     "roro.stellar.manager.intent.extra.BINDER",
-                    BinderContainer(binder)
+                    com.stellar.api.BinderContainer(binder)
                 )
 
-                val reply = callCompat(provider, null, name, "sendBinder", null, extra)
+                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(provider, null, name, "sendBinder", null, extra)
                 if (reply != null) {
                     LOGGER.i("已向用户 %d 中的用户应用 %s 发送 binder", userId, packageName)
                 } else {
@@ -1144,64 +637,10 @@ class StellarService : IStellarService.Stub() {
             } finally {
                 if (provider != null) {
                     try {
-                        ActivityManagerApis.removeContentProviderExternal(name, token)
+                        rikka.hidden.compat.ActivityManagerApis.removeContentProviderExternal(name, token)
                     } catch (tr: Throwable) {
                         LOGGER.w(tr, "移除 ContentProvider 失败")
                     }
-                }
-            }
-        }
-
-        fun sendShizukuBinderToUserApp(
-            binder: Binder?,
-            packageName: String?,
-            userId: Int,
-            retry: Boolean = true
-        ) {
-            try {
-                DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
-                    packageName, (30 * 1000).toLong(), userId, 316, "shell"
-                )
-            } catch (tr: Throwable) {
-                LOGGER.w(tr, "添加 Shizuku 应用到省电白名单失败")
-            }
-
-            val name = "$packageName${ShizukuApiConstants.PROVIDER_SUFFIX}"
-            var provider: IContentProvider? = null
-            val token: IBinder? = null
-
-            try {
-                provider = ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
-                if (provider == null) {
-                    LOGGER.d("Shizuku provider 为 null: %s %d", name, userId)
-                    return
-                }
-                if (!provider.asBinder().pingBinder()) {
-                    LOGGER.d("Shizuku provider 已失效: %s %d", name, userId)
-                    if (retry) {
-                        Thread.sleep(1000)
-                        sendShizukuBinderToUserApp(binder, packageName, userId, false)
-                    }
-                    return
-                }
-
-                val extra = Bundle()
-                extra.putParcelable(
-                    ShizukuApiConstants.EXTRA_BINDER,
-                    ShizukuBinderContainer(binder)
-                )
-
-                val reply = callCompat(provider, null, name, "sendBinder", null, extra)
-                if (reply != null) {
-                    LOGGER.i("已向 Shizuku 应用 %s 发送 binder (userId=%d)", packageName, userId)
-                }
-            } catch (tr: Throwable) {
-                LOGGER.d("向 Shizuku 应用发送 binder 失败: %s", tr.message)
-            } finally {
-                if (provider != null) {
-                    try {
-                        ActivityManagerApis.removeContentProviderExternal(name, token)
-                    } catch (_: Throwable) {}
                 }
             }
         }
