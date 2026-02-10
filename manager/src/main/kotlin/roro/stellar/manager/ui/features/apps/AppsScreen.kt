@@ -57,10 +57,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
-import roro.stellar.manager.compat.Status
-import roro.stellar.manager.management.AppsViewModel
-import roro.stellar.manager.management.AppInfo
-import roro.stellar.manager.management.AppType
+import roro.stellar.manager.common.state.Status
+import roro.stellar.manager.domain.apps.AppInfo
+import roro.stellar.manager.domain.apps.AppType
+import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.ui.components.StellarInfoDialog
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar

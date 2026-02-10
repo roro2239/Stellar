@@ -8,7 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
-import roro.stellar.manager.compat.Resource
+import roro.stellar.manager.common.state.Resource
 import roro.stellar.manager.model.ServiceStatus
 import roro.stellar.manager.util.Logger.Companion.LOGGER
 
