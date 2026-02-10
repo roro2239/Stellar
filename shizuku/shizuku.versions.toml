@@ -1,7 +1,0 @@
-[versions]
-androidxAnnotation = "1.9.1"
-gson = "2.13.1"
-
-[libraries]
-androidxAnnotation = { module = "androidx.annotation:annotation", version.ref = "androidxAnnotation" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
