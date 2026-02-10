@@ -1,4 +1,4 @@
-package roro.stellar.manager.ui.features.starter
+package roro.stellar.manager.startup.service
 
 import android.app.Service
 import android.content.Intent

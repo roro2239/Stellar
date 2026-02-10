@@ -4,7 +4,7 @@ import android.content.pm.PackageInfo
 import android.os.Parcel
 import rikka.parcelablelist.ParcelableListSlice
 import roro.stellar.Stellar
-import roro.stellar.manager.management.AppType
+import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.server.ServerConstants
 
 object AuthorizationManager {

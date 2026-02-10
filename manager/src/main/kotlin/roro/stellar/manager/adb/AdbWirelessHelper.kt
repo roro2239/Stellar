@@ -17,7 +17,7 @@ import roro.stellar.manager.StellarSettings
 
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
-import roro.stellar.manager.ui.features.starter.Starter
+import roro.stellar.manager.startup.command.Starter
 import java.net.Socket
 import javax.net.ssl.SSLException
 

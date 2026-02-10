@@ -1,4 +1,4 @@
-package roro.stellar.manager.management
+package roro.stellar.manager.domain.apps
 
 import android.content.Context
 import android.content.pm.PackageInfo
@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
-import roro.stellar.manager.compat.Resource
+import roro.stellar.manager.common.state.Resource
 
 /**
  * 应用类型枚举
