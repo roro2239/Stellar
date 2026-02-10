@@ -16,8 +16,8 @@ import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.ui.features.starter.SelfStarterService
-import roro.stellar.manager.ui.features.starter.Starter
+import roro.stellar.manager.startup.command.Starter
+import roro.stellar.manager.startup.service.SelfStarterService
 import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.UserHandleCompat
 

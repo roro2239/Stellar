@@ -42,8 +42,8 @@ import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.BuildConfig
+import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.StellarSettings
-import roro.stellar.manager.ui.features.starter.Starter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

@@ -1,4 +1,4 @@
-package roro.stellar.manager.compat
+package roro.stellar.manager.common.state
 
 enum class Status {
     SUCCESS,
