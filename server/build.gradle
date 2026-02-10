@@ -15,16 +15,14 @@ android {
 }
 dependencies {
     implementation serverLibs.androidxAnnotation
-    
+
     implementation serverLibs.gson
-    
+
     api serverLibs.parcelablelist
 
     implementation project(':aidl')
     implementation project(':shared')
     compileOnly project(':provider')
-
-    implementation project(':shizuku-server')
 
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub

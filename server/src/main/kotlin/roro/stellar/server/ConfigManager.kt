@@ -243,15 +243,7 @@ class ConfigManager {
     }
 
     private fun updatePermissionLocked(uid: Int, permission: String, newFlag: Int) {
-        var entry = findLocked(uid)
-        if (entry == null) {
-            entry = PackageEntry()
-            val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
-            entry.packages.addAll(packages)
-            config.packages[uid] = entry
-            LOGGER.i("为 uid %d 创建新的配置条目, packages=%s", uid, packages.toString())
-        }
-        entry.permissions[permission] = newFlag
+        findLocked(uid)?.let { it.permissions[permission] = newFlag }
         scheduleWriteLocked()
     }
 
