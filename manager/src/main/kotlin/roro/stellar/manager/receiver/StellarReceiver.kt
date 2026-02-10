@@ -6,7 +6,7 @@ import android.content.Intent
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.model.ServiceStatus
-import roro.stellar.manager.ui.features.starter.SelfStarterService
+import roro.stellar.manager.startup.service.SelfStarterService
 
 class StellarReceiver : BroadcastReceiver() {
     private val adbWirelessHelper = AdbWirelessHelper()

@@ -22,11 +22,11 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
-import roro.stellar.manager.management.AppsViewModel
+import roro.stellar.manager.domain.apps.AppsViewModel
+import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.ui.components.ModernActionCard
 import roro.stellar.manager.ui.components.StellarConfirmDialog
 import roro.stellar.manager.ui.components.StellarDialog
-import roro.stellar.manager.ui.features.starter.Starter
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppSpacing

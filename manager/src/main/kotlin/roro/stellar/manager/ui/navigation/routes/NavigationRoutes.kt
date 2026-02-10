@@ -46,27 +46,3 @@ enum class MainScreen(
     )
 }
 
-enum class HomeScreen(
-    val route: String
-) {
-    Home("home")
-}
-
-enum class AppsScreen(
-    val route: String
-) {
-    Home("apps")
-}
-
-enum class TerminalScreen(
-    val route: String
-) {
-    Home("terminal")
-}
-
-enum class SettingsScreen(
-    val route: String
-) {
-    Home("settings")
-}
-

@@ -25,17 +25,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import roro.stellar.manager.management.appsViewModel
+import roro.stellar.manager.domain.apps.AppsViewModel
+import roro.stellar.manager.domain.apps.appsViewModel
 import roro.stellar.manager.ui.features.apps.AppsScreen
 import roro.stellar.manager.ui.features.home.HomeScreen
 import roro.stellar.manager.ui.features.home.HomeViewModel
 import roro.stellar.manager.ui.features.settings.SettingsScreen
 import roro.stellar.manager.ui.features.terminal.TerminalScreen
+import roro.stellar.manager.ui.features.manager.ManagerActivity
 import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
 import roro.stellar.manager.ui.navigation.routes.MainScreen
-import roro.stellar.manager.ui.features.manager.ManagerActivity
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
@@ -112,7 +113,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainScreenContent(
     homeViewModel: HomeViewModel,
-    appsViewModel: roro.stellar.manager.management.AppsViewModel
+    appsViewModel: AppsViewModel
 ) {
     val topAppBarState = LocalTopAppBarState.current!!
     val navController = rememberNavController()

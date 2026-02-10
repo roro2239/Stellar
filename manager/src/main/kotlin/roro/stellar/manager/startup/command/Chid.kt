@@ -1,4 +1,4 @@
-package roro.stellar.manager.ui.features.starter
+package roro.stellar.manager.startup.command
 
 import roro.stellar.manager.application
 import java.io.File

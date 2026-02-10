@@ -89,7 +89,7 @@
         </service>
 
         <service
-            android:name=".ui.features.starter.SelfStarterService"
+            android:name=".startup.service.SelfStarterService"
             android:enabled="true"
             android:exported="false" />
 
