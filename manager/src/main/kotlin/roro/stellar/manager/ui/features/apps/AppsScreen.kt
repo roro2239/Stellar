@@ -338,10 +338,33 @@ fun AppListItem(
         }
     }
 
+    // 根据应用类型选择权限类型
+    val permissionType = if (isShizukuApp) "shizuku" else "stellar"
+
+    // Shizuku 权限标志转换函数
+    fun shizukuToStellarFlag(shizukuFlag: Int): Int {
+        return when (shizukuFlag) {
+            0 -> AuthorizationManager.FLAG_ASK      // FLAG_ASK
+            2 -> AuthorizationManager.FLAG_GRANTED  // FLAG_GRANTED (1 << 1)
+            4 -> AuthorizationManager.FLAG_DENIED   // FLAG_DENIED (1 << 2)
+            else -> AuthorizationManager.FLAG_ASK
+        }
+    }
+
+    fun stellarToShizukuFlag(stellarFlag: Int): Int {
+        return when (stellarFlag) {
+            AuthorizationManager.FLAG_ASK -> 0
+            AuthorizationManager.FLAG_GRANTED -> 2  // 1 << 1
+            AuthorizationManager.FLAG_DENIED -> 4   // 1 << 2
+            else -> 0
+        }
+    }
+
     var stellarFlag by remember {
         mutableIntStateOf(
             try {
-                Stellar.getFlagForUid(uid, "stellar")
+                val rawFlag = Stellar.getFlagForUid(uid, permissionType)
+                if (isShizukuApp) shizukuToStellarFlag(rawFlag) else rawFlag
             } catch (e: Exception) {
                 LOGGER.w("获取应用授权状态异常", tr = e)
                 AuthorizationManager.FLAG_ASK
@@ -443,13 +466,14 @@ fun AppListItem(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 PermissionItem(
-                    title = "基础权限",
-                    subtitle = "使用 Stellar 功能",
+                    title = if (isShizukuApp) "Shizuku 权限" else "基础权限",
+                    subtitle = if (isShizukuApp) "使用 Shizuku 功能" else "使用 Stellar 功能",
                     currentFlag = stellarFlag,
                     onFlagChange = { newFlag ->
                         try {
                             stellarFlag = newFlag
-                            Stellar.updateFlagForUid(uid, "stellar", newFlag)
+                            val actualFlag = if (isShizukuApp) stellarToShizukuFlag(newFlag) else newFlag
+                            Stellar.updateFlagForUid(uid, permissionType, actualFlag)
                             onUpdateFlag(newFlag)
                         } catch (e: Exception) {
                             LOGGER.e("更新权限失败", tr = e)

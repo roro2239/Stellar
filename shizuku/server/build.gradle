@@ -1,11 +1,10 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'dev.rikka.tools.refine'
 }
 
 android {
-    namespace 'com.stellar.server'
+    namespace 'roro.stellar.shizuku.server'
     buildFeatures {
         buildConfig = false
     }
@@ -13,19 +12,13 @@ android {
         jvmToolchain(21)
     }
 }
+
 dependencies {
     implementation serverLibs.androidxAnnotation
-
     implementation serverLibs.gson
 
-    api serverLibs.parcelablelist
-
-    implementation project(':aidl')
-    implementation project(':shared')
-    compileOnly project(':provider')
-    implementation project(':shizuku-server')
-    implementation project(':shizuku-api')
-
+    api project(':shizuku-aidl')
+    api project(':aidl')
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
 }

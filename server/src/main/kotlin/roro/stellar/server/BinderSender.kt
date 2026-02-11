@@ -62,9 +62,16 @@ object BinderSender {
                     LOGGER.i("sendBinder: 发送 Binder 到用户应用: %s (通过 metaData)", packageName)
                     StellarService.sendBinderToUserApp(stellarService, packageName, userId)
                     return
-                } else {
-                    LOGGER.d("sendBinder: 包 %s 的 metaData 不包含 stellar 权限: %s", packageName, permissions)
                 }
+
+                // 检查是否支持 Shizuku
+                if (metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
+                    LOGGER.i("sendBinder: 发送 Shizuku Binder 到应用: %s", packageName)
+                    StellarService.sendShizukuBinderToUserApp(stellarService, packageName, userId)
+                    return
+                }
+
+                LOGGER.d("sendBinder: 包 %s 的 metaData 不包含 stellar 或 shizuku 权限", packageName)
             } else {
                 LOGGER.w("sendBinder: 包 %s 的 metaData 为 null，跳过", packageName)
             }
