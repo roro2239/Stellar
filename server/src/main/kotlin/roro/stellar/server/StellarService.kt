@@ -35,6 +35,10 @@ import roro.stellar.server.service.StellarServiceCore
 import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.UserHandleCompat.getAppId
+import roro.stellar.shizuku.server.ShizukuApiConstants
+import roro.stellar.shizuku.server.ShizukuConfigManager
+import roro.stellar.shizuku.server.ShizukuServiceCallback
+import roro.stellar.shizuku.server.ShizukuServiceIntercept
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -55,6 +59,9 @@ class StellarService : IStellarService.Stub() {
     private val serviceCore: StellarServiceCore
     internal val permissionEnforcer: PermissionEnforcer
     private val bridge: StellarCommunicationBridge
+
+    private val shizukuConfigManager: ShizukuConfigManager
+    private val shizukuServiceIntercept: ShizukuServiceIntercept
 
     init {
         try {
@@ -91,6 +98,11 @@ class StellarService : IStellarService.Stub() {
             serviceCore = StellarServiceCore(clientManager, configManager, userServiceManager)
             permissionEnforcer = PermissionEnforcer(clientManager, configManager, managerAppId)
             bridge = StellarCommunicationBridge(serviceCore, permissionEnforcer)
+
+            LOGGER.i("初始化 Shizuku 兼容层...")
+            System.err.println("初始化 Shizuku 兼容层...")
+            shizukuConfigManager = ShizukuConfigManager(File("/data/local/tmp/stellar"))
+            shizukuServiceIntercept = ShizukuServiceIntercept(createShizukuCallback())
 
             LOGGER.i("启动文件监听...")
             System.err.println("启动文件监听...")
@@ -191,16 +203,42 @@ class StellarService : IStellarService.Stub() {
         data: Bundle?
     ) {
         if (data == null) return
+
+        // 检查是否是 Shizuku 权限请求
+        val permission = data.getString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, "stellar")
+        if (permission == "shizuku") {
+            val allowed = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false)
+
+            // 更新 Shizuku 权限配置
+            val flag = if (allowed) ShizukuApiConstants.FLAG_GRANTED else ShizukuApiConstants.FLAG_DENIED
+            shizukuConfigManager.setPermission(requestUid, flag)
+
+            // 通知客户端应用
+            shizukuServiceIntercept.notifyPermissionResult(requestUid, requestCode, allowed)
+            return
+        }
+
         val caller = CallerContext.fromBinder()
         bridge.handleDispatchPermissionConfirmationResult(caller, requestUid, requestPid, requestCode, data)
     }
 
     override fun getFlagForUid(uid: Int, permission: String): Int {
+        // 如果是 Shizuku 权限，直接从 ShizukuConfigManager 获取
+        if (permission == "shizuku") {
+            return shizukuConfigManager.getPermission(uid)
+        }
+
         val caller = CallerContext.fromBinder()
         return bridge.handleGetFlagForUid(caller, uid, permission)
     }
 
     override fun updateFlagForUid(uid: Int, permission: String, flag: Int) {
+        // 如果是 Shizuku 权限，直接更新到 ShizukuConfigManager
+        if (permission == "shizuku") {
+            shizukuConfigManager.setPermission(uid, flag)
+            return
+        }
+
         val caller = CallerContext.fromBinder()
         bridge.handleUpdateFlagForUid(caller, uid, permission, flag)
     }
@@ -452,12 +490,18 @@ class StellarService : IStellarService.Stub() {
 
                 if (flag != -1) {
                     list.add(pi)
-                } else if (applicationInfo.metaData != null && applicationInfo.metaData.getString(
+                } else if (applicationInfo.metaData != null) {
+                    // 检查 Stellar 权限声明
+                    val stellarPermission = applicationInfo.metaData.getString(
                         StellarApiConstants.PERMISSION_KEY,
                         ""
-                    ).split(",").contains("stellar")
-                ) {
-                    list.add(pi)
+                    )
+                    if (stellarPermission.split(",").contains("stellar")) {
+                        list.add(pi)
+                    } else if (applicationInfo.metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
+                        // 检查 Shizuku 支持
+                        list.add(pi)
+                    }
                 }
             }
         }
@@ -507,6 +551,70 @@ class StellarService : IStellarService.Stub() {
         if (event and FileObserver.DELETE_SELF != 0) events.add("DELETE_SELF")
         if (event and FileObserver.MOVE_SELF != 0) events.add("MOVE_SELF")
         return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
+    }
+
+    // ========== Shizuku 兼容层 ==========
+
+    private fun createShizukuCallback(): ShizukuServiceCallback {
+        return object : ShizukuServiceCallback {
+            override fun getStellarService(): IStellarService = this@StellarService
+
+            override fun getManagerAppId(): Int = managerAppId
+
+            override fun getServicePid(): Int = android.os.Process.myPid()
+
+            override fun getPackagesForUid(uid: Int): List<String> {
+                return PackageManagerApis.getPackagesForUidNoThrow(uid).toList()
+            }
+
+            override fun checkShizukuPermission(uid: Int): Int {
+                return shizukuConfigManager.getPermission(uid)
+            }
+
+            override fun updateShizukuPermission(uid: Int, flag: Int) {
+                shizukuConfigManager.setPermission(uid, flag)
+            }
+
+            override fun showPermissionConfirmation(
+                requestCode: Int,
+                uid: Int,
+                pid: Int,
+                userId: Int,
+                packageName: String
+            ) {
+                LOGGER.i("Shizuku 权限请求: uid=$uid, pkg=$packageName, code=$requestCode")
+
+                val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
+                if (ai == null) {
+                    LOGGER.w("无法获取应用信息: $packageName")
+                    return
+                }
+
+                val intent = android.content.Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
+                    .setPackage(ServerConstants.MANAGER_APPLICATION_ID)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                    .putExtra("uid", uid)
+                    .putExtra("pid", pid)
+                    .putExtra("requestCode", requestCode)
+                    .putExtra("applicationInfo", ai)
+                    .putExtra("denyOnce", true)
+                    .putExtra("permission", "shizuku")
+                    .putExtra("isShizuku", true)
+
+                rikka.hidden.compat.ActivityManagerApis.startActivityNoThrow(intent, null, userId)
+            }
+
+            override fun dispatchPermissionResult(uid: Int, requestCode: Int, allowed: Boolean) {
+                LOGGER.i("Shizuku 权限结果: uid=$uid, code=$requestCode, allowed=$allowed")
+
+                // 更新权限配置
+                val flag = if (allowed) ShizukuApiConstants.FLAG_GRANTED else ShizukuApiConstants.FLAG_DENIED
+                shizukuConfigManager.setPermission(uid, flag)
+
+                // 通知客户端应用
+                shizukuServiceIntercept.notifyPermissionResult(uid, requestCode, allowed)
+            }
+        }
     }
 
     // ========== Binder 发送 ==========
@@ -634,6 +742,65 @@ class StellarService : IStellarService.Stub() {
                 }
             } catch (tr: Throwable) {
                 LOGGER.e(tr, "向用户 %d 中的用户应用 %s 发送 binder 失败", userId, packageName)
+            } finally {
+                if (provider != null) {
+                    try {
+                        rikka.hidden.compat.ActivityManagerApis.removeContentProviderExternal(name, token)
+                    } catch (tr: Throwable) {
+                        LOGGER.w(tr, "移除 ContentProvider 失败")
+                    }
+                }
+            }
+        }
+
+        fun sendShizukuBinderToUserApp(
+            stellarService: StellarService?,
+            packageName: String?,
+            userId: Int
+        ) {
+            if (stellarService == null || packageName == null) return
+
+            try {
+                rikka.hidden.compat.DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
+                    packageName, (30 * 1000).toLong(), userId,
+                    316, "shell"
+                )
+                LOGGER.v("将 %d:%s 添加到省电临时白名单 30 秒", userId, packageName)
+            } catch (tr: Throwable) {
+                LOGGER.e(tr, "添加 %d:%s 到省电临时白名单失败", userId, packageName)
+            }
+
+            val name = "$packageName.shizuku"
+            var provider: android.content.IContentProvider? = null
+            val token: IBinder? = null
+
+            try {
+                provider = rikka.hidden.compat.ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
+                if (provider == null) {
+                    LOGGER.e("Shizuku provider 为 null %s %d", name, userId)
+                    return
+                }
+                if (!provider.asBinder().pingBinder()) {
+                    LOGGER.e("Shizuku provider 已失效 %s %d", name, userId)
+                    return
+                }
+
+                val extra = Bundle()
+                extra.putParcelable(
+                    "moe.shizuku.privileged.api.intent.extra.BINDER",
+                    moe.shizuku.api.BinderContainer(stellarService.shizukuServiceIntercept.asBinder())
+                )
+
+                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(
+                    provider, null, name, "sendBinder", null, extra
+                )
+                if (reply != null) {
+                    LOGGER.i("已向用户 %d 中的应用 %s 发送 Shizuku binder", userId, packageName)
+                } else {
+                    LOGGER.w("向用户 %d 中的应用 %s 发送 Shizuku binder 失败", userId, packageName)
+                }
+            } catch (tr: Throwable) {
+                LOGGER.e(tr, "向用户 %d 中的应用 %s 发送 Shizuku binder 失败", userId, packageName)
             } finally {
                 if (provider != null) {
                     try {

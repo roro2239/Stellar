@@ -87,3 +87,12 @@ project(':hidden-api-stub').projectDir = file("$root${File.separator}hidden-api-
 
 include ':userservice'
 project(':userservice').projectDir = file("$root${File.separator}userservice")
+
+include ':shizuku-aidl'
+project(':shizuku-aidl').projectDir = file('shizuku/aidl')
+
+include ':shizuku-api'
+project(':shizuku-api').projectDir = file('shizuku/api')
+
+include ':shizuku-server'
+project(':shizuku-server').projectDir = file('shizuku/server')
