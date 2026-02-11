@@ -1,0 +1,28 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'roro.stellar.shizuku'
+    defaultConfig {
+        consumerProguardFiles "consumer-rules.pro"
+    }
+    buildFeatures {
+        buildConfig false
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    kotlin {
+        jvmToolchain(21)
+    }
+}
+
+dependencies {
+    api project(':shizuku-aidl')
+
+    implementation serverLibs.androidxAnnotation
+}

@@ -14,7 +14,7 @@ object AuthorizationManager {
     const val FLAG_DENIED: Int = 2
 
     private const val SHIZUKU_META_DATA_KEY = "moe.shizuku.client.V3_SUPPORT"
-    private const val STELLAR_PERMISSION_KEY = "stellar.permission"
+    private const val STELLAR_PERMISSION_KEY = "roro.stellar.permissions"
 
     private fun getApplications(userId: Int): List<PackageInfo> {
         val data = Parcel.obtain()
