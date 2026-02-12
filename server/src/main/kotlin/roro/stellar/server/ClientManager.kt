@@ -5,59 +5,52 @@ import android.os.RemoteException
 import com.stellar.server.IStellarApplication
 import moe.shizuku.server.IShizukuApplication
 import roro.stellar.server.util.Logger
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 open class ClientManager(
     val configManager: ConfigManager
 ) {
-    private val clientRecords =
-        Collections.synchronizedList(
-            ArrayList<ClientRecord>()
-        )
+    // 使用 ConcurrentHashMap 提升查找效率 O(1)
+    private val clientsByKey = ConcurrentHashMap<Long, ClientRecord>()
+    // 保留 uid -> records 映射，用于 findClients
+    private val clientsByUid = ConcurrentHashMap<Int, MutableSet<ClientRecord>>()
+
+    private fun makeKey(uid: Int, pid: Int): Long = (uid.toLong() shl 32) or (pid.toLong() and 0xFFFFFFFFL)
 
     fun findClients(uid: Int): MutableList<ClientRecord> {
-        synchronized(this) {
-            val res = ArrayList<ClientRecord>()
-            for (clientRecord in clientRecords) {
-                if (clientRecord != null) {
-                    if (clientRecord.uid == uid) {
-                        res.add(clientRecord)
-                    }
-                }
-            }
-            return res
-        }
+        return clientsByUid[uid]?.toMutableList() ?: mutableListOf()
     }
 
     fun findClient(uid: Int, pid: Int): ClientRecord? {
-        for (clientRecord in clientRecords) {
-            if (clientRecord != null) {
-                if (clientRecord.pid == pid && clientRecord.uid == uid) {
-                    return clientRecord
-                }
-            }
-        }
-        return null
+        return clientsByKey[makeKey(uid, pid)]
+    }
+
+    private fun addToMaps(record: ClientRecord) {
+        clientsByKey[makeKey(record.uid, record.pid)] = record
+        clientsByUid.getOrPut(record.uid) { ConcurrentHashMap.newKeySet() }.add(record)
+    }
+
+    private fun removeFromMaps(record: ClientRecord) {
+        clientsByKey.remove(makeKey(record.uid, record.pid))
+        clientsByUid[record.uid]?.remove(record)
     }
 
     /**
      * 获取或创建客户端记录（用于 Shizuku 客户端）
      */
     fun getOrCreateClient(uid: Int, pid: Int, packageName: String): ClientRecord {
-        var record = findClient(uid, pid)
-        if (record != null) return record
+        findClient(uid, pid)?.let { return it }
 
-        record = ClientRecord(uid, pid, null, packageName, 0)
+        val record = ClientRecord(uid, pid, null, packageName, 0)
 
         // 加载权限配置
-        val entry = configManager.find(uid)
-        if (entry != null) {
+        configManager.find(uid)?.let { entry ->
             for (permission in entry.permissions) {
                 record.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
             }
         }
 
-        clientRecords.add(record)
+        addToMaps(record)
         LOGGER.i("创建 Shizuku 客户端记录: uid=%d, pid=%d, package=%s", uid, pid, packageName)
         return record
     }
@@ -76,7 +69,7 @@ open class ClientManager(
                 record.shizukuApplication = null
                 // 如果没有 Stellar 客户端，移除整个记录
                 if (record.client == null) {
-                    clientRecords.remove(record)
+                    removeFromMaps(record)
                 }
             }, 0)
         } catch (e: RemoteException) {
@@ -94,10 +87,9 @@ open class ClientManager(
         requiresPermission: Boolean = false
     ): ClientRecord {
         val clientRecord = findClient(callingUid, callingPid)
-        if (clientRecord == null) {
-            LOGGER.w("Caller (uid %d, pid %d) is not an attached client", callingUid, callingPid)
-            throw IllegalStateException("非已连接的客户端")
-        }
+            ?: throw IllegalStateException("非已连接的客户端").also {
+                LOGGER.w("Caller (uid %d, pid %d) is not an attached client", callingUid, callingPid)
+            }
         if (requiresPermission && clientRecord.allowedMap["stellar"] != true) {
             throw SecurityException("调用者没有权限")
         }
@@ -117,7 +109,7 @@ open class ClientManager(
             for (oldClient in oldClients) {
                 LOGGER.i("清理旧客户端: uid=%d, pid=%d, package=%s",
                     oldClient.uid, oldClient.pid, oldClient.packageName)
-                clientRecords.remove(oldClient)
+                removeFromMaps(oldClient)
             }
         }
 
@@ -152,7 +144,7 @@ open class ClientManager(
         val binder = client.asBinder()
         val deathRecipient = DeathRecipient {
             LOGGER.i("客户端死亡回调: uid=%d, pid=%d, package=%s", uid, pid, packageName)
-            clientRecords.remove(clientRecord)
+            removeFromMaps(clientRecord)
         }
         try {
             binder.linkToDeath(deathRecipient, 0)
@@ -161,8 +153,8 @@ open class ClientManager(
             return null
         }
 
-        clientRecords.add(clientRecord)
-        LOGGER.i("客户端记录已添加: uid=%d, pid=%d, 当前客户端总数=%d", uid, pid, clientRecords.size)
+        addToMaps(clientRecord)
+        LOGGER.i("客户端记录已添加: uid=%d, pid=%d, 当前客户端总数=%d", uid, pid, clientsByKey.size)
         return clientRecord
     }
 

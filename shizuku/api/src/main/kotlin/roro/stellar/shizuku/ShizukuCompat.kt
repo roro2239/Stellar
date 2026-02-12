@@ -75,7 +75,9 @@ object ShizukuCompat {
 
             try {
                 binder?.linkToDeath(deathRecipient, 0)
-            } catch (_: Throwable) {}
+            } catch (e: Throwable) {
+                Log.w(TAG, "linkToDeath failed", e)
+            }
 
             try {
                 attachApplication(newBinder, packageName)
@@ -168,19 +170,27 @@ object ShizukuCompat {
     fun checkSelfPermission(): Int {
         return try {
             if (service?.checkSelfPermission() == true) 0 else -1
-        } catch (_: RemoteException) { -1 }
+        } catch (e: RemoteException) {
+            Log.w(TAG, "checkSelfPermission failed", e)
+            -1
+        }
     }
 
     fun shouldShowRequestPermissionRationale(): Boolean {
         return try {
             service?.shouldShowRequestPermissionRationale() ?: false
-        } catch (_: RemoteException) { false }
+        } catch (e: RemoteException) {
+            Log.w(TAG, "shouldShowRequestPermissionRationale failed", e)
+            false
+        }
     }
 
     fun requestPermission(requestCode: Int) {
         try {
             service?.requestPermission(requestCode)
-        } catch (_: RemoteException) {}
+        } catch (e: RemoteException) {
+            Log.w(TAG, "requestPermission failed", e)
+        }
     }
 
     fun interface OnBinderReceivedListener {

@@ -9,7 +9,7 @@ object ShizukuApiConstants {
 
     const val BINDER_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
 
-    const val BINDER_TRANSACTION_transact = 1599295570 // '_' << 24 | 'S' << 16 | 'H' << 8 | 'K'
+    const val BINDER_TRANSACTION_transact = 1599295570
 
     const val PROVIDER_SUFFIX = ".shizuku"
 
@@ -30,6 +30,7 @@ object ShizukuApiConstants {
     const val MASK_PERMISSION = FLAG_ALLOWED or FLAG_DENIED
 
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
+    const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
 
     /**
      * 将 Stellar 权限标志转换为 Shizuku 标志

@@ -4,6 +4,7 @@ import android.os.Bundle
 import com.stellar.server.IStellarApplication
 import moe.shizuku.server.IShizukuApplication
 import roro.stellar.StellarApiConstants
+import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.util.Logger
 
 open class ClientRecord(
@@ -45,10 +46,10 @@ open class ClientRecord(
      */
     fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean) {
         val app = shizukuApplication ?: return
-        if (!allowed) lastDenyTimeMap["shizuku"] = System.currentTimeMillis()
+        if (!allowed) lastDenyTimeMap[ShizukuApiConstants.PERMISSION_NAME] = System.currentTimeMillis()
         try {
             val data = Bundle()
-            data.putBoolean("moe.shizuku.privileged.api.intent.extra.ALLOWED", allowed)
+            data.putBoolean(ShizukuApiConstants.EXTRA_ALLOWED, allowed)
             app.dispatchRequestPermissionResult(requestCode, data)
             LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
         } catch (e: Throwable) {
