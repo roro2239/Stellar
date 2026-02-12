@@ -153,6 +153,16 @@ class ConfigManager {
         }
     }
 
+    /**
+     * 获取指定 UID 的权限标志
+     * @return FLAG_ASK, FLAG_GRANTED 或 FLAG_DENIED
+     */
+    fun getPermissionFlag(uid: Int, permission: String): Int {
+        synchronized(this) {
+            return findLocked(uid)?.permissions?.get(permission) ?: FLAG_ASK
+        }
+    }
+
     fun findOldConfigByPackageName(currentUid: Int, packageName: String): Pair<Int, PackageEntry>? {
         synchronized(this) {
             for ((uid, entry) in config.packages) {

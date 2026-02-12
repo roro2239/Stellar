@@ -65,45 +65,37 @@ class StellarService : IStellarService.Stub() {
     init {
         try {
             LOGGER.i("正在启动 Stellar 服务...")
-            System.err.println("正在启动 Stellar 服务...")
 
             LOGGER.i("等待系统服务...")
-            System.err.println("等待系统服务...")
             waitSystemService("package")
             waitSystemService(Context.ACTIVITY_SERVICE)
             waitSystemService(Context.USER_SERVICE)
             waitSystemService(Context.APP_OPS_SERVICE)
 
             LOGGER.i("获取管理器应用信息...")
-            System.err.println("获取管理器应用信息...")
             val ai = managerApplicationInfo
             if (ai == null) {
-                System.err.println("错误：无法获取管理器应用信息")
+                LOGGER.e("无法获取管理器应用信息")
                 exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
             }
 
             managerAppId = ai.uid
             LOGGER.i("管理器应用 UID: $managerAppId")
-            System.err.println("管理器应用 UID: $managerAppId")
 
             LOGGER.i("初始化配置管理器...")
-            System.err.println("初始化配置管理器...")
             configManager = ConfigManager()
             clientManager = ClientManager(configManager)
             userServiceManager = UserServiceManager()
 
             LOGGER.i("初始化服务核心...")
-            System.err.println("初始化服务核心...")
             serviceCore = StellarServiceCore(clientManager, configManager, userServiceManager)
             permissionEnforcer = PermissionEnforcer(clientManager, configManager, managerAppId)
             bridge = StellarCommunicationBridge(serviceCore, permissionEnforcer)
 
             LOGGER.i("初始化 Shizuku 兼容层...")
-            System.err.println("初始化 Shizuku 兼容层...")
             shizukuServiceIntercept = ShizukuServiceIntercept(createShizukuCallback())
 
             LOGGER.i("启动文件监听...")
-            System.err.println("启动文件监听...")
             start(ai.sourceDir) {
                 LOGGER.w("检测到管理器应用文件变化，检查应用状态...")
                 if (managerApplicationInfo == null) {
@@ -115,32 +107,24 @@ class StellarService : IStellarService.Stub() {
             }
 
             LOGGER.i("注册包移除监听...")
-            System.err.println("注册包移除监听...")
             registerPackageRemovedReceiver(ai)
 
             LOGGER.i("注册 Binder...")
-            System.err.println("注册 Binder...")
             register(this)
 
             LOGGER.i("发送 Binder 到客户端...")
-            System.err.println("发送 Binder 到客户端...")
             mainHandler.post {
                 try {
                     sendBinderToClient()
                     sendBinderToManager()
                     FollowStellarStartupExt.schedule(configManager)
                     LOGGER.i("Stellar 服务启动完成")
-                    System.err.println("Stellar 服务启动完成")
                 } catch (e: Throwable) {
                     LOGGER.e(e, "发送 Binder 失败")
-                    System.err.println("错误：发送 Binder 失败: ${e.message}")
-                    e.printStackTrace()
                 }
             }
         } catch (e: Throwable) {
             LOGGER.e(e, "Stellar 服务初始化失败")
-            System.err.println("错误：Stellar 服务初始化失败: ${e.message}")
-            e.printStackTrace()
             exitProcess(1)
         }
     }
@@ -239,8 +223,7 @@ class StellarService : IStellarService.Stub() {
     override fun getFlagForUid(uid: Int, permission: String): Int {
         // Shizuku 权限也统一从 ConfigManager 获取
         if (permission == ShizukuApiConstants.PERMISSION_NAME) {
-            val stellarFlag = configManager.find(uid)?.permissions?.get(ShizukuApiConstants.PERMISSION_NAME)
-                ?: ConfigManager.FLAG_ASK
+            val stellarFlag = configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
             // 转换为 Shizuku 标志格式返回给管理器
             return ShizukuApiConstants.stellarToShizukuFlag(stellarFlag)
         }
@@ -602,8 +585,7 @@ class StellarService : IStellarService.Stub() {
                 }
 
                 // 检查当前权限状态
-                val currentFlag = configManager.find(uid)?.permissions?.get(ShizukuApiConstants.PERMISSION_NAME)
-                    ?: ConfigManager.FLAG_ASK
+                val currentFlag = configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
 
                 // 如果已经被永久拒绝，直接返回拒绝结果
                 if (currentFlag == ConfigManager.FLAG_DENIED) {
@@ -718,65 +700,16 @@ class StellarService : IStellarService.Stub() {
             userId: Int,
             retry: Boolean = true
         ) {
-            try {
-                rikka.hidden.compat.DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
-                    packageName, (30 * 1000).toLong(), userId,
-                    316, "shell"
-                )
-                LOGGER.v("将 %d:%s 添加到省电临时白名单 30 秒", userId, packageName)
-            } catch (tr: Throwable) {
-                LOGGER.e(tr, "添加 %d:%s 到省电临时白名单失败", userId, packageName)
-            }
-
-            val name = "$packageName.stellar"
-            var provider: android.content.IContentProvider? = null
-            val token: IBinder? = null
-
-            try {
-                provider = rikka.hidden.compat.ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
-                if (provider == null) {
-                    LOGGER.e("provider 为 null %s %d", name, userId)
-                    return
-                }
-                if (!provider.asBinder().pingBinder()) {
-                    LOGGER.e("provider 已失效 %s %d", name, userId)
-
-                    if (retry) {
-                        rikka.hidden.compat.ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
-                        LOGGER.e("终止用户 %d 中的 %s 并重试", userId, packageName)
-                        Thread.sleep(1000)
-                        sendBinderToUserApp(binder, packageName, userId, false)
-                    }
-                    return
-                }
-
-                if (!retry) {
-                    LOGGER.e("重试成功")
-                }
-
-                val extra = Bundle()
-                extra.putParcelable(
-                    "roro.stellar.manager.intent.extra.BINDER",
-                    com.stellar.api.BinderContainer(binder)
-                )
-
-                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(provider, null, name, "sendBinder", null, extra)
-                if (reply != null) {
-                    LOGGER.i("已向用户 %d 中的用户应用 %s 发送 binder", userId, packageName)
-                } else {
-                    LOGGER.w("向用户 %d 中的用户应用 %s 发送 binder 失败", userId, packageName)
-                }
-            } catch (tr: Throwable) {
-                LOGGER.e(tr, "向用户 %d 中的用户应用 %s 发送 binder 失败", userId, packageName)
-            } finally {
-                if (provider != null) {
-                    try {
-                        rikka.hidden.compat.ActivityManagerApis.removeContentProviderExternal(name, token)
-                    } catch (tr: Throwable) {
-                        LOGGER.w(tr, "移除 ContentProvider 失败")
-                    }
-                }
-            }
+            sendBinderInternal(
+                packageName = packageName,
+                userId = userId,
+                providerSuffix = ".stellar",
+                extraKey = "roro.stellar.manager.intent.extra.BINDER",
+                binderContainer = com.stellar.api.BinderContainer(binder),
+                logPrefix = "",
+                retry = retry,
+                onRetry = { sendBinderToUserApp(binder, packageName, userId, false) }
+            )
         }
 
         fun sendShizukuBinderToUserApp(
@@ -786,47 +719,75 @@ class StellarService : IStellarService.Stub() {
         ) {
             if (stellarService == null || packageName == null) return
 
+            sendBinderInternal(
+                packageName = packageName,
+                userId = userId,
+                providerSuffix = ".shizuku",
+                extraKey = ShizukuApiConstants.EXTRA_BINDER,
+                binderContainer = moe.shizuku.api.BinderContainer(stellarService.shizukuServiceIntercept.asBinder()),
+                logPrefix = "Shizuku ",
+                retry = false,
+                onRetry = null
+            )
+        }
+
+        private fun sendBinderInternal(
+            packageName: String?,
+            userId: Int,
+            providerSuffix: String,
+            extraKey: String,
+            binderContainer: android.os.Parcelable,
+            logPrefix: String,
+            retry: Boolean,
+            onRetry: (() -> Unit)?
+        ) {
+            if (packageName == null) return
+
             try {
                 rikka.hidden.compat.DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
-                    packageName, (30 * 1000).toLong(), userId,
-                    316, "shell"
+                    packageName, 30_000L, userId, 316, "shell"
                 )
                 LOGGER.v("将 %d:%s 添加到省电临时白名单 30 秒", userId, packageName)
             } catch (tr: Throwable) {
                 LOGGER.e(tr, "添加 %d:%s 到省电临时白名单失败", userId, packageName)
             }
 
-            val name = "$packageName.shizuku"
+            val name = "$packageName$providerSuffix"
             var provider: android.content.IContentProvider? = null
             val token: IBinder? = null
 
             try {
                 provider = rikka.hidden.compat.ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
                 if (provider == null) {
-                    LOGGER.e("Shizuku provider 为 null %s %d", name, userId)
+                    LOGGER.e("${logPrefix}provider 为 null %s %d", name, userId)
                     return
                 }
                 if (!provider.asBinder().pingBinder()) {
-                    LOGGER.e("Shizuku provider 已失效 %s %d", name, userId)
+                    LOGGER.e("${logPrefix}provider 已失效 %s %d", name, userId)
+                    if (retry && onRetry != null) {
+                        rikka.hidden.compat.ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
+                        LOGGER.e("终止用户 %d 中的 %s 并重试", userId, packageName)
+                        Thread.sleep(1000)
+                        onRetry()
+                    }
                     return
                 }
 
-                val extra = Bundle()
-                extra.putParcelable(
-                    "moe.shizuku.privileged.api.intent.extra.BINDER",
-                    moe.shizuku.api.BinderContainer(stellarService.shizukuServiceIntercept.asBinder())
-                )
+                if (retry && onRetry != null) {
+                    // 这是重试后的成功情况，不需要额外日志
+                }
 
-                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(
-                    provider, null, name, "sendBinder", null, extra
-                )
+                val extra = Bundle()
+                extra.putParcelable(extraKey, binderContainer)
+
+                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(provider, null, name, "sendBinder", null, extra)
                 if (reply != null) {
-                    LOGGER.i("已向用户 %d 中的应用 %s 发送 Shizuku binder", userId, packageName)
+                    LOGGER.i("已向用户 %d 中的应用 %s 发送 ${logPrefix}binder", userId, packageName)
                 } else {
-                    LOGGER.w("向用户 %d 中的应用 %s 发送 Shizuku binder 失败", userId, packageName)
+                    LOGGER.w("向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
                 }
             } catch (tr: Throwable) {
-                LOGGER.e(tr, "向用户 %d 中的应用 %s 发送 Shizuku binder 失败", userId, packageName)
+                LOGGER.e(tr, "向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
             } finally {
                 if (provider != null) {
                     try {

@@ -19,7 +19,6 @@ class ShizukuServiceIntercept(
 
     companion object {
         private const val TAG = "ShizukuServiceIntercept"
-        private const val PERMISSION_NAME = "shizuku"
     }
 
     private val clientManager get() = callback.clientManager
@@ -44,22 +43,21 @@ class ShizukuServiceIntercept(
      * 检查 Shizuku 权限（持久权限）
      */
     private fun checkPermission(uid: Int): Int {
-        return configManager.find(uid)?.permissions?.get(PERMISSION_NAME)
-            ?: ConfigManager.FLAG_ASK
+        return configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
     }
 
     /**
      * 检查一次性权限
      */
     private fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
-        return clientManager.findClient(uid, pid)?.onetimeMap?.get(PERMISSION_NAME) ?: false
+        return clientManager.findClient(uid, pid)?.onetimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: false
     }
 
     /**
      * 获取上次拒绝时间
      */
     private fun getLastDenyTime(uid: Int, pid: Int): Long {
-        return clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(PERMISSION_NAME) ?: 0
+        return clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
     }
 
     /**
@@ -199,9 +197,9 @@ class ShizukuServiceIntercept(
 
     override fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
         val stellarFlag = ShizukuApiConstants.shizukuToStellarFlag(value)
-        configManager.updatePermission(uid, PERMISSION_NAME, stellarFlag)
+        configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, stellarFlag)
         // 清除一次性权限
-        clientManager.findClients(uid).forEach { it.onetimeMap.remove(PERMISSION_NAME) }
+        clientManager.findClients(uid).forEach { it.onetimeMap.remove(ShizukuApiConstants.PERMISSION_NAME) }
     }
 
     /**
