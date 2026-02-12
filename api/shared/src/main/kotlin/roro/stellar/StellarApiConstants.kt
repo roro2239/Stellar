@@ -11,7 +11,7 @@ object StellarApiConstants {
     )
 
     fun isRuntimePermission(permission: String): Boolean {
-        return permission == "stellar" || permission.endsWith(":runtime")
+        return permission == "stellar" || permission == "shizuku" || permission.endsWith(":runtime")
     }
 
     const val BINDER_DESCRIPTOR = "com.stellar.server.IStellarService"

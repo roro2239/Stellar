@@ -3,6 +3,7 @@ package roro.stellar.server
 import android.os.IBinder.DeathRecipient
 import android.os.RemoteException
 import com.stellar.server.IStellarApplication
+import moe.shizuku.server.IShizukuApplication
 import roro.stellar.server.util.Logger
 import java.util.Collections
 
@@ -37,6 +38,53 @@ open class ClientManager(
             }
         }
         return null
+    }
+
+    /**
+     * 获取或创建客户端记录（用于 Shizuku 客户端）
+     */
+    fun getOrCreateClient(uid: Int, pid: Int, packageName: String): ClientRecord {
+        var record = findClient(uid, pid)
+        if (record != null) return record
+
+        record = ClientRecord(uid, pid, null, packageName, 0)
+
+        // 加载权限配置
+        val entry = configManager.find(uid)
+        if (entry != null) {
+            for (permission in entry.permissions) {
+                record.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
+            }
+        }
+
+        clientRecords.add(record)
+        LOGGER.i("创建 Shizuku 客户端记录: uid=%d, pid=%d, package=%s", uid, pid, packageName)
+        return record
+    }
+
+    /**
+     * 附加 Shizuku 应用到客户端记录
+     */
+    fun attachShizukuApplication(uid: Int, pid: Int, application: IShizukuApplication, packageName: String): ClientRecord {
+        val record = getOrCreateClient(uid, pid, packageName)
+        record.shizukuApplication = application
+
+        // 监听 Shizuku 客户端死亡
+        try {
+            application.asBinder().linkToDeath({
+                LOGGER.i("Shizuku 客户端死亡: uid=%d, pid=%d", uid, pid)
+                record.shizukuApplication = null
+                // 如果没有 Stellar 客户端，移除整个记录
+                if (record.client == null) {
+                    clientRecords.remove(record)
+                }
+            }, 0)
+        } catch (e: RemoteException) {
+            LOGGER.w(e, "attachShizukuApplication: linkToDeath 失败")
+        }
+
+        LOGGER.i("附加 Shizuku 应用: uid=%d, pid=%d", uid, pid)
+        return record
     }
 
     @JvmOverloads

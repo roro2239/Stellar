@@ -2,7 +2,6 @@ package roro.stellar.server.shizuku
 
 import android.os.Binder
 import android.util.Log
-import com.stellar.server.IStellarService
 import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
@@ -12,7 +11,7 @@ import roro.stellar.server.ConfigManager
 /**
  * Shizuku 服务拦截器
  * 将 Shizuku API 调用转发到 Stellar 服务
- * 复用 Stellar 的权限管理逻辑
+ * 复用 Stellar 的权限管理和客户端管理
  */
 class ShizukuServiceIntercept(
     private val callback: ShizukuServiceCallback
@@ -20,16 +19,11 @@ class ShizukuServiceIntercept(
 
     companion object {
         private const val TAG = "ShizukuServiceIntercept"
+        private const val PERMISSION_NAME = "shizuku"
     }
 
-    // 保存客户端应用的 IShizukuApplication 引用，用于权限结果回调
-    private val applications = mutableMapOf<Int, MutableMap<Int, IShizukuApplication>>()
-
-    private val stellarService: IStellarService
-        get() = callback.getStellarService()
-
-    private val managerAppId: Int
-        get() = callback.getManagerAppId()
+    private val clientManager get() = callback.clientManager
+    private val configManager get() = callback.configManager
 
     private inline fun <T> withClearedIdentity(block: () -> T): T {
         val id = Binder.clearCallingIdentity()
@@ -41,86 +35,93 @@ class ShizukuServiceIntercept(
     }
 
     private fun getAppId(uid: Int): Int = uid % 100000
-    private fun getUserId(uid: Int): Int = uid / 100000
 
     private fun checkCallerManagerPermission(callingUid: Int): Boolean {
-        return getAppId(callingUid) == managerAppId
+        return getAppId(callingUid) == callback.managerAppId
+    }
+
+    /**
+     * 检查 Shizuku 权限（持久权限）
+     */
+    private fun checkPermission(uid: Int): Int {
+        return configManager.find(uid)?.permissions?.get(PERMISSION_NAME)
+            ?: ConfigManager.FLAG_ASK
+    }
+
+    /**
+     * 检查一次性权限
+     */
+    private fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
+        return clientManager.findClient(uid, pid)?.onetimeMap?.get(PERMISSION_NAME) ?: false
+    }
+
+    /**
+     * 获取上次拒绝时间
+     */
+    private fun getLastDenyTime(uid: Int, pid: Int): Long {
+        return clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(PERMISSION_NAME) ?: 0
     }
 
     /**
      * 检查调用者是否有权限
-     * 复用 Stellar 的权限逻辑：持久权限 + 一次性权限
      */
     private fun enforceCallingPermission(method: String) {
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
-        if (callingPid == callback.getServicePid()) {
-            return
-        }
-
-        if (checkCallerManagerPermission(callingUid)) {
-            return
-        }
+        if (callingPid == callback.servicePid) return
+        if (checkCallerManagerPermission(callingUid)) return
 
         // 检查持久权限
-        val permission = callback.checkPermission(callingUid)
-        if (permission == ConfigManager.FLAG_GRANTED) {
-            return
-        }
+        if (checkPermission(callingUid) == ConfigManager.FLAG_GRANTED) return
 
         // 检查一次性权限
-        if (callback.checkOnetimePermission(callingUid, callingPid)) {
-            return
-        }
+        if (checkOnetimePermission(callingUid, callingPid)) return
 
         throw SecurityException("Permission denied for $method")
     }
 
     override fun getVersion(): Int {
         enforceCallingPermission("getVersion")
-        return withClearedIdentity { stellarService.version }
+        return withClearedIdentity { callback.stellarService.version }
     }
 
     override fun getUid(): Int {
         enforceCallingPermission("getUid")
-        return withClearedIdentity { stellarService.uid }
+        return withClearedIdentity { callback.stellarService.uid }
     }
 
     override fun checkPermission(permission: String?): Int {
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
-        val stellarPermission = callback.checkPermission(callingUid)
 
-        // 检查持久权限或一次性权限
-        val hasPermission = stellarPermission == ConfigManager.FLAG_GRANTED ||
-                callback.checkOnetimePermission(callingUid, callingPid)
+        val hasPermission = checkPermission(callingUid) == ConfigManager.FLAG_GRANTED ||
+                checkOnetimePermission(callingUid, callingPid)
 
-        // 返回 Shizuku 权限状态：0=GRANTED, -1=DENIED
         return if (hasPermission) 0 else -1
     }
 
     override fun getSELinuxContext(): String? {
         enforceCallingPermission("getSELinuxContext")
         return withClearedIdentity {
-            stellarService.seLinuxContext ?: throw IllegalStateException("无法获取 SELinux 上下文")
+            callback.stellarService.seLinuxContext ?: throw IllegalStateException("无法获取 SELinux 上下文")
         }
     }
 
     override fun getSystemProperty(name: String?, defaultValue: String?): String {
         enforceCallingPermission("getSystemProperty")
-        return withClearedIdentity { stellarService.getSystemProperty(name, defaultValue) }
+        return withClearedIdentity { callback.stellarService.getSystemProperty(name, defaultValue) }
     }
 
     override fun setSystemProperty(name: String?, value: String?) {
         enforceCallingPermission("setSystemProperty")
-        withClearedIdentity { stellarService.setSystemProperty(name, value) }
+        withClearedIdentity { callback.stellarService.setSystemProperty(name, value) }
     }
 
     override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
         enforceCallingPermission("newProcess")
         Log.d(TAG, "newProcess: uid=${Binder.getCallingUid()}, cmd=${cmd?.contentToString()}")
-        val stellarProcess = withClearedIdentity { stellarService.newProcess(cmd, env, dir) }
+        val stellarProcess = withClearedIdentity { callback.stellarService.newProcess(cmd, env, dir) }
         return StellarRemoteProcessAdapter(stellarProcess)
     }
 
@@ -135,10 +136,7 @@ class ShizukuServiceIntercept(
     override fun requestPermission(requestCode: Int) {
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
-
         Log.d(TAG, "requestPermission: uid=$callingUid, pid=$callingPid, code=$requestCode")
-
-        // 复用 Stellar 的权限请求流程
         callback.requestPermission(callingUid, callingPid, requestCode)
     }
 
@@ -146,29 +144,17 @@ class ShizukuServiceIntercept(
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
-        // 检查持久权限
-        val permission = callback.checkPermission(callingUid)
-        if (permission == ConfigManager.FLAG_GRANTED) {
-            return true
-        }
-
-        // 检查一次性权限
-        return callback.checkOnetimePermission(callingUid, callingPid)
+        if (checkPermission(callingUid) == ConfigManager.FLAG_GRANTED) return true
+        return checkOnetimePermission(callingUid, callingPid)
     }
 
     override fun shouldShowRequestPermissionRationale(): Boolean {
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
-        val permission = callback.checkPermission(callingUid)
 
-        // 和 Stellar 一样：被拒绝过才显示 rationale
-        // 这样用户可以选择"拒绝且不再询问"
-        if (permission == ConfigManager.FLAG_DENIED) {
-            return true
-        }
+        if (checkPermission(callingUid) == ConfigManager.FLAG_DENIED) return true
 
-        // 检查是否在短时间内被拒绝过（10秒内）
-        val lastDenyTime = callback.getLastDenyTime(callingUid, callingPid)
+        val lastDenyTime = getLastDenyTime(callingUid, callingPid)
         return lastDenyTime > 0 && (System.currentTimeMillis() - lastDenyTime) <= 10000
     }
 
@@ -178,11 +164,9 @@ class ShizukuServiceIntercept(
         Log.d(TAG, "attachApplication: uid=$callingUid, pid=$callingPid")
 
         if (application != null) {
-            synchronized(applications) {
-                val pidMap = applications.getOrPut(callingUid) { mutableMapOf() }
-                pidMap[callingPid] = application
-            }
-            Log.d(TAG, "保存客户端应用引用: uid=$callingUid, pid=$callingPid")
+            val packages = callback.getPackagesForUid(callingUid)
+            val packageName = packages.firstOrNull() ?: "unknown"
+            clientManager.attachShizukuApplication(callingUid, callingPid, application, packageName)
         }
     }
 
@@ -198,9 +182,7 @@ class ShizukuServiceIntercept(
         // 暂不需要处理
     }
 
-    override fun isHidden(uid: Int): Boolean {
-        return false
-    }
+    override fun isHidden(uid: Int): Boolean = false
 
     override fun dispatchPermissionConfirmationResult(
         requestUid: Int,
@@ -208,52 +190,29 @@ class ShizukuServiceIntercept(
         requestCode: Int,
         data: android.os.Bundle?
     ) {
-        // 这个方法由管理器调用，不需要在这里处理
         // 权限结果通过 StellarService.dispatchPermissionConfirmationResult 统一处理
     }
 
     override fun getFlagsForUid(uid: Int, mask: Int): Int {
-        val stellarFlag = callback.checkPermission(uid)
-        return ShizukuApiConstants.stellarToShizukuFlag(stellarFlag)
+        return ShizukuApiConstants.stellarToShizukuFlag(checkPermission(uid))
     }
 
     override fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
         val stellarFlag = ShizukuApiConstants.shizukuToStellarFlag(value)
-        callback.updatePermission(uid, stellarFlag)
+        configManager.updatePermission(uid, PERMISSION_NAME, stellarFlag)
+        // 清除一次性权限
+        clientManager.findClients(uid).forEach { it.onetimeMap.remove(PERMISSION_NAME) }
     }
 
     /**
-     * 通知客户端应用权限授权结果
+     * 通知客户端权限结果
      */
     fun notifyPermissionResult(uid: Int, pid: Int, requestCode: Int, allowed: Boolean) {
-        val application = synchronized(applications) {
-            applications[uid]?.get(pid)
-        }
-
-        if (application == null) {
-            Log.w(TAG, "notifyPermissionResult: 未找到 uid=$uid, pid=$pid 的客户端应用")
+        val record = clientManager.findClient(uid, pid)
+        if (record?.shizukuApplication == null) {
+            Log.w(TAG, "notifyPermissionResult: 未找到 uid=$uid, pid=$pid 的客户端")
             return
         }
-
-        try {
-            val data = android.os.Bundle()
-            data.putBoolean("moe.shizuku.privileged.api.intent.extra.ALLOWED", allowed)
-            application.dispatchRequestPermissionResult(requestCode, data)
-            Log.i(TAG, "已通知客户端权限结果: uid=$uid, pid=$pid, code=$requestCode, allowed=$allowed")
-        } catch (e: Exception) {
-            Log.e(TAG, "通知客户端权限结果失败: uid=$uid, pid=$pid", e)
-        }
-    }
-
-    /**
-     * 清理断开连接的客户端
-     */
-    fun removeClient(uid: Int, pid: Int) {
-        synchronized(applications) {
-            applications[uid]?.remove(pid)
-            if (applications[uid]?.isEmpty() == true) {
-                applications.remove(uid)
-            }
-        }
+        record.dispatchShizukuPermissionResult(requestCode, allowed)
     }
 }
