@@ -130,8 +130,10 @@ object UserServiceStarter {
         serviceMode: Int,
         verificationToken: String
     ): Boolean {
-        val providerName = "$packageName.stellar"
-        Log.i(TAG, "连接到 Provider: $providerName")
+        // 连接到管理器应用的 provider，而不是客户端应用的 provider
+        // 这样可以同时支持 Stellar 客户端和 Shizuku 客户端
+        val providerName = "${ServerConstants.MANAGER_APPLICATION_ID}.stellar"
+        Log.i(TAG, "连接到 Provider: $providerName (客户端包名: $packageName)")
 
         val userId = 0
         var provider: IContentProvider? = null
