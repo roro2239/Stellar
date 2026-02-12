@@ -35,10 +35,9 @@ import roro.stellar.server.service.StellarServiceCore
 import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.UserHandleCompat.getAppId
-import roro.stellar.shizuku.server.ShizukuApiConstants
-import roro.stellar.shizuku.server.ShizukuConfigManager
-import roro.stellar.shizuku.server.ShizukuServiceCallback
-import roro.stellar.shizuku.server.ShizukuServiceIntercept
+import roro.stellar.server.shizuku.ShizukuApiConstants
+import roro.stellar.server.shizuku.ShizukuServiceCallback
+import roro.stellar.server.shizuku.ShizukuServiceIntercept
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -60,7 +59,8 @@ class StellarService : IStellarService.Stub() {
     internal val permissionEnforcer: PermissionEnforcer
     private val bridge: StellarCommunicationBridge
 
-    private val shizukuConfigManager: ShizukuConfigManager
+    // Shizuku 兼容层 - 复用 Stellar 权限系统
+    private val shizukuClientManager: ShizukuClientManager
     private val shizukuServiceIntercept: ShizukuServiceIntercept
 
     init {
@@ -101,7 +101,7 @@ class StellarService : IStellarService.Stub() {
 
             LOGGER.i("初始化 Shizuku 兼容层...")
             System.err.println("初始化 Shizuku 兼容层...")
-            shizukuConfigManager = ShizukuConfigManager(File("/data/local/tmp/stellar"))
+            shizukuClientManager = ShizukuClientManager()
             shizukuServiceIntercept = ShizukuServiceIntercept(createShizukuCallback())
 
             LOGGER.i("启动文件监听...")
@@ -206,15 +206,30 @@ class StellarService : IStellarService.Stub() {
 
         // 检查是否是 Shizuku 权限请求
         val permission = data.getString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, "stellar")
-        if (permission == "shizuku") {
+        if (permission == ShizukuApiConstants.PERMISSION_NAME) {
             val allowed = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false)
+            val onetime = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, false)
 
-            // 更新 Shizuku 权限配置
-            val flag = if (allowed) ShizukuApiConstants.FLAG_GRANTED else ShizukuApiConstants.FLAG_DENIED
-            shizukuConfigManager.setPermission(requestUid, flag)
+            LOGGER.i("Shizuku 权限结果: uid=$requestUid, pid=$requestPid, code=$requestCode, allowed=$allowed, onetime=$onetime")
+
+            if (onetime) {
+                // 一次性权限：只设置到 ShizukuClientManager
+                shizukuClientManager.setOnetimePermission(requestUid, requestPid, allowed)
+            } else {
+                // 持久权限：更新到 ConfigManager
+                val newFlag = if (allowed) ConfigManager.FLAG_GRANTED else ConfigManager.FLAG_DENIED
+                configManager.updatePermission(requestUid, ShizukuApiConstants.PERMISSION_NAME, newFlag)
+                // 清除一次性权限
+                shizukuClientManager.clearOnetimePermissions(requestUid)
+            }
+
+            // 记录拒绝时间
+            if (!allowed) {
+                shizukuClientManager.recordDenyTime(requestUid, requestPid)
+            }
 
             // 通知客户端应用
-            shizukuServiceIntercept.notifyPermissionResult(requestUid, requestCode, allowed)
+            shizukuServiceIntercept.notifyPermissionResult(requestUid, requestPid, requestCode, allowed)
             return
         }
 
@@ -223,9 +238,12 @@ class StellarService : IStellarService.Stub() {
     }
 
     override fun getFlagForUid(uid: Int, permission: String): Int {
-        // 如果是 Shizuku 权限，直接从 ShizukuConfigManager 获取
-        if (permission == "shizuku") {
-            return shizukuConfigManager.getPermission(uid)
+        // Shizuku 权限也统一从 ConfigManager 获取
+        if (permission == ShizukuApiConstants.PERMISSION_NAME) {
+            val stellarFlag = configManager.find(uid)?.permissions?.get(ShizukuApiConstants.PERMISSION_NAME)
+                ?: ConfigManager.FLAG_ASK
+            // 转换为 Shizuku 标志格式返回给管理器
+            return ShizukuApiConstants.stellarToShizukuFlag(stellarFlag)
         }
 
         val caller = CallerContext.fromBinder()
@@ -233,9 +251,13 @@ class StellarService : IStellarService.Stub() {
     }
 
     override fun updateFlagForUid(uid: Int, permission: String, flag: Int) {
-        // 如果是 Shizuku 权限，直接更新到 ShizukuConfigManager
-        if (permission == "shizuku") {
-            shizukuConfigManager.setPermission(uid, flag)
+        // Shizuku 权限也统一更新到 ConfigManager
+        if (permission == ShizukuApiConstants.PERMISSION_NAME) {
+            // 从 Shizuku 标志转换为 Stellar 标志
+            val stellarFlag = ShizukuApiConstants.shizukuToStellarFlag(flag)
+            configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, stellarFlag)
+            // 清除一次性权限
+            shizukuClientManager.clearOnetimePermissions(uid)
             return
         }
 
@@ -567,22 +589,29 @@ class StellarService : IStellarService.Stub() {
                 return PackageManagerApis.getPackagesForUidNoThrow(uid).toList()
             }
 
-            override fun checkShizukuPermission(uid: Int): Int {
-                return shizukuConfigManager.getPermission(uid)
+            override fun checkPermission(uid: Int): Int {
+                // 从 ConfigManager 获取 Shizuku 权限 (返回 Stellar 标志)
+                return configManager.find(uid)?.permissions?.get(ShizukuApiConstants.PERMISSION_NAME)
+                    ?: ConfigManager.FLAG_ASK
             }
 
-            override fun updateShizukuPermission(uid: Int, flag: Int) {
-                shizukuConfigManager.setPermission(uid, flag)
+            override fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
+                return shizukuClientManager.checkOnetimePermission(uid, pid)
             }
 
-            override fun showPermissionConfirmation(
-                requestCode: Int,
-                uid: Int,
-                pid: Int,
-                userId: Int,
-                packageName: String
-            ) {
-                LOGGER.i("Shizuku 权限请求: uid=$uid, pkg=$packageName, code=$requestCode")
+            override fun updatePermission(uid: Int, flag: Int) {
+                // 更新到 ConfigManager (使用 Stellar 标志)
+                configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, flag)
+                // 清除一次性权限
+                shizukuClientManager.clearOnetimePermissions(uid)
+            }
+
+            override fun requestPermission(uid: Int, pid: Int, requestCode: Int) {
+                val userId = uid / 100000
+                val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
+                val packageName = packages.firstOrNull() ?: return
+
+                LOGGER.i("Shizuku 权限请求: uid=$uid, pid=$pid, pkg=$packageName, code=$requestCode")
 
                 val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
                 if (ai == null) {
@@ -590,29 +619,73 @@ class StellarService : IStellarService.Stub() {
                     return
                 }
 
-                val intent = android.content.Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
+                // 检查当前权限状态
+                val currentFlag = checkPermission(uid)
+
+                // 如果已经被永久拒绝，直接返回拒绝结果
+                if (currentFlag == ConfigManager.FLAG_DENIED) {
+                    LOGGER.i("Shizuku 权限已被永久拒绝: uid=$uid")
+                    shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, false)
+                    return
+                }
+
+                // 如果已经被永久授权，直接返回授权结果
+                if (currentFlag == ConfigManager.FLAG_GRANTED) {
+                    LOGGER.i("Shizuku 权限已被永久授权: uid=$uid")
+                    shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, true)
+                    return
+                }
+
+                // 确保配置存在
+                if (configManager.find(uid) == null) {
+                    configManager.createConfigWithAllPermissions(uid, packageName)
+                }
+
+                // 检查是否在短时间内被拒绝过（10秒内），决定是否显示"不再询问"选项
+                val lastDenyTime = shizukuClientManager.getLastDenyTime(uid, pid)
+                val denyOnce = (System.currentTimeMillis() - lastDenyTime) > 10000
+
+                val intent = Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
                     .setPackage(ServerConstants.MANAGER_APPLICATION_ID)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
                     .putExtra("uid", uid)
                     .putExtra("pid", pid)
                     .putExtra("requestCode", requestCode)
                     .putExtra("applicationInfo", ai)
-                    .putExtra("denyOnce", true)
-                    .putExtra("permission", "shizuku")
-                    .putExtra("isShizuku", true)
+                    .putExtra("denyOnce", denyOnce)
+                    .putExtra("permission", ShizukuApiConstants.PERMISSION_NAME)
 
                 rikka.hidden.compat.ActivityManagerApis.startActivityNoThrow(intent, null, userId)
             }
 
-            override fun dispatchPermissionResult(uid: Int, requestCode: Int, allowed: Boolean) {
-                LOGGER.i("Shizuku 权限结果: uid=$uid, code=$requestCode, allowed=$allowed")
+            override fun dispatchPermissionResult(uid: Int, pid: Int, requestCode: Int, allowed: Boolean, onetime: Boolean) {
+                LOGGER.i("Shizuku 权限结果: uid=$uid, pid=$pid, code=$requestCode, allowed=$allowed, onetime=$onetime")
 
-                // 更新权限配置
-                val flag = if (allowed) ShizukuApiConstants.FLAG_GRANTED else ShizukuApiConstants.FLAG_DENIED
-                shizukuConfigManager.setPermission(uid, flag)
+                if (onetime) {
+                    // 一次性权限
+                    shizukuClientManager.setOnetimePermission(uid, pid, allowed)
+                } else {
+                    // 持久权限
+                    val newFlag = if (allowed) ConfigManager.FLAG_GRANTED else ConfigManager.FLAG_DENIED
+                    configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, newFlag)
+                    shizukuClientManager.clearOnetimePermissions(uid)
+                }
+
+                // 记录拒绝时间
+                if (!allowed) {
+                    shizukuClientManager.recordDenyTime(uid, pid)
+                }
 
                 // 通知客户端应用
-                shizukuServiceIntercept.notifyPermissionResult(uid, requestCode, allowed)
+                shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, allowed)
+            }
+
+            override fun recordDenyTime(uid: Int, pid: Int) {
+                shizukuClientManager.recordDenyTime(uid, pid)
+            }
+
+            override fun getLastDenyTime(uid: Int, pid: Int): Long {
+                return shizukuClientManager.getLastDenyTime(uid, pid)
             }
         }
     }
