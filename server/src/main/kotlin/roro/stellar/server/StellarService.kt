@@ -475,10 +475,13 @@ class StellarService : IStellarService.Stub() {
 
         for (user in users) {
             for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                PackageManager.GET_META_DATA.toLong(),
+                (PackageManager.GET_META_DATA or PackageManager.GET_PERMISSIONS).toLong(),
                 user!!
             )) {
+                // 排除 Stellar 管理器
                 if (MANAGER_APPLICATION_ID == pi.packageName) continue
+                // 排除 Shizuku 管理器
+                if (pi.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) continue
                 val applicationInfo = pi.applicationInfo ?: continue
 
                 val uid = applicationInfo.uid
@@ -641,6 +644,8 @@ class StellarService : IStellarService.Stub() {
 
     companion object {
         private val LOGGER: Logger = Logger("StellarService")
+        // Shizuku Manager 特征权限 (signature 级别，只有 Manager 会请求)
+        private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
 
         @JvmStatic
         fun main(args: Array<String>) {
