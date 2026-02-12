@@ -24,6 +24,11 @@ class ShizukuServiceIntercept(
     private val clientManager get() = callback.clientManager
     private val configManager get() = callback.configManager
 
+    // Shizuku 用户服务适配器
+    private val userServiceAdapter by lazy {
+        ShizukuUserServiceAdapter(callback.userServiceManager)
+    }
+
     private inline fun <T> withClearedIdentity(block: () -> T): T {
         val id = Binder.clearCallingIdentity()
         try {
@@ -124,11 +129,34 @@ class ShizukuServiceIntercept(
     }
 
     override fun addUserService(conn: IShizukuServiceConnection?, args: android.os.Bundle?): Int {
-        throw UnsupportedOperationException("User service not supported")
+        if (conn == null || args == null) {
+            throw IllegalArgumentException("conn or args is null")
+        }
+
+        enforceCallingPermission("addUserService")
+
+        val callingUid = Binder.getCallingUid()
+        val callingPid = Binder.getCallingPid()
+
+        Log.d(TAG, "addUserService: uid=$callingUid, pid=$callingPid")
+
+        return withClearedIdentity {
+            userServiceAdapter.addUserService(conn, args, callingUid, callingPid)
+        }
     }
 
     override fun removeUserService(conn: IShizukuServiceConnection?, args: android.os.Bundle?): Int {
-        throw UnsupportedOperationException("User service not supported")
+        if (conn == null || args == null) {
+            throw IllegalArgumentException("conn or args is null")
+        }
+
+        enforceCallingPermission("removeUserService")
+
+        Log.d(TAG, "removeUserService: uid=${Binder.getCallingUid()}")
+
+        return withClearedIdentity {
+            userServiceAdapter.removeUserService(conn, args)
+        }
     }
 
     override fun requestPermission(requestCode: Int) {
@@ -173,7 +201,18 @@ class ShizukuServiceIntercept(
     }
 
     override fun attachUserService(binder: android.os.IBinder?, options: android.os.Bundle?) {
-        // 暂不支持用户服务
+        if (binder == null || options == null) {
+            Log.w(TAG, "attachUserService: binder or options is null")
+            return
+        }
+
+        val token = options.getString(ShizukuApiConstants.UserServiceArgs.TOKEN)
+        if (token != null) {
+            Log.d(TAG, "attachUserService: token=$token")
+            withClearedIdentity {
+                userServiceAdapter.onStellarServiceAttached(token, binder)
+            }
+        }
     }
 
     override fun dispatchPackageChanged(intent: android.content.Intent?) {

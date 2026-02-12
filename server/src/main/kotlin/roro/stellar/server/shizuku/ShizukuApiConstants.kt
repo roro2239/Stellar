@@ -16,6 +16,20 @@ object ShizukuApiConstants {
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
     const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
 
+    // Shizuku 用户服务参数常量
+    object UserServiceArgs {
+        const val COMPONENT = "shizuku:user-service-arg-component"
+        const val DEBUGGABLE = "shizuku:user-service-arg-debuggable"
+        const val VERSION_CODE = "shizuku:user-service-arg-version-code"
+        const val DAEMON = "shizuku:user-service-arg-daemon"
+        const val USE_32_BIT = "shizuku:user-service-arg-use-32-bit-app-process"
+        const val PROCESS_NAME = "shizuku:user-service-arg-process-name"
+        const val TAG = "shizuku:user-service-arg-tag"
+        const val NO_CREATE = "shizuku:user-service-arg-no-create"
+        const val REMOVE = "shizuku:user-service-remove"
+        const val TOKEN = "shizuku:user-service-arg-token"
+    }
+
     /**
      * 将 Stellar 权限标志转换为 Shizuku 标志
      * Stellar: ASK=0, GRANTED=1, DENIED=2
