@@ -29,6 +29,24 @@
     public static void main(java.lang.String[]);
 }
 
+# Keep UserServiceStarter for app_process
+-keep class roro.stellar.server.userservice.UserServiceStarter {
+    public static void main(java.lang.String[]);
+}
+
+# Keep Shizuku AIDL interfaces
+-keep class moe.shizuku.server.** { *; }
+-keep interface moe.shizuku.server.** { *; }
+
+# Keep Shizuku API classes (BinderContainer must keep original package name for client compatibility)
+-keep class moe.shizuku.api.** { *; }
+# Prevent repackaging of Shizuku classes - clients expect exact package names
+-keeppackagenames moe.shizuku.**
+
+# Keep Shizuku compatibility layer
+-keep class roro.stellar.server.shizuku.** { *; }
+-keep class roro.stellar.shizuku.** { *; }
+
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
 }

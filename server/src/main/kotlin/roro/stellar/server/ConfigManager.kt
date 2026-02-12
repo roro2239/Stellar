@@ -108,6 +108,10 @@ class ConfigManager {
                         permissions.add(permission)
                     }
                 }
+                // 检查是否是 Shizuku 客户端，保留 shizuku 权限
+                if (applicationInfo.metaData?.getBoolean("moe.shizuku.client.V3_SUPPORT", false) == true) {
+                    permissions.add("shizuku")
+                }
             }
             val packageEntry = findLocked(entry.key)!!
             val permissionsToRemove = mutableListOf<String>()
