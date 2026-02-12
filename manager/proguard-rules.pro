@@ -45,3 +45,9 @@
 -repackageclasses roro.stellar
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Fix R8 missing classes for androidx.window
+-dontwarn androidx.window.extensions.**
+-dontwarn androidx.window.area.**
+-dontwarn androidx.window.reflection.**
+-dontwarn androidx.window.core.util.function.**
