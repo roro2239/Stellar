@@ -54,92 +54,9 @@ data class CommandItem(
 )
 
 private const val COMMANDS_KEY = "saved_commands"
-private const val COMMANDS_INITIALIZED_KEY = "commands_initialized"
-
-private val SHIZUKU_START_SCRIPT = """
-PACKAGE_NAME="moe.shizuku.privileged.api"
-SERVER_NAME="shizuku_server"
-SERVER_CLASS_PATH="rikka.shizuku.server.ShizukuService"
-
-EXIT_FATAL_UID=6
-EXIT_FATAL_PM_PATH=7
-EXIT_FATAL_KILL=9
-
-case "${'$'}(uname -m)" in
-    aarch64|armv8*) ABI="arm64" ;;
-    armv7*) ABI="arm" ;;
-    i686) ABI="x86" ;;
-    x86_64) ABI="x86_64" ;;
-    *) ABI="unknown" ;;
-esac
-
-info() { echo "信息: ${'$'}*"; }
-warn() { echo "警告: ${'$'}*"; }
-fatal() { echo "错误: ${'$'}*"; exit "${'$'}1"; }
-
-check_uid() {
-    uid=${'$'}(id -u)
-    [ "${'$'}uid" -ne 0 ] && [ "${'$'}uid" -ne 2000 ] && fatal ${'$'}EXIT_FATAL_UID "非 root 或 adb 用户 (uid=${'$'}uid)"
-}
-
-switch_cgroup() {
-    for p in /acct /dev/cg2_bpf /sys/fs/cgroup /dev/memcg/apps; do
-        [ -d "${'$'}p" ] && echo ${'$'}${'$'} > "${'$'}p/cgroup.procs" 2>/dev/null && info "切换 cgroup 成功: ${'$'}p" && return 0
-    done
-    warn "无法切换 cgroup"
-}
-
-kill_old_server() {
-    info "正在终止旧进程..."
-    for pid in ${'$'}(ps -A | grep "${'$'}SERVER_NAME" | awk '{print ${'$'}2}'); do
-        [ "${'$'}pid" = "${'$'}${'$'}" ] && continue
-        kill -9 "${'$'}pid" 2>/dev/null && info "已终止: ${'$'}pid" || warn "终止失败: ${'$'}pid"
-    done
-}
-
-get_apk_path() {
-    apk_path=${'$'}(pm path "${'$'}PACKAGE_NAME" 2>/dev/null | grep '^package:' | head -n1 | sed 's/^package://')
-    [ -z "${'$'}apk_path" ] || [ ! -r "${'$'}apk_path" ] && fatal ${'$'}EXIT_FATAL_PM_PATH "无法获取 APK: ${'$'}apk_path"
-    echo "${'$'}apk_path"
-}
-
-run_server() {
-    lib_path="${'$'}(dirname "${'$'}1")/lib/${'$'}ABI"
-    info "库路径: ${'$'}lib_path"
-    (setsid; cd /; exec 0</dev/null 1>/dev/null 2>/dev/null
-    exec /system/bin/app_process -Djava.class.path="${'$'}1" -Dshizuku.library.path="${'$'}lib_path" /system/bin --nice-name="${'$'}SERVER_NAME" "${'$'}SERVER_CLASS_PATH") &
-    info "服务已启动, PID: ${'$'}!"
-    exit 0
-}
-
-check_uid
-[ "${'$'}(id -u)" -eq 0 ] && { switch_cgroup; [ "${'$'}(getprop ro.build.version.sdk)" -ge 29 ] && nsenter -t 1 -m -- sh -c 'true' 2>/dev/null; }
-info "Shizuku 启动器开始运行"
-kill_old_server
-apk_path=${'$'}(get_apk_path)
-info "APK 路径: ${'$'}apk_path"
-info "正在启动服务..."
-run_server "${'$'}apk_path"
-""".trimIndent()
 
 private fun loadCommands(): List<CommandItem> {
     val prefs = StellarSettings.getPreferences()
-    val initialized = prefs.getBoolean(COMMANDS_INITIALIZED_KEY, false)
-
-    if (!initialized) {
-        // 首次加载，添加默认命令
-        val defaultCommands = listOf(
-            CommandItem(
-                title = "启动 Shizuku",
-                command = SHIZUKU_START_SCRIPT,
-                mode = CommandMode.FOLLOW_SERVICE
-            )
-        )
-        saveCommands(defaultCommands)
-        prefs.edit().putBoolean(COMMANDS_INITIALIZED_KEY, true).apply()
-        return defaultCommands
-    }
-
     val json = prefs.getString(COMMANDS_KEY, "[]") ?: "[]"
     return try {
         val array = JSONArray(json)

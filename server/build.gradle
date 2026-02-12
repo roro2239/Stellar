@@ -23,7 +23,7 @@ dependencies {
     implementation project(':aidl')
     implementation project(':shared')
     compileOnly project(':provider')
-    implementation project(':shizuku-server')
+    implementation project(':shizuku-aidl')
     implementation project(':shizuku-api')
 
     implementation libs.hidden.compat

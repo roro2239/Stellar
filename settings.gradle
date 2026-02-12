@@ -93,6 +93,3 @@ project(':shizuku-aidl').projectDir = file('shizuku/aidl')
 
 include ':shizuku-api'
 project(':shizuku-api').projectDir = file('shizuku/api')
-
-include ':shizuku-server'
-project(':shizuku-server').projectDir = file('shizuku/server')
