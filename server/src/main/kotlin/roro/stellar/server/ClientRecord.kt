@@ -2,16 +2,19 @@ package roro.stellar.server
 
 import android.os.Bundle
 import com.stellar.server.IStellarApplication
+import moe.shizuku.server.IShizukuApplication
 import roro.stellar.StellarApiConstants
 import roro.stellar.server.util.Logger
 
 open class ClientRecord(
     val uid: Int,
     val pid: Int,
-    val client: IStellarApplication,
+    val client: IStellarApplication?,
     val packageName: String,
     val apiVersion: Int
 ) {
+    // Shizuku 应用引用
+    var shizukuApplication: IShizukuApplication? = null
 
     val lastDenyTimeMap: MutableMap<String, Long> = mutableMapOf()
 
@@ -25,7 +28,7 @@ open class ClientRecord(
         reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
         if (!allowed) lastDenyTimeMap[permission] = System.currentTimeMillis()
         try {
-            client.dispatchRequestPermissionResult(requestCode, reply)
+            client?.dispatchRequestPermissionResult(requestCode, reply)
         } catch (e: Throwable) {
             LOGGER.w(
                 e,
@@ -34,6 +37,22 @@ open class ClientRecord(
                 pid,
                 packageName
             )
+        }
+    }
+
+    /**
+     * 分发 Shizuku 权限结果
+     */
+    fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean) {
+        val app = shizukuApplication ?: return
+        if (!allowed) lastDenyTimeMap["shizuku"] = System.currentTimeMillis()
+        try {
+            val data = Bundle()
+            data.putBoolean("moe.shizuku.privileged.api.intent.extra.ALLOWED", allowed)
+            app.dispatchRequestPermissionResult(requestCode, data)
+            LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
+        } catch (e: Throwable) {
+            LOGGER.w(e, "dispatchShizukuPermissionResult failed for client (uid=%d, pid=%d)", uid, pid)
         }
     }
 
