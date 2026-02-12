@@ -23,23 +23,6 @@ object ApkChangedObservers {
         }
         observer.addListener(listener)
     }
-
-    @JvmStatic
-    fun stop(listener: ApkChangedListener) {
-        val pathToRemove = mutableListOf<String>()
-
-        for ((path, observer) in observers) {
-            observer.removeListener(listener)
-
-            if (!observer.hasListeners()) {
-                pathToRemove.add(path)
-            }
-        }
-
-        for (path in pathToRemove) {
-            observers.remove(path)?.stopWatching()
-        }
-    }
 }
 
 @Suppress("DEPRECATION")
@@ -49,14 +32,6 @@ class ApkChangedObserver(private val path: String) : FileObserver(path, DELETE o
 
     fun addListener(listener: ApkChangedListener): Boolean {
         return listeners.add(listener)
-    }
-
-    fun removeListener(listener: ApkChangedListener): Boolean {
-        return listeners.remove(listener)
-    }
-
-    fun hasListeners(): Boolean {
-        return listeners.isNotEmpty()
     }
 
     override fun onEvent(event: Int, path: String?) {
