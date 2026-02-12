@@ -13,7 +13,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
-import android.os.RemoteException
 import android.os.ServiceManager
 import com.stellar.server.IRemoteProcess
 import com.stellar.server.IStellarApplication

@@ -25,7 +25,6 @@ object ShizukuCompat {
     private var serverUid = -1
     private var serverVersion = -1
     private var serverContext: String? = null
-    private var permissionGranted = false
     private var binderReady = false
 
     private val receivedListeners = mutableListOf<OnBinderReceivedListener>()
@@ -39,7 +38,6 @@ object ShizukuCompat {
             serverUid = data.getInt("moe.shizuku.privileged.api.intent.extra.SERVER_UID", -1)
             serverVersion = data.getInt("moe.shizuku.privileged.api.intent.extra.SERVER_VERSION", -1)
             serverContext = data.getString("moe.shizuku.privileged.api.intent.extra.SERVER_SECONTEXT")
-            permissionGranted = data.getBoolean("moe.shizuku.privileged.api.intent.extra.PERMISSION_GRANTED", false)
             notifyBinderReceived()
         }
 

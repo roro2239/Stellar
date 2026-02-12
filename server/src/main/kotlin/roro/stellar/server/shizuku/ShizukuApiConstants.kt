@@ -2,32 +2,16 @@ package roro.stellar.server.shizuku
 
 object ShizukuApiConstants {
 
-    const val SERVER_VERSION = 13
-    const val SERVER_PATCH_VERSION = 5
-
-    const val SHIZUKU_APP_PACKAGE_NAME = "moe.shizuku.privileged.api"
-
-    const val BINDER_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
-
-    const val BINDER_TRANSACTION_transact = 1599295570
-
-    const val PROVIDER_SUFFIX = ".shizuku"
-
-    const val SHIZUKU_MANAGER_APPLICATION_ID = "moe.shizuku.manager"
-
-    const val SHIZUKU_PERMISSION = "moe.shizuku.manager.permission.API_V23"
-
     /** Shizuku 权限名称，用于 ConfigManager */
     const val PERMISSION_NAME = "shizuku"
 
+    /** 用于检测应用是否支持 Shizuku */
     const val META_DATA_KEY = "moe.shizuku.client.V3_SUPPORT"
 
     // Shizuku 原始标志值 (用于 AIDL 接口兼容)
     const val FLAG_ASK = 0
-    const val FLAG_ALLOWED = 1 shl 1  // 2
-    const val FLAG_GRANTED = FLAG_ALLOWED
+    const val FLAG_GRANTED = 1 shl 1  // 2
     const val FLAG_DENIED = 1 shl 2   // 4
-    const val MASK_PERMISSION = FLAG_ALLOWED or FLAG_DENIED
 
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
     const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
