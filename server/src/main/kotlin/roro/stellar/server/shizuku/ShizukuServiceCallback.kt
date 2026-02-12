@@ -3,6 +3,7 @@ package roro.stellar.server.shizuku
 import com.stellar.server.IStellarService
 import roro.stellar.server.ClientManager
 import roro.stellar.server.ConfigManager
+import roro.stellar.server.userservice.UserServiceManager
 
 /**
  * Shizuku 服务回调接口
@@ -12,6 +13,7 @@ interface ShizukuServiceCallback {
     val stellarService: IStellarService
     val clientManager: ClientManager
     val configManager: ConfigManager
+    val userServiceManager: UserServiceManager
     val managerAppId: Int
     val servicePid: Int
 

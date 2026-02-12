@@ -563,6 +563,7 @@ class StellarService : IStellarService.Stub() {
             override val stellarService: IStellarService get() = this@StellarService
             override val clientManager: ClientManager get() = this@StellarService.clientManager
             override val configManager: ConfigManager get() = this@StellarService.configManager
+            override val userServiceManager: UserServiceManager get() = this@StellarService.userServiceManager
             override val managerAppId: Int get() = this@StellarService.managerAppId
             override val servicePid: Int get() = android.os.Process.myPid()
 
