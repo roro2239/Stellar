@@ -7,6 +7,7 @@ import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import moe.shizuku.server.IShizukuServiceConnection
+import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ConfigManager
 
 /**
@@ -20,6 +21,8 @@ class ShizukuServiceIntercept(
 
     companion object {
         private const val TAG = "ShizukuServiceIntercept"
+        // Shizuku Manager 特征权限 (signature 级别，只有 Manager 会请求)
+        private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
     }
 
     private val clientManager get() = callback.clientManager
@@ -46,16 +49,36 @@ class ShizukuServiceIntercept(
     }
 
     /**
+     * 检查 UID 是否属于 Shizuku 管理器
+     * Shizuku 管理器不应获得 Shizuku 权限
+     */
+    private fun isShizukuManager(uid: Int): Boolean {
+        val userId = uid / 100000
+        val packages = callback.getPackagesForUid(uid)
+        for (packageName in packages) {
+            val pi = PackageManagerApis.getPackageInfoNoThrow(packageName, 0x00001000, userId) // GET_PERMISSIONS
+            if (pi?.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
      * 检查 Shizuku 权限（持久权限）
+     * Shizuku 管理器始终返回 DENIED
      */
     private fun checkPermission(uid: Int): Int {
+        if (isShizukuManager(uid)) return ConfigManager.FLAG_DENIED
         return configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
     }
 
     /**
      * 检查一次性权限
+     * Shizuku 管理器始终返回 false
      */
     private fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
+        if (isShizukuManager(uid)) return false
         return clientManager.findClient(uid, pid)?.onetimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: false
     }
 
