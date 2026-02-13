@@ -338,15 +338,13 @@ fun AppListItem(
         }
     }
 
-    // 根据应用类型选择权限类型
     val permissionType = if (isShizukuApp) "shizuku" else "stellar"
 
-    // Shizuku 权限标志转换函数
     fun shizukuToStellarFlag(shizukuFlag: Int): Int {
         return when (shizukuFlag) {
-            0 -> AuthorizationManager.FLAG_ASK      // FLAG_ASK
-            2 -> AuthorizationManager.FLAG_GRANTED  // FLAG_GRANTED (1 << 1)
-            4 -> AuthorizationManager.FLAG_DENIED   // FLAG_DENIED (1 << 2)
+            0 -> AuthorizationManager.FLAG_ASK
+            2 -> AuthorizationManager.FLAG_GRANTED
+            4 -> AuthorizationManager.FLAG_DENIED
             else -> AuthorizationManager.FLAG_ASK
         }
     }
@@ -354,8 +352,8 @@ fun AppListItem(
     fun stellarToShizukuFlag(stellarFlag: Int): Int {
         return when (stellarFlag) {
             AuthorizationManager.FLAG_ASK -> 0
-            AuthorizationManager.FLAG_GRANTED -> 2  // 1 << 1
-            AuthorizationManager.FLAG_DENIED -> 4   // 1 << 2
+            AuthorizationManager.FLAG_GRANTED -> 2
+            AuthorizationManager.FLAG_DENIED -> 4
             else -> 0
         }
     }
@@ -481,7 +479,6 @@ fun AppListItem(
                     }
                 )
 
-                // 只有 Stellar 原生应用才显示"跟随启动"选项
                 if (!isShizukuApp) {
                     PermissionItem(
                         title = "跟随启动",

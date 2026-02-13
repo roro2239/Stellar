@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Observer
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.util.EnvironmentUtils
 
+@OptIn(DelicateCoroutinesApi::class)
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun AdbAutoConnect(
@@ -46,12 +48,10 @@ fun AdbAutoConnect(
         val preferences = StellarSettings.getPreferences()
         val hasSecureSettings = context.checkSelfPermission(WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
-        // 获取端口
         val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
         val settingsPort = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
         val systemPort = EnvironmentUtils.getAdbTcpPort()
 
-        // 定义启用无线调试的函数
         fun enableWirelessAdb() {
             try {
                 Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
@@ -61,10 +61,8 @@ fun AdbAutoConnect(
             }
         }
 
-        // 用于标记是否已处理
         var handled = false
 
-        // 第二轮扫描（开启无线调试后，失败直接进入配对页面）
         fun startSecondRoundScan() {
             handled = false
             val secondObserver = Observer<Int> { discoveredPort ->
@@ -78,7 +76,6 @@ fun AdbAutoConnect(
                             if (hasPermission) {
                                 onStartConnection(discoveredPort, hasSecureSettings)
                             } else {
-                                // 第二轮失败，直接进入配对页面
                                 onNeedsPairing()
                             }
                             onComplete()
@@ -102,7 +99,6 @@ fun AdbAutoConnect(
             ).apply { start() }
         }
 
-        // 定义 mDNS 扫描函数
         fun startMdnsScan() {
             val portObserver = Observer<Int> { discoveredPort ->
                 if (discoveredPort in 1..65535 && !handled) {
@@ -163,7 +159,6 @@ fun AdbAutoConnect(
             ).apply { start() }
         }
 
-        // 如果设置了自定义端口，优先使用自定义端口检测
         if (tcpipPortEnabled && settingsPort != null && settingsPort in 1..65535) {
             GlobalScope.launch(Dispatchers.IO) {
                 val hasPermission = adbWirelessHelper.hasAdbPermission("127.0.0.1", settingsPort)
@@ -173,7 +168,6 @@ fun AdbAutoConnect(
                         onStartConnection(settingsPort, hasSecureSettings)
                         onComplete()
                     } else {
-                        // 自定义端口不可用，继续 mDNS 扫描
                         startMdnsScan()
                     }
                 }
@@ -181,7 +175,6 @@ fun AdbAutoConnect(
             return@LaunchedEffect
         }
 
-        // 没有自定义端口，直接使用 mDNS 扫描
         startMdnsScan()
     }
 }
