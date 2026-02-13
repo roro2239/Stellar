@@ -33,10 +33,6 @@ dependencyResolutionManagement {
     }
 
     versionCatalogs {
-        demoLibs {
-            from(files('demo/demo.versions.toml'))
-        }
-
         serverLibs {
             from(files('server/server.versions.toml'))
         }
@@ -54,7 +50,6 @@ dependencyResolutionManagement {
 if (System.getenv("JITPACK") != "true") {
     include ':server'
     include ':manager'
-    include ':demo'
 }
 def root = "api"
 
