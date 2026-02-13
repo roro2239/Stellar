@@ -1,6 +1,7 @@
 package roro.stellar.server.shizuku
 
 import android.os.Binder
+import android.os.Parcel
 import android.util.Log
 import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuApplication
@@ -84,14 +85,81 @@ class ShizukuServiceIntercept(
         throw SecurityException("Permission denied for $method")
     }
 
+    /**
+     * transactRemote - Shizuku 核心功能
+     * 允许客户端通过 Shizuku 代理调用任意系统 Binder
+     */
+    private fun transactRemote(data: Parcel, reply: Parcel?, flags: Int) {
+        enforceCallingPermission("transactRemote")
+
+        val targetBinder = data.readStrongBinder()
+        val targetCode = data.readInt()
+
+        val callingUid = Binder.getCallingUid()
+        val callingPid = Binder.getCallingPid()
+        val clientRecord = clientManager.findClient(callingUid, callingPid)
+
+        // API >= 13 会传递 targetFlags
+        val targetFlags = if (clientRecord != null && clientRecord.apiVersion >= 13) {
+            data.readInt()
+        } else {
+            flags
+        }
+
+        Log.d(TAG, "transactRemote: uid=$callingUid, code=$targetCode")
+
+        val newData = Parcel.obtain()
+        try {
+            newData.appendFrom(data, data.dataPosition(), data.dataAvail())
+        } catch (e: Throwable) {
+            Log.w(TAG, "transactRemote appendFrom failed", e)
+            newData.recycle()
+            return
+        }
+
+        try {
+            withClearedIdentity {
+                targetBinder.transact(targetCode, newData, reply, targetFlags)
+            }
+        } finally {
+            newData.recycle()
+        }
+    }
+
+    override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+        // transactRemote (Transaction Code = 1)
+        if (code == ShizukuApiConstants.BINDER_TRANSACTION_transact) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
+            transactRemote(data, reply, flags)
+            return true
+        }
+
+        // 旧版 attachApplication (Transaction Code = 14, API <= v12)
+        if (code == 14) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
+            val binder = data.readStrongBinder()
+            val packageName = data.readString()
+
+            val args = android.os.Bundle().apply {
+                putString(ShizukuApiConstants.AttachApplication.PACKAGE_NAME, packageName)
+                putInt(ShizukuApiConstants.AttachApplication.API_VERSION, -1)
+            }
+            attachApplication(IShizukuApplication.Stub.asInterface(binder), args)
+            reply?.writeNoException()
+            return true
+        }
+
+        return super.onTransact(code, data, reply, flags)
+    }
+
     override fun getVersion(): Int {
         enforceCallingPermission("getVersion")
-        return withClearedIdentity { callback.stellarService.version }
+        return callback.serviceVersion
     }
 
     override fun getUid(): Int {
         enforceCallingPermission("getUid")
-        return withClearedIdentity { callback.stellarService.uid }
+        return callback.serviceUid
     }
 
     override fun checkPermission(permission: String?): Int {
@@ -106,25 +174,25 @@ class ShizukuServiceIntercept(
 
     override fun getSELinuxContext(): String? {
         enforceCallingPermission("getSELinuxContext")
-        return withClearedIdentity {
-            callback.stellarService.seLinuxContext ?: throw IllegalStateException("无法获取 SELinux 上下文")
-        }
+        return callback.serviceSeLinuxContext ?: throw IllegalStateException("无法获取 SELinux 上下文")
     }
 
     override fun getSystemProperty(name: String?, defaultValue: String?): String {
         enforceCallingPermission("getSystemProperty")
-        return withClearedIdentity { callback.stellarService.getSystemProperty(name, defaultValue) }
+        return callback.getSystemProperty(name, defaultValue)
     }
 
     override fun setSystemProperty(name: String?, value: String?) {
         enforceCallingPermission("setSystemProperty")
-        withClearedIdentity { callback.stellarService.setSystemProperty(name, value) }
+        callback.setSystemProperty(name, value)
     }
 
     override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
         enforceCallingPermission("newProcess")
-        Log.d(TAG, "newProcess: uid=${Binder.getCallingUid()}, cmd=${cmd?.contentToString()}")
-        val stellarProcess = withClearedIdentity { callback.stellarService.newProcess(cmd, env, dir) }
+        val callingUid = Binder.getCallingUid()
+        val callingPid = Binder.getCallingPid()
+        Log.d(TAG, "newProcess: uid=$callingUid, cmd=${cmd?.contentToString()}")
+        val stellarProcess = withClearedIdentity { callback.newProcess(callingUid, callingPid, cmd, env, dir) }
         return StellarRemoteProcessAdapter(stellarProcess)
     }
 
@@ -185,14 +253,43 @@ class ShizukuServiceIntercept(
     }
 
     override fun attachApplication(application: IShizukuApplication?, args: android.os.Bundle?) {
+        if (application == null) return
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
-        Log.d(TAG, "attachApplication: uid=$callingUid, pid=$callingPid")
+        val apiVersion = args?.getInt(ShizukuApiConstants.AttachApplication.API_VERSION, -1) ?: -1
 
-        if (application != null) {
-            val packages = callback.getPackagesForUid(callingUid)
-            val packageName = packages.firstOrNull() ?: "unknown"
-            clientManager.attachShizukuApplication(callingUid, callingPid, application, packageName)
+        Log.d(TAG, "attachApplication: uid=$callingUid, pid=$callingPid, apiVersion=$apiVersion")
+
+        val packages = callback.getPackagesForUid(callingUid)
+        val packageName = args?.getString(ShizukuApiConstants.AttachApplication.PACKAGE_NAME)
+            ?: packages.firstOrNull()
+            ?: "unknown"
+
+        clientManager.attachShizukuApplication(callingUid, callingPid, application, packageName, apiVersion)
+
+        // 检查权限状态
+        val hasPermission = checkPermission(callingUid) == ConfigManager.FLAG_GRANTED ||
+                checkOnetimePermission(callingUid, callingPid)
+
+        // 兼容旧版客户端 (API <= v12)
+        val replyServerVersion = if (apiVersion == -1) 12 else ShizukuApiConstants.SERVER_VERSION
+
+        // 构建回复 Bundle
+        val reply = android.os.Bundle().apply {
+            putInt(ShizukuApiConstants.BindApplication.SERVER_UID, callback.serviceUid)
+            putInt(ShizukuApiConstants.BindApplication.SERVER_VERSION, replyServerVersion)
+            putInt(ShizukuApiConstants.BindApplication.SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION)
+            putString(ShizukuApiConstants.BindApplication.SERVER_SECONTEXT, callback.serviceSeLinuxContext)
+            putBoolean(ShizukuApiConstants.BindApplication.PERMISSION_GRANTED, hasPermission)
+            putBoolean(ShizukuApiConstants.BindApplication.SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE, false)
+        }
+
+        try {
+            application.bindApplication(reply)
+            Log.i(TAG, "bindApplication 成功: uid=$callingUid, pid=$callingPid, granted=$hasPermission")
+        } catch (e: Throwable) {
+            Log.w(TAG, "bindApplication 失败", e)
         }
     }
 
@@ -216,7 +313,7 @@ class ShizukuServiceIntercept(
     }
 
     override fun dispatchPackageChanged(intent: android.content.Intent?) {
-        // 暂不需要处理
+        // Sui only
     }
 
     override fun isHidden(uid: Int): Boolean = false
