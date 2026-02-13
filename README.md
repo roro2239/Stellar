@@ -1,7 +1,5 @@
 # Stellar
 
-[![JitPack](https://img.shields.io/jitpack/version/com.github.RORO2239/Stellar)](https://jitpack.io/#roro2239/Stellar)
-
 一个基于 Shizuku 的魔改分支，让应用通过 ADB 或 Root 权限使用系统级 API。
 
 ## 项目简介
