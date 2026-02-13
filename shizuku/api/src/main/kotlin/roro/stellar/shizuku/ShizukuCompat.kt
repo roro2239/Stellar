@@ -9,6 +9,7 @@ import android.os.RemoteException
 import android.util.Log
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Shizuku 兼容层
@@ -17,6 +18,16 @@ import moe.shizuku.server.IShizukuService
 object ShizukuCompat {
 
     private const val TAG = "ShizukuCompat"
+
+    // Shizuku API 常量
+    private const val BINDER_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
+    private const val TRANSACTION_attachApplication = 17
+    private const val EXTRA_SERVER_UID = "moe.shizuku.privileged.api.intent.extra.SERVER_UID"
+    private const val EXTRA_SERVER_VERSION = "moe.shizuku.privileged.api.intent.extra.SERVER_VERSION"
+    private const val EXTRA_SERVER_SECONTEXT = "moe.shizuku.privileged.api.intent.extra.SERVER_SECONTEXT"
+    private const val EXTRA_API_VERSION = "moe.shizuku.privileged.api.intent.extra.API_VERSION"
+    private const val EXTRA_PACKAGE_NAME = "moe.shizuku.privileged.api.intent.extra.PACKAGE_NAME"
+    private const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
 
     var binder: IBinder? = null
         private set
@@ -27,22 +38,22 @@ object ShizukuCompat {
     private var serverContext: String? = null
     private var binderReady = false
 
-    private val receivedListeners = mutableListOf<OnBinderReceivedListener>()
-    private val deadListeners = mutableListOf<OnBinderDeadListener>()
-    private val permissionListeners = mutableListOf<OnRequestPermissionResultListener>()
+    private val receivedListeners = CopyOnWriteArrayList<OnBinderReceivedListener>()
+    private val deadListeners = CopyOnWriteArrayList<OnBinderDeadListener>()
+    private val permissionListeners = CopyOnWriteArrayList<OnRequestPermissionResultListener>()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val application = object : IShizukuApplication.Stub() {
         override fun bindApplication(data: Bundle?) {
             if (data == null) return
-            serverUid = data.getInt("moe.shizuku.privileged.api.intent.extra.SERVER_UID", -1)
-            serverVersion = data.getInt("moe.shizuku.privileged.api.intent.extra.SERVER_VERSION", -1)
-            serverContext = data.getString("moe.shizuku.privileged.api.intent.extra.SERVER_SECONTEXT")
+            serverUid = data.getInt(EXTRA_SERVER_UID, -1)
+            serverVersion = data.getInt(EXTRA_SERVER_VERSION, -1)
+            serverContext = data.getString(EXTRA_SERVER_SECONTEXT)
             notifyBinderReceived()
         }
 
         override fun dispatchRequestPermissionResult(requestCode: Int, data: Bundle?) {
-            val allowed = data?.getBoolean("moe.shizuku.privileged.api.intent.extra.ALLOWED", false) ?: false
+            val allowed = data?.getBoolean(EXTRA_ALLOWED, false) ?: false
             notifyPermissionResult(requestCode, allowed)
         }
 
@@ -90,18 +101,19 @@ object ShizukuCompat {
 
     @Throws(RemoteException::class)
     private fun attachApplication(binder: IBinder, packageName: String?) {
-        val args = Bundle()
-        args.putInt("moe.shizuku.privileged.api.intent.extra.API_VERSION", 13)
-        args.putString("moe.shizuku.privileged.api.intent.extra.PACKAGE_NAME", packageName)
+        val args = Bundle().apply {
+            putInt(EXTRA_API_VERSION, 13)
+            putString(EXTRA_PACKAGE_NAME, packageName)
+        }
 
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         try {
-            data.writeInterfaceToken("moe.shizuku.server.IShizukuService")
+            data.writeInterfaceToken(BINDER_DESCRIPTOR)
             data.writeStrongBinder(application.asBinder())
             data.writeInt(1)
             args.writeToParcel(data, 0)
-            binder.transact(17, data, reply, 0)
+            binder.transact(TRANSACTION_attachApplication, data, reply, 0)
             reply.readException()
         } finally {
             reply.recycle()
@@ -110,26 +122,20 @@ object ShizukuCompat {
     }
 
     private fun notifyBinderReceived() {
-        synchronized(receivedListeners) {
-            for (listener in receivedListeners) {
-                mainHandler.post { listener.onBinderReceived() }
-            }
+        receivedListeners.forEach { listener ->
+            mainHandler.post { listener.onBinderReceived() }
         }
     }
 
     private fun notifyBinderDead() {
-        synchronized(deadListeners) {
-            for (listener in deadListeners) {
-                mainHandler.post { listener.onBinderDead() }
-            }
+        deadListeners.forEach { listener ->
+            mainHandler.post { listener.onBinderDead() }
         }
     }
 
     private fun notifyPermissionResult(requestCode: Int, allowed: Boolean) {
-        synchronized(permissionListeners) {
-            for (listener in permissionListeners) {
-                mainHandler.post { listener.onRequestPermissionResult(requestCode, allowed) }
-            }
+        permissionListeners.forEach { listener ->
+            mainHandler.post { listener.onRequestPermissionResult(requestCode, allowed) }
         }
     }
 
@@ -141,46 +147,42 @@ object ShizukuCompat {
     fun isPreV11(): Boolean = serverVersion < 11
 
     fun addBinderReceivedListener(listener: OnBinderReceivedListener) {
-        synchronized(receivedListeners) { receivedListeners.add(listener) }
+        receivedListeners.add(listener)
         if (binderReady) mainHandler.post { listener.onBinderReceived() }
     }
 
     fun removeBinderReceivedListener(listener: OnBinderReceivedListener) {
-        synchronized(receivedListeners) { receivedListeners.remove(listener) }
+        receivedListeners.remove(listener)
     }
 
     fun addBinderDeadListener(listener: OnBinderDeadListener) {
-        synchronized(deadListeners) { deadListeners.add(listener) }
+        deadListeners.add(listener)
     }
 
     fun removeBinderDeadListener(listener: OnBinderDeadListener) {
-        synchronized(deadListeners) { deadListeners.remove(listener) }
+        deadListeners.remove(listener)
     }
 
     fun addRequestPermissionResultListener(listener: OnRequestPermissionResultListener) {
-        synchronized(permissionListeners) { permissionListeners.add(listener) }
+        permissionListeners.add(listener)
     }
 
     fun removeRequestPermissionResultListener(listener: OnRequestPermissionResultListener) {
-        synchronized(permissionListeners) { permissionListeners.remove(listener) }
+        permissionListeners.remove(listener)
     }
 
-    fun checkSelfPermission(): Int {
-        return try {
-            if (service?.checkSelfPermission() == true) 0 else -1
-        } catch (e: RemoteException) {
-            Log.w(TAG, "checkSelfPermission failed", e)
-            -1
-        }
+    fun checkSelfPermission(): Int = try {
+        if (service?.checkSelfPermission() == true) 0 else -1
+    } catch (e: RemoteException) {
+        Log.w(TAG, "checkSelfPermission failed", e)
+        -1
     }
 
-    fun shouldShowRequestPermissionRationale(): Boolean {
-        return try {
-            service?.shouldShowRequestPermissionRationale() ?: false
-        } catch (e: RemoteException) {
-            Log.w(TAG, "shouldShowRequestPermissionRationale failed", e)
-            false
-        }
+    fun shouldShowRequestPermissionRationale(): Boolean = try {
+        service?.shouldShowRequestPermissionRationale() ?: false
+    } catch (e: RemoteException) {
+        Log.w(TAG, "shouldShowRequestPermissionRationale failed", e)
+        false
     }
 
     fun requestPermission(requestCode: Int) {

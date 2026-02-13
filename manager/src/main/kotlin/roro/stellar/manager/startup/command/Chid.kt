@@ -18,9 +18,7 @@ object Chid {
 
     fun commandForUidGid(uid: Int, gid: Int): String = "$path $uid,$gid"
 
-    fun commandForUidGid(uid: Int, gid: Int, command: String): String {
-        return "$path $uid,$gid $command"
-    }
+    fun commandForUidGid(uid: Int, gid: Int, command: String): String = "$path $uid,$gid $command"
 
     fun commandForShell(): String = commandForUid(2000)
 

@@ -55,11 +55,25 @@ class ShizukuUserServiceAdapter(
 
         // 检查是否已有记录
         val existingRecord = records[key]
-        if (existingRecord != null) {
-            // 注册回调
-            existingRecord.callbacks.register(conn)
 
-            // 如果服务已连接，立即通知
+        // noCreate 模式：只查询已存在的服务，不创建新服务
+        if (noCreate) {
+            val binder = existingRecord?.serviceBinder
+            if (binder == null || !binder.pingBinder()) {
+                return -1
+            }
+            existingRecord.callbacks.register(conn)
+            try {
+                conn.connected(binder)
+            } catch (e: Exception) {
+                LOGGER.w(e, "通知已存在服务失败")
+            }
+            return 0
+        }
+
+        // 正常模式：如果服务已存在且连接，直接返回
+        if (existingRecord != null) {
+            existingRecord.callbacks.register(conn)
             val binder = existingRecord.serviceBinder
             if (binder != null && binder.pingBinder()) {
                 try {
@@ -69,16 +83,6 @@ class ShizukuUserServiceAdapter(
                 }
                 return 0
             }
-
-            // noCreate 模式下，服务不存在则返回 -1
-            if (noCreate) {
-                return -1
-            }
-        }
-
-        // noCreate 模式下，没有记录则返回 -1
-        if (noCreate && existingRecord == null) {
-            return -1
         }
 
         // 转换为 Stellar 参数
@@ -160,14 +164,12 @@ class ShizukuUserServiceAdapter(
      * Stellar 服务附加时调用
      */
     fun onStellarServiceAttached(stellarToken: String, binder: IBinder) {
-        val key = tokenToKey[stellarToken]
-        if (key == null) {
+        val key = tokenToKey[stellarToken] ?: run {
             LOGGER.d("onStellarServiceAttached: 未找到 token=$stellarToken 对应的记录 (可能是 Stellar 原生服务)")
             return
         }
 
-        val record = records[key]
-        if (record == null) {
+        val record = records[key] ?: run {
             LOGGER.w("onStellarServiceAttached: 未找到 key=$key 对应的记录")
             return
         }

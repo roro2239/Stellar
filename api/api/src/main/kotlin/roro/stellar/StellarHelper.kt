@@ -26,37 +26,23 @@ object StellarHelper {
     }
 
     fun openManager(context: Context): Boolean {
-        try {
-            var intent = context.packageManager.getLaunchIntentForPackage(
-                STELLAR_MANAGER_PACKAGE_NAME
-            )
-            if (intent == null) {
-                intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE_NAME)
-            }
-            if (intent != null) {
-                context.startActivity(intent)
-                return true
-            }
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(STELLAR_MANAGER_PACKAGE_NAME)
+                ?: context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE_NAME)
+            intent?.let {
+                context.startActivity(it)
+                true
+            } ?: false
         } catch (_: Exception) {
+            false
         }
-        return false
     }
 
     val serviceInfo: ServiceInfo?
-        get() {
-            if (!pingBinder()) {
-                return null
-            }
-
-            return try {
-                ServiceInfo(
-                    uid,
-                    version,
-                    sELinuxContext
-                )
-            } catch (_: Exception) {
-                null
-            }
+        get() = if (!pingBinder()) null else try {
+            ServiceInfo(uid, version, sELinuxContext)
+        } catch (_: Exception) {
+            null
         }
 
     class ServiceInfo(
@@ -70,12 +56,7 @@ object StellarHelper {
         val isAdb: Boolean
             get() = uid == 2000
 
-        override fun toString(): String {
-            return "ServiceInfo{" +
-                    "uid=" + uid +
-                    ", version=" + version +
-                    ", seLinuxContext='" + seLinuxContext + '\'' +
-                    '}'
-        }
+        override fun toString(): String =
+            "ServiceInfo{uid=$uid, version=$version, seLinuxContext='$seLinuxContext'}"
     }
 }

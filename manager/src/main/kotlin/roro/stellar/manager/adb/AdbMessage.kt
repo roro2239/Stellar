@@ -36,14 +36,11 @@ class AdbMessage(
             (command.toLong() xor 0xFFFFFFFF).toInt(),
             data)
 
-    fun validate(): Boolean {
-        if (command != magic xor -0x1) return false
-        if (data_length != 0 && crc32(data) != data_crc32) return false
-        return true
-    }
+    fun validate(): Boolean =
+        command == magic xor -0x1 && (data_length == 0 || crc32(data) == data_crc32)
 
     fun validateOrThrow() {
-        if (!validate()) throw IllegalArgumentException("错误的消息 ${this.toStringShort()}")
+        if (!validate()) throw IllegalArgumentException("错误的消息 ${toStringShort()}")
     }
 
     fun toByteArray(): ByteArray {
@@ -93,9 +90,7 @@ class AdbMessage(
         return result
     }
 
-    override fun toString(): String {
-        return "AdbMessage(${toStringShort()})"
-    }
+    override fun toString(): String = "AdbMessage(${toStringShort()})"
 
     fun toStringShort(): String {
         val commandString = when (command) {
@@ -116,17 +111,8 @@ class AdbMessage(
 
         const val HEADER_LENGTH = 24
 
-        private fun crc32(data: ByteArray?): Int {
-            if (data == null) return 0
-            var res = 0
-            for (b in data) {
-                if (b >= 0)
-                    res += b
-                else
-                    res += b + 256
-            }
-            return res
-        }
+        private fun crc32(data: ByteArray?): Int =
+            data?.sumOf { if (it >= 0) it.toInt() else it + 256 } ?: 0
     }
 }
 

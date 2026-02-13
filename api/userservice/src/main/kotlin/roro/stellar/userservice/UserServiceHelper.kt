@@ -13,27 +13,19 @@ object UserServiceHelper {
 
     @JvmStatic
     @Throws(RemoteException::class)
-    fun destroy(binder: IBinder) {
-        transactVoid(binder, TRANSACTION_DESTROY)
-    }
+    fun destroy(binder: IBinder) = transactVoid(binder, TRANSACTION_DESTROY)
 
     @JvmStatic
     @Throws(RemoteException::class)
-    fun isAlive(binder: IBinder): Boolean {
-        return transactInt(binder, TRANSACTION_IS_ALIVE) != 0
-    }
+    fun isAlive(binder: IBinder): Boolean = transactInt(binder, TRANSACTION_IS_ALIVE) != 0
 
     @JvmStatic
     @Throws(RemoteException::class)
-    fun getUid(binder: IBinder): Int {
-        return transactInt(binder, TRANSACTION_GET_UID)
-    }
+    fun getUid(binder: IBinder): Int = transactInt(binder, TRANSACTION_GET_UID)
 
     @JvmStatic
     @Throws(RemoteException::class)
-    fun getPid(binder: IBinder): Int {
-        return transactInt(binder, TRANSACTION_GET_PID)
-    }
+    fun getPid(binder: IBinder): Int = transactInt(binder, TRANSACTION_GET_PID)
 
     private fun transactVoid(binder: IBinder, code: Int) {
         val data = Parcel.obtain()

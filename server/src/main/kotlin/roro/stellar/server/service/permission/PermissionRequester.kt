@@ -107,9 +107,11 @@ class PermissionRequester(
         configManager.updatePermission(
             requestUid,
             permission,
-            if (onetime) ConfigManager.FLAG_ASK
-            else if (allowed) ConfigManager.FLAG_GRANTED
-            else ConfigManager.FLAG_DENIED
+            when {
+                onetime -> ConfigManager.FLAG_ASK
+                allowed -> ConfigManager.FLAG_GRANTED
+                else -> ConfigManager.FLAG_DENIED
+            }
         )
     }
 }

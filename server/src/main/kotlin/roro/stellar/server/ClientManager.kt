@@ -17,13 +17,9 @@ open class ClientManager(
 
     private fun makeKey(uid: Int, pid: Int): Long = (uid.toLong() shl 32) or (pid.toLong() and 0xFFFFFFFFL)
 
-    fun findClients(uid: Int): MutableList<ClientRecord> {
-        return clientsByUid[uid]?.toMutableList() ?: mutableListOf()
-    }
+    fun findClients(uid: Int): List<ClientRecord> = clientsByUid[uid]?.toList() ?: emptyList()
 
-    fun findClient(uid: Int, pid: Int): ClientRecord? {
-        return clientsByKey[makeKey(uid, pid)]
-    }
+    fun findClient(uid: Int, pid: Int): ClientRecord? = clientsByKey[makeKey(uid, pid)]
 
     private fun addToMaps(record: ClientRecord) {
         clientsByKey[makeKey(record.uid, record.pid)] = record

@@ -30,8 +30,6 @@ class PermissionChecker(
         }
     }
 
-    fun shouldShowRequestPermissionRationale(uid: Int): Boolean {
-        val entry = configManager.find(uid)
-        return entry != null && entry.permissions["stellar"] == ConfigManager.FLAG_DENIED
-    }
+    fun shouldShowRequestPermissionRationale(uid: Int): Boolean =
+        configManager.find(uid)?.permissions?.get("stellar") == ConfigManager.FLAG_DENIED
 }

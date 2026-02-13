@@ -36,11 +36,7 @@ object AuthorizationManager {
         }
     }
 
-    fun getPackages(): List<PackageInfo> {
-        val packages: MutableList<PackageInfo> = ArrayList()
-        packages.addAll(getApplications(-1))
-        return packages
-    }
+    fun getPackages(): List<PackageInfo> = getApplications(-1).toMutableList()
 
     /**
      * 判断应用类型

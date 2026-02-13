@@ -16,24 +16,19 @@ object IContentProviderUtils {
         method: String?,
         arg: String?,
         extras: Bundle?
-    ): Bundle? {
-        val result: Bundle?
-        result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            provider.call(
-                (AttributionSource.Builder(uid)).setPackageName(callingPkg).build(),
-                authority,
-                method,
-                arg,
-                extras
-            )
-        } else if (Build.VERSION.SDK_INT >= 30) {
-            provider.call(callingPkg, null as String?, authority, method, arg, extras)
-        } else if (Build.VERSION.SDK_INT >= 29) {
-            provider.call(callingPkg, authority, method, arg, extras)
-        } else {
-            provider.call(callingPkg, method, arg, extras)
-        }
-
-        return result
+    ): Bundle? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        provider.call(
+            (AttributionSource.Builder(uid)).setPackageName(callingPkg).build(),
+            authority,
+            method,
+            arg,
+            extras
+        )
+    } else if (Build.VERSION.SDK_INT >= 30) {
+        provider.call(callingPkg, null as String?, authority, method, arg, extras)
+    } else if (Build.VERSION.SDK_INT >= 29) {
+        provider.call(callingPkg, authority, method, arg, extras)
+    } else {
+        provider.call(callingPkg, method, arg, extras)
     }
 }

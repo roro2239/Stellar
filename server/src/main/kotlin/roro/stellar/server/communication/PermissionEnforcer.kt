@@ -18,44 +18,24 @@ class PermissionEnforcer(
         private val LOGGER = Logger("PermissionEnforcer")
     }
 
-    fun isManager(caller: CallerContext): Boolean {
-        return getAppId(caller.uid) == managerAppId
-    }
+    fun isManager(caller: CallerContext): Boolean = getAppId(caller.uid) == managerAppId
 
-    fun isSelf(caller: CallerContext): Boolean {
-        return caller.uid == OsUtils.uid || caller.pid == Os.getpid()
-    }
+    fun isSelf(caller: CallerContext): Boolean = caller.uid == OsUtils.uid || caller.pid == Os.getpid()
 
     fun hasPermission(caller: CallerContext, permission: String = "stellar"): Boolean {
-        if (isSelf(caller)) {
-            return true
-        }
-        if (isManager(caller)) {
-            return true
-        }
-        val clientRecord = clientManager.findClient(caller.uid, caller.pid)
-        if (clientRecord == null) {
-            return false
-        }
+        if (isSelf(caller) || isManager(caller)) return true
+
+        val clientRecord = clientManager.findClient(caller.uid, caller.pid) ?: return false
 
         if (StellarApiConstants.isRuntimePermission(permission)) {
             return clientRecord.allowedMap[permission] == true
         }
 
-        return when (configManager.find(caller.uid)?.permissions?.get(permission)) {
-            ConfigManager.FLAG_GRANTED -> true
-            else -> false
-        }
+        return configManager.find(caller.uid)?.permissions?.get(permission) == ConfigManager.FLAG_GRANTED
     }
 
     fun enforceManager(caller: CallerContext, func: String) {
-        if (isSelf(caller)) {
-            return
-        }
-
-        if (isManager(caller)) {
-            return
-        }
+        if (isSelf(caller) || isManager(caller)) return
 
         val msg = "Permission Denial: $func from pid=${caller.pid}, uid=${caller.uid} is not manager"
         LOGGER.w(msg)
@@ -63,13 +43,7 @@ class PermissionEnforcer(
     }
 
     fun enforcePermission(caller: CallerContext, func: String, permission: String = "stellar") {
-        if (isSelf(caller)) {
-            return
-        }
-
-        if (isManager(caller)) {
-            return
-        }
+        if (isSelf(caller) || isManager(caller)) return
 
         val clientRecord = clientManager.findClient(caller.uid, caller.pid)
         if (clientRecord == null) {

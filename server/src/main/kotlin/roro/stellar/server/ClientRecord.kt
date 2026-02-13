@@ -24,20 +24,17 @@ open class ClientRecord(
     val onetimeMap: MutableMap<String, Boolean> = mutableMapOf()
 
     fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean, permission: String = "stellar") {
-        val reply = Bundle()
-        reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
-        reply.putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
         if (!allowed) lastDenyTimeMap[permission] = System.currentTimeMillis()
+
+        val reply = Bundle().apply {
+            putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
+            putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
+        }
+
         try {
             client?.dispatchRequestPermissionResult(requestCode, reply)
         } catch (e: Throwable) {
-            LOGGER.w(
-                e,
-                "dispatchRequestPermissionResult failed for client (uid=%d, pid=%d, package=%s)",
-                uid,
-                pid,
-                packageName
-            )
+            LOGGER.w(e, "dispatchRequestPermissionResult failed for client (uid=%d, pid=%d, package=%s)", uid, pid, packageName)
         }
     }
 
@@ -47,25 +44,25 @@ open class ClientRecord(
     fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean, serviceUid: Int, serviceVersion: Int, serviceSeContext: String?) {
         val app = shizukuApplication ?: return
         if (!allowed) lastDenyTimeMap[ShizukuApiConstants.PERMISSION_NAME] = System.currentTimeMillis()
+
         try {
-            val data = Bundle()
-            data.putBoolean(ShizukuApiConstants.EXTRA_ALLOWED, allowed)
-            app.dispatchRequestPermissionResult(requestCode, data)
+            app.dispatchRequestPermissionResult(requestCode, Bundle().apply {
+                putBoolean(ShizukuApiConstants.EXTRA_ALLOWED, allowed)
+            })
             LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
 
             // 重新调用 bindApplication 更新客户端缓存的权限状态
             if (allowed) {
                 // 兼容旧版客户端 (API <= v12)
                 val replyServerVersion = if (apiVersion == -1) 12 else ShizukuApiConstants.SERVER_VERSION
-                val reply = Bundle().apply {
+                app.bindApplication(Bundle().apply {
                     putInt(ShizukuApiConstants.BindApplication.SERVER_UID, serviceUid)
                     putInt(ShizukuApiConstants.BindApplication.SERVER_VERSION, replyServerVersion)
                     putInt(ShizukuApiConstants.BindApplication.SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION)
                     putString(ShizukuApiConstants.BindApplication.SERVER_SECONTEXT, serviceSeContext)
                     putBoolean(ShizukuApiConstants.BindApplication.PERMISSION_GRANTED, true)
                     putBoolean(ShizukuApiConstants.BindApplication.SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE, false)
-                }
-                app.bindApplication(reply)
+                })
                 LOGGER.i("已重新绑定 Shizuku 客户端: uid=$uid, pid=$pid, granted=true, version=$replyServerVersion")
             }
         } catch (e: Throwable) {
