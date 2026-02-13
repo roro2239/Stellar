@@ -1,13 +1,22 @@
 package roro.stellar.server.userservice
 
+import android.app.ActivityThread
+import android.app.Application
+import android.app.Instrumentation
+import android.content.Context
+import android.content.ContextHidden
 import android.content.IContentProvider
+import android.ddm.DdmHandleAppName
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Looper
+import android.os.UserHandle
+import android.os.UserHandleHidden
 import android.util.Log
 import com.stellar.api.BinderContainer
+import dev.rikka.tools.refine.Refine
 import rikka.hidden.compat.ActivityManagerApis
-import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.api.IContentProviderUtils
 
@@ -32,6 +41,7 @@ object UserServiceStarter {
         var uid: Int = -1
         var serviceMode: Int = UserServiceConstants.MODE_ONE_TIME
         var verificationToken: String? = null
+        var debugName: String? = null
 
         for (arg in args) {
             when {
@@ -48,6 +58,8 @@ object UserServiceStarter {
                         ?: UserServiceConstants.MODE_ONE_TIME
                 arg.startsWith("--verification-token=") ->
                     verificationToken = arg.substringAfter("--verification-token=").trim('\'')
+                arg.startsWith("--debug-name=") ->
+                    debugName = arg.substringAfter("--debug-name=").trim('\'')
             }
         }
 
@@ -57,9 +69,11 @@ object UserServiceStarter {
             return
         }
 
-        Log.i(TAG, "启动 UserService: package=$packageName, class=$className, uid=$uid")
+        val userId = uid / 100000
 
-        val userBinder = createUserService(packageName, className)
+        Log.i(TAG, "启动 UserService: package=$packageName, class=$className, uid=$uid, userId=$userId")
+
+        val userBinder = createUserService(packageName, className, userId, debugName)
         if (userBinder == null) {
             Log.e(TAG, "创建 UserService 实例失败")
             System.exit(1)
@@ -83,42 +97,68 @@ object UserServiceStarter {
         System.exit(0)
     }
 
-    private fun createUserService(packageName: String, className: String): IBinder? {
+    private fun createUserService(packageName: String, className: String, userId: Int, debugName: String?): IBinder? {
+        Log.i(TAG, "创建 UserService: $packageName/$className")
+
         return try {
-            val classLoader = createClassLoader(packageName)
+            val activityThread = ActivityThread.systemMain()
+            val systemContext = activityThread.systemContext
+            DdmHandleAppName.setAppName(debugName ?: "$packageName:user_service", userId)
+            val userHandle: UserHandle = Refine.unsafeCast(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    UserHandleHidden.of(userId)
+                } else {
+                    UserHandleHidden(userId)
+                }
+            )
+            val context = Refine.unsafeCast<ContextHidden>(systemContext).createPackageContextAsUser(
+                packageName,
+                Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY,
+                userHandle
+            )
+            val mPackageInfo = context::class.java.getDeclaredField("mPackageInfo")
+            mPackageInfo.isAccessible = true
+            val loadedApk = mPackageInfo.get(context)
+
+            val makeApplication = loadedApk.javaClass.getDeclaredMethod(
+                "makeApplication",
+                Boolean::class.javaPrimitiveType,
+                Instrumentation::class.java
+            )
+            val application = makeApplication.invoke(loadedApk, true, null) as Application
+
+            val mInitialApplication = activityThread.javaClass.getDeclaredField("mInitialApplication")
+            mInitialApplication.isAccessible = true
+            mInitialApplication.set(activityThread, application)
+
+            Log.i(TAG, "Application 创建成功: ${application.javaClass.name}")
+
+            val classLoader = application.classLoader
             val serviceClass = classLoader.loadClass(className)
 
-            val constructor = serviceClass.getDeclaredConstructor()
-            constructor.isAccessible = true
-            val instance = constructor.newInstance()
+            val instance = try {
+                val constructorWithContext = serviceClass.getConstructor(Context::class.java)
+                constructorWithContext.newInstance(application)
+            } catch (e: NoSuchMethodException) {
+                val constructor = serviceClass.getDeclaredConstructor()
+                constructor.isAccessible = true
+                constructor.newInstance()
+            }
 
             when (instance) {
-                is IBinder -> instance
+                is IBinder -> {
+                    Log.i(TAG, "UserService 实例创建成功: $className")
+                    instance
+                }
                 else -> {
-                    Log.e(TAG, "服务类不是 Binder 的子类")
+                    Log.e(TAG, "服务类不是 Binder 的子类: ${instance.javaClass.name}")
                     null
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "创建 UserService 失败", e)
             null
         }
-    }
-
-    private fun createClassLoader(packageName: String): ClassLoader {
-        val userId = 0
-        val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
-            ?: throw IllegalStateException("包未找到: $packageName")
-
-        val apkPath = ai.sourceDir
-        val libraryPath = ai.nativeLibraryDir
-
-        Log.i(TAG, "使用 APK 直接加载: $apkPath")
-        return dalvik.system.PathClassLoader(
-            apkPath,
-            libraryPath,
-            UserServiceStarter::class.java.classLoader
-        )
     }
 
     private fun sendBinderToServer(
@@ -130,8 +170,6 @@ object UserServiceStarter {
         serviceMode: Int,
         verificationToken: String
     ): Boolean {
-        // 连接到管理器应用的 provider，而不是客户端应用的 provider
-        // 这样可以同时支持 Stellar 客户端和 Shizuku 客户端
         val providerName = "${ServerConstants.MANAGER_APPLICATION_ID}.stellar"
         Log.i(TAG, "连接到 Provider: $providerName (客户端包名: $packageName)")
 
