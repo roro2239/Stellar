@@ -8,6 +8,14 @@ object ShizukuApiConstants {
     /** 用于检测应用是否支持 Shizuku */
     const val META_DATA_KEY = "moe.shizuku.client.V3_SUPPORT"
 
+    // Shizuku 服务版本
+    const val SERVER_VERSION = 13
+    const val SERVER_PATCH_VERSION = 6
+
+    // Binder 相关
+    const val BINDER_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
+    const val BINDER_TRANSACTION_transact = 1
+
     // Shizuku 原始标志值 (用于 AIDL 接口兼容)
     const val FLAG_ASK = 0
     const val FLAG_GRANTED = 1 shl 1  // 2
@@ -15,6 +23,22 @@ object ShizukuApiConstants {
 
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
     const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
+
+    // bindApplication 回复常量
+    object BindApplication {
+        const val SERVER_VERSION = "shizuku:attach-reply-version"
+        const val SERVER_PATCH_VERSION = "shizuku:attach-reply-patch-version"
+        const val SERVER_UID = "shizuku:attach-reply-uid"
+        const val SERVER_SECONTEXT = "shizuku:attach-reply-secontext"
+        const val PERMISSION_GRANTED = "shizuku:attach-reply-permission-granted"
+        const val SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE = "shizuku:attach-reply-should-show-request-permission-rationale"
+    }
+
+    // attachApplication 参数常量
+    object AttachApplication {
+        const val PACKAGE_NAME = "shizuku:attach-package-name"
+        const val API_VERSION = "shizuku:attach-api-version"
+    }
 
     // Shizuku 用户服务参数常量
     object UserServiceArgs {
