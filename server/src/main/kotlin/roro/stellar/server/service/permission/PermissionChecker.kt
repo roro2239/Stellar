@@ -20,7 +20,6 @@ class PermissionChecker(
             ConfigManager.FLAG_GRANTED -> true
             ConfigManager.FLAG_DENIED -> false
             else -> {
-                // 检查运行时权限
                 if (StellarApiConstants.isRuntimePermission(permission)) {
                     clientManager.requireClient(uid, pid).allowedMap[permission] ?: false
                 } else {

@@ -22,7 +22,6 @@ object BinderSender {
     private var stellarService: StellarService? = null
     private var initialManagerUid: Int = -1
 
-    // Shizuku Manager 特征权限
     private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
 
     @Throws(RemoteException::class)
@@ -68,9 +67,7 @@ object BinderSender {
                     return
                 }
 
-                // 检查是否支持 Shizuku
                 if (metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
-                    // 检查是否是 Shizuku 管理器，如果是则不发送 binder
                     val permPi = PackageManagerApis.getPackageInfoNoThrow(
                         packageName, PackageManager.GET_PERMISSIONS.toLong(), userId
                     )

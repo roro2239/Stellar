@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SettingsEthernet
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Subject
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
@@ -94,6 +95,7 @@ import roro.stellar.manager.util.PortBlacklistUtils
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import roro.stellar.Stellar
 
 private const val TAG = "SettingsScreen"
 
@@ -155,6 +157,21 @@ fun SettingsScreen(
     var updateAvailable by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableIntStateOf(0) }
+
+    var shizukuCompatEnabled by remember { mutableStateOf(true) }
+    var isServiceConnected by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isServiceConnected = Stellar.pingBinder()
+        if (isServiceConnected) {
+            try {
+                shizukuCompatEnabled = withContext(Dispatchers.IO) {
+                    Stellar.isShizukuCompatEnabled()
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier
@@ -225,6 +242,31 @@ fun SettingsScreen(
                 onCheckedChange = { newValue ->
                     dropPrivileges = newValue
                     savePreference(DROP_PRIVILEGES, newValue)
+                }
+            )
+
+            SettingsSwitchCard(
+                icon = Icons.Default.Share,
+                title = "Shizuku 兼容层",
+                subtitle = "允许 Shizuku 应用通过 Stellar 服务运行",
+                checked = shizukuCompatEnabled,
+                enabled = isServiceConnected,
+                onCheckedChange = { newValue ->
+                    scope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                Stellar.setShizukuCompatEnabled(newValue)
+                            }
+                            shizukuCompatEnabled = newValue
+                            Toast.makeText(
+                                context,
+                                if (newValue) "Shizuku 兼容层已启用" else "Shizuku 兼容层已禁用",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "设置失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             )
 

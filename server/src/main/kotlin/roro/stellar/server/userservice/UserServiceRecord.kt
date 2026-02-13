@@ -79,7 +79,6 @@ class UserServiceRecord(
 
         LOGGER.i("停止服务: %s", className)
 
-        // 调用服务的 destroy 方法
         serviceBinder?.let { binder ->
             val data = Parcel.obtain()
             val reply = Parcel.obtain()
@@ -95,12 +94,10 @@ class UserServiceRecord(
             }
         }
 
-        // 取消死亡监听
         deathRecipient?.let { recipient ->
             serviceBinder?.unlinkToDeath(recipient, 0)
         }
 
-        // 通知回调
         try {
             callback?.onServiceDisconnected()
         } catch (e: Exception) {

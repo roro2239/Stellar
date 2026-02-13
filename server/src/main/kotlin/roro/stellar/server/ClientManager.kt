@@ -10,9 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 open class ClientManager(
     val configManager: ConfigManager
 ) {
-    // 使用 ConcurrentHashMap 提升查找效率 O(1)
     private val clientsByKey = ConcurrentHashMap<Long, ClientRecord>()
-    // 保留 uid -> records 映射，用于 findClients
     private val clientsByUid = ConcurrentHashMap<Int, MutableSet<ClientRecord>>()
 
     private fun makeKey(uid: Int, pid: Int): Long = (uid.toLong() shl 32) or (pid.toLong() and 0xFFFFFFFFL)
@@ -31,15 +29,11 @@ open class ClientManager(
         clientsByUid[record.uid]?.remove(record)
     }
 
-    /**
-     * 获取或创建客户端记录（用于 Shizuku 客户端）
-     */
     fun getOrCreateClient(uid: Int, pid: Int, packageName: String, apiVersion: Int = 0): ClientRecord {
         findClient(uid, pid)?.let { return it }
 
         val record = ClientRecord(uid, pid, null, packageName, apiVersion)
 
-        // 加载权限配置
         configManager.find(uid)?.let { entry ->
             for (permission in entry.permissions) {
                 record.allowedMap[permission.key] = permission.value == ConfigManager.FLAG_GRANTED
@@ -51,19 +45,14 @@ open class ClientManager(
         return record
     }
 
-    /**
-     * 附加 Shizuku 应用到客户端记录
-     */
     fun attachShizukuApplication(uid: Int, pid: Int, application: IShizukuApplication, packageName: String, apiVersion: Int = 0): ClientRecord {
         val record = getOrCreateClient(uid, pid, packageName, apiVersion)
         record.shizukuApplication = application
 
-        // 监听 Shizuku 客户端死亡
         try {
             application.asBinder().linkToDeath({
                 LOGGER.i("Shizuku 客户端死亡: uid=%d, pid=%d", uid, pid)
                 record.shizukuApplication = null
-                // 如果没有 Stellar 客户端，移除整个记录
                 if (record.client == null) {
                     removeFromMaps(record)
                 }

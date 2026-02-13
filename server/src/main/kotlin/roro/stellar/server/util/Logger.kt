@@ -57,35 +57,29 @@ class Logger(private val tag: String?, private val fileLogger: Logger? = null) {
         @JvmStatic
         internal fun addLog(level: Int, tag: String?, message: String) {
             logBuffer.add(LogEntry(System.currentTimeMillis(), level, tag, message))
-            // 移除多余的旧日志
             while (logBuffer.size > MAX_LOG_ENTRIES) {
                 logBuffer.removeAt(0)
             }
         }
     }
 
-    // Verbose
     fun v(msg: String) = println(Log.VERBOSE, msg)
     fun v(fmt: String, vararg args: Any?) = println(Log.VERBOSE, String.format(Locale.ENGLISH, fmt, *args))
     fun v(msg: String?, tr: Throwable?) = println(Log.VERBOSE, msg + '\n' + Log.getStackTraceString(tr))
 
-    // Debug
     fun d(msg: String) = println(Log.DEBUG, msg)
     fun d(fmt: String, vararg args: Any?) = println(Log.DEBUG, String.format(Locale.ENGLISH, fmt, *args))
     fun d(msg: String?, tr: Throwable?) = println(Log.DEBUG, msg + '\n' + Log.getStackTraceString(tr))
 
-    // Info
     fun i(msg: String) = println(Log.INFO, msg)
     fun i(fmt: String, vararg args: Any?) = println(Log.INFO, String.format(Locale.ENGLISH, fmt, *args))
     fun i(msg: String?, tr: Throwable?) = println(Log.INFO, msg + '\n' + Log.getStackTraceString(tr))
 
-    // Warn
     fun w(msg: String) = println(Log.WARN, msg)
     fun w(fmt: String, vararg args: Any?) = println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args))
     fun w(tr: Throwable?, fmt: String, vararg args: Any?) = println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr))
     fun w(msg: String?, tr: Throwable?) = println(Log.WARN, msg + '\n' + Log.getStackTraceString(tr))
 
-    // Error
     fun e(msg: String) = println(Log.ERROR, msg)
     fun e(fmt: String, vararg args: Any?) = println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args))
     fun e(msg: String?, tr: Throwable?) = println(Log.ERROR, msg + '\n' + Log.getStackTraceString(tr))

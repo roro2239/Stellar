@@ -5,9 +5,6 @@ import android.os.RemoteException
 import com.stellar.server.IRemoteProcess as IStellarRemoteProcess
 import moe.shizuku.server.IRemoteProcess as IShizukuRemoteProcess
 
-/**
- * Stellar IRemoteProcess 到 Shizuku IRemoteProcess 的适配器
- */
 class StellarRemoteProcessAdapter(
     private val stellarProcess: IStellarRemoteProcess
 ) : IShizukuRemoteProcess.Stub() {
