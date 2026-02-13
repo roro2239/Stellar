@@ -257,7 +257,16 @@ class ConfigManager {
     }
 
     private fun updatePermissionLocked(uid: Int, permission: String, newFlag: Int) {
-        findLocked(uid)?.let { it.permissions[permission] = newFlag }
+        var entry = findLocked(uid)
+        if (entry == null) {
+            // 配置不存在，先创建一个空配置
+            entry = PackageEntry()
+            val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
+            entry.packages.addAll(packages)
+            config.packages[uid] = entry
+            LOGGER.i("为 uid=%d 创建新配置以保存权限 %s", uid, permission)
+        }
+        entry.permissions[permission] = newFlag
         scheduleWriteLocked()
     }
 
