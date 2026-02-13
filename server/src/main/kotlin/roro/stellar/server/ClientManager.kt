@@ -38,10 +38,10 @@ open class ClientManager(
     /**
      * 获取或创建客户端记录（用于 Shizuku 客户端）
      */
-    fun getOrCreateClient(uid: Int, pid: Int, packageName: String): ClientRecord {
+    fun getOrCreateClient(uid: Int, pid: Int, packageName: String, apiVersion: Int = 0): ClientRecord {
         findClient(uid, pid)?.let { return it }
 
-        val record = ClientRecord(uid, pid, null, packageName, 0)
+        val record = ClientRecord(uid, pid, null, packageName, apiVersion)
 
         // 加载权限配置
         configManager.find(uid)?.let { entry ->
@@ -58,8 +58,8 @@ open class ClientManager(
     /**
      * 附加 Shizuku 应用到客户端记录
      */
-    fun attachShizukuApplication(uid: Int, pid: Int, application: IShizukuApplication, packageName: String): ClientRecord {
-        val record = getOrCreateClient(uid, pid, packageName)
+    fun attachShizukuApplication(uid: Int, pid: Int, application: IShizukuApplication, packageName: String, apiVersion: Int = 0): ClientRecord {
+        val record = getOrCreateClient(uid, pid, packageName, apiVersion)
         record.shizukuApplication = application
 
         // 监听 Shizuku 客户端死亡

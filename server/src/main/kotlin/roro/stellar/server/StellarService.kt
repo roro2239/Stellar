@@ -563,7 +563,13 @@ class StellarService : IStellarService.Stub() {
 
     private fun createShizukuCallback(): ShizukuServiceCallback {
         return object : ShizukuServiceCallback {
-            override val stellarService: IStellarService get() = this@StellarService
+            // 直接获取服务信息，绕过 AIDL 权限检查
+            override val serviceUid: Int get() = android.system.Os.getuid()
+            override val serviceVersion: Int get() = roro.stellar.StellarApiConstants.SERVER_VERSION
+            override val serviceSeLinuxContext: String? get() = try {
+                android.os.SELinux.getContext()
+            } catch (e: Throwable) { null }
+
             override val clientManager: ClientManager get() = this@StellarService.clientManager
             override val configManager: ConfigManager get() = this@StellarService.configManager
             override val userServiceManager: UserServiceManager get() = this@StellarService.userServiceManager
@@ -572,6 +578,18 @@ class StellarService : IStellarService.Stub() {
 
             override fun getPackagesForUid(uid: Int): List<String> {
                 return PackageManagerApis.getPackagesForUidNoThrow(uid).toList()
+            }
+
+            override fun getSystemProperty(name: String?, defaultValue: String?): String {
+                return android.os.SystemProperties.get(name, defaultValue)
+            }
+
+            override fun setSystemProperty(name: String?, value: String?) {
+                android.os.SystemProperties.set(name, value)
+            }
+
+            override fun newProcess(uid: Int, pid: Int, cmd: Array<String?>?, env: Array<String?>?, dir: String?): com.stellar.server.IRemoteProcess {
+                return this@StellarService.serviceCore.processManager.newProcess(uid, pid, cmd ?: emptyArray(), env, dir)
             }
 
             override fun requestPermission(uid: Int, pid: Int, requestCode: Int) {
