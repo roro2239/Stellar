@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="status_ready">#4CAF50</color>
-    <color name="status_error">#F44336</color>
-    <color name="status_warning">#FF9800</color>
-</resources>
