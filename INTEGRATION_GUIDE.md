@@ -371,15 +371,17 @@ val args = UserServiceArgs.Builder(MyUserService::class.java)
 | `versionCode` | Long | `0` | 服务版本号 |
 | `tag` | String? | `null` | 可选标签 |
 | `serviceMode` | ServiceMode | `ONE_TIME` | 服务运行模式 |
-| `useStandaloneDex` | Boolean | `false` | 是否使用独立 DEX |
+| ~~`useStandaloneDex`~~ | ~~Boolean~~ | ~~`false`~~ | ~~是否使用独立 DEX~~ (已临时删除) |
 
-#### 独立 DEX 模式配置
+#### 独立 DEX 模式配置 (已临时删除)
+
+> **注意：** 独立 DEX 模式功能已临时删除，以下文档仅供参考。
 
 独立 DEX 模式可以将用户服务类编译为独立的 DEX 文件，避免加载整个 APK。
 
-**步骤 1：引用构建脚本**
+~~**步骤 1：引用构建脚本**~~
 
-在应用的 `build.gradle` 中引用 Stellar 提供的构建脚本：
+~~在应用的 `build.gradle` 中引用 Stellar 提供的构建脚本：~~
 
 ```gradle
 plugins {
@@ -387,18 +389,19 @@ plugins {
     // ...
 }
 
-// 在 plugins 块之后添加
-apply from: project(':userservice').file('userservice-standalone.gradle')
+// 已临时删除
+// apply from: project(':userservice').file('userservice-standalone.gradle')
 ```
 
-**步骤 2：配置 stellarUserService**
+~~**步骤 2：配置 stellarUserService**~~
 
 ```gradle
-stellarUserService {
-    enabled = true                                    // 启用独立 DEX 模式
-    serviceClass = 'com.example.MyUserService'        // 必须指定服务类的完整类名
-    extraClasses = ['com.example.MyHelper']           // 可选：额外需要包含的类
-}
+// 已临时删除
+// stellarUserService {
+//     enabled = true                                    // 启用独立 DEX 模式
+//     serviceClass = 'com.example.MyUserService'        // 必须指定服务类的完整类名
+//     extraClasses = ['com.example.MyHelper']           // 可选：额外需要包含的类
+// }
 ```
 
 | 配置项 | 类型 | 默认值 | 说明 |
@@ -407,24 +410,26 @@ stellarUserService {
 | `serviceClass` | String | `null` | 服务类的完整类名（启用时必填） |
 | `extraClasses` | List | `[]` | 额外需要包含的类列表 |
 
-**步骤 3：在代码中使用 BuildConfig**
+~~**步骤 3：在代码中使用 BuildConfig**~~
 
-启用后，构建脚本会自动生成 `BuildConfig.STELLAR_USE_STANDALONE_DEX` 字段：
+~~启用后，构建脚本会自动生成 `BuildConfig.STELLAR_USE_STANDALONE_DEX` 字段：~~
 
 ```kotlin
-val args = UserServiceArgs.Builder(MyUserService::class.java)
-    .useStandaloneDex(BuildConfig.STELLAR_USE_STANDALONE_DEX)
-    .build()
+// 已临时删除
+// val args = UserServiceArgs.Builder(MyUserService::class.java)
+//     .useStandaloneDex(BuildConfig.STELLAR_USE_STANDALONE_DEX)
+//     .build()
 ```
 
-**不使用独立 DEX 模式**
+~~**不使用独立 DEX 模式**~~
 
-如果不需要独立 DEX 模式，可以设置 `enabled = false` 或省略配置：
+~~如果不需要独立 DEX 模式，可以设置 `enabled = false` 或省略配置：~~
 
 ```gradle
-stellarUserService {
-    enabled = false  // 此时 BuildConfig.STELLAR_USE_STANDALONE_DEX = false
-}
+// 已临时删除
+// stellarUserService {
+//     enabled = false  // 此时 BuildConfig.STELLAR_USE_STANDALONE_DEX = false
+// }
 ```
 
 **命名约定：** 对应的 AIDL 接口应命名为 `I<ServiceName>`（如服务类为 `MyUserService`，接口应为 `IMyUserService`）。

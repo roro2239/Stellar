@@ -67,6 +67,38 @@ Stellar 重新启用了 Shizuku 最新版本中已标记为弃用的功能：
 - 精简模块结构
 - 规范化命名
 
+## Shizuku 兼容层
+
+Stellar 内置了 Shizuku 兼容层，允许使用 Shizuku API 的应用无需修改代码即可使用 Stellar 服务。
+
+### 工作原理
+
+兼容层通过以下方式实现无缝兼容：
+
+1. **客户端兼容** - `ShizukuProvider` 接收 Stellar 服务发送的 Binder，并通过 `ShizukuCompat` 管理连接状态
+2. **服务端拦截** - `ShizukuServiceIntercept` 实现完整的 `IShizukuService` 接口，将 Shizuku API 调用转发到 Stellar 服务
+3. **权限映射** - 自动将 Shizuku 权限请求映射到 Stellar 的 `shizuku` 权限
+
+### 支持的 API
+
+兼容层支持 Shizuku 的核心 API：
+
+- `pingBinder()` / `getVersion()` / `getUid()` - 服务状态查询
+- `checkSelfPermission()` / `requestPermission()` - 权限管理
+- `newProcess()` - 创建特权进程
+- `addUserService()` / `removeUserService()` - 用户服务管理
+- `transactRemote()` - Binder 事务转发
+
+### 启用/禁用
+
+Shizuku 兼容层默认启用。如需禁用，可在 Stellar 管理器的设置页面中关闭「Shizuku 兼容」开关。
+
+### 注意事项
+
+- 兼容层会自动拒绝来自 Shizuku Manager 的请求，避免冲突
+- 使用 Shizuku API 的应用需要在 `AndroidManifest.xml` 中配置 `ShizukuProvider`
+- 建议新应用直接使用 Stellar API 以获得完整功能支持
+
 ## 降权激活
 
 降权激活功能允许以 Root 权限启动 Stellar 服务后，自动降权到 Shell 用户（uid=2000）运行，提高安全性。
