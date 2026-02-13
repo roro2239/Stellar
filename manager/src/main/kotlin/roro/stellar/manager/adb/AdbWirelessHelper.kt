@@ -23,11 +23,6 @@ import javax.net.ssl.SSLException
 
 class AdbWirelessHelper {
 
-    /**
-     * 快速检测是否有 ADB 连接权限（已配对）
-     * 通过尝试连接 ADB 来判断
-     * @return true 表示有权限可以直接启动，false 表示需要配对
-     */
     suspend fun hasAdbPermission(host: String, port: Int): Boolean {
         if (port !in 1..65535) return false
 
@@ -43,13 +38,10 @@ class AdbWirelessHelper {
             }
             true
         } catch (e: SSLException) {
-            // SSL 错误表示证书不被信任，需要配对
             false
         } catch (e: java.net.ConnectException) {
-            // 连接失败，端口可能未开启
             false
         } catch (e: Throwable) {
-            // 其他错误也视为需要配对
             false
         }
     }
