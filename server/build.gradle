@@ -28,4 +28,5 @@ dependencies {
 
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
+    implementation libs.refine.runtime
 }
