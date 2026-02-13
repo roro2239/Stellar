@@ -12,7 +12,8 @@
       "Read(//d/StudioProjects/AxManager/api/server-shared/src/main/java/frb/axeron/server/**)",
       "Read(//d/StudioProjects/AxManager/**)",
       "Read(//d/StudioProjects/Shizuku-API/demo/src/main/aidl/rikka/shizuku/demo/**)",
-      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" powershell.exe -Command \"$env:JAVA_HOME=''C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr''; ./gradlew.bat :server:compileDebugKotlin --no-daemon\")"
+      "Bash(JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" powershell.exe -Command \"$env:JAVA_HOME=''C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr''; ./gradlew.bat :server:compileDebugKotlin --no-daemon\")",
+      "Bash(where:*)"
     ],
     "deny": []
   },
