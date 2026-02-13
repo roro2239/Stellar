@@ -23,9 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
-/**
- * 设置项卡片 - 带开关
- */
 @Composable
 fun SettingsSwitchCard(
     icon: ImageVector,
@@ -89,9 +86,6 @@ fun SettingsSwitchCard(
     }
 }
 
-/**
- * 设置项卡片 - 带自定义内容
- */
 @Composable
 fun SettingsContentCard(
     icon: ImageVector,
@@ -144,9 +138,6 @@ fun SettingsContentCard(
     }
 }
 
-/**
- * 设置项卡片 - 可点击
- */
 @Composable
 fun SettingsClickableCard(
     icon: ImageVector,

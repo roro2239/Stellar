@@ -38,26 +38,19 @@ object AuthorizationManager {
 
     fun getPackages(): List<PackageInfo> = getApplications(-1).toMutableList()
 
-    /**
-     * 判断应用类型
-     * 优先检查是否为 Stellar 原生应用，否则为 Shizuku 兼容应用
-     */
     fun getAppType(packageInfo: PackageInfo): AppType {
         val metaData = packageInfo.applicationInfo?.metaData ?: return AppType.SHIZUKU
 
-        // 检查是否有 Stellar 权限声明
         val stellarPermission = metaData.getString(STELLAR_PERMISSION_KEY, "")
         if (stellarPermission.split(",").contains("stellar")) {
             return AppType.STELLAR
         }
 
-        // 检查是否有 Shizuku 支持标记
         val shizukuSupport = metaData.get(SHIZUKU_META_DATA_KEY)
         if (shizukuSupport == true || shizukuSupport == "true") {
             return AppType.SHIZUKU
         }
 
-        // 默认为 Stellar 应用（已有权限记录的应用）
         return AppType.STELLAR
     }
 }

@@ -58,7 +58,6 @@ import javax.net.ssl.SSLProtocolException
 
 private class NotRootedException : Exception("没有 Root 权限")
 
-// 启动步骤状态
 enum class StepStatus { PENDING, RUNNING, COMPLETED, ERROR, WARNING }
 
 data class StartStep(
@@ -172,7 +171,6 @@ private fun LoadingContent(
         }
     }
 
-    // 根据输出解析当前步骤
     val steps = remember(isRoot, useMdnsDiscovery) {
         if (isRoot) {
             listOf(
@@ -183,7 +181,6 @@ private fun LoadingContent(
                 StartStep("启动完成", Icons.Filled.CheckCircle)
             )
         } else if (useMdnsDiscovery) {
-            // mDNS 模式：不需要切换端口步骤
             listOf(
                 StartStep("连接 ADB 服务", Icons.Filled.Cable),
                 StartStep("验证连接状态", Icons.Filled.VerifiedUser),
@@ -282,7 +279,6 @@ private fun LoadingContent(
                 }
             }
 
-            // 启动完成后显示复制日志卡片
             if (isSuccess && outputLines.isNotEmpty()) {
                 var copyLogVisible by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
@@ -1036,7 +1032,7 @@ internal class StarterViewModel(
                 if (!Shell.getShell().isRoot) {
                     Shell.getCachedShell()?.close()
                     if (!Shell.getShell().isRoot) {
-                        setError(NotRootedException(), 0) // 检查 Root 权限失败
+                        setError(NotRootedException(), 0)
                         return@launch
                     }
                 }
@@ -1052,7 +1048,7 @@ internal class StarterViewModel(
                     if (result.code != 0) {
                         val errorMsg = getErrorMessage(result.code)
                         addOutputLine("错误：$errorMsg")
-                        setError(Exception(errorMsg), 2) // 启动服务进程失败
+                        setError(Exception(errorMsg), 2)
                     }
                 }
             } catch (e: Exception) {
@@ -1075,18 +1071,15 @@ internal class StarterViewModel(
 
     private fun startAdb(host: String, port: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            // 获取自定义端口设置
             val preferences = StellarSettings.getPreferences()
             val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
             val customPort = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
             val hasValidCustomPort = tcpipPortEnabled && customPort != null && customPort in 1..65535
 
             if (hasValidCustomPort) {
-                // 1. 先尝试用自定义端口连接
                 addOutputLine("尝试连接自定义端口: $customPort")
                 val canConnect = adbWirelessHelper.hasAdbPermission(host, customPort!!)
                 if (canConnect) {
-                    // 自定义端口可用，直接激活服务
                     addOutputLine("自定义端口可用")
                     _useMdnsDiscovery.value = false
                     launch(Dispatchers.Main) {
@@ -1097,14 +1090,12 @@ internal class StarterViewModel(
                 addOutputLine("自定义端口不可用，切换到 mDNS 扫描")
             }
 
-            // 2. 使用 mDNS 发现端口
             if (hasSecureSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 addOutputLine("正在扫描 ADB 端口...")
                 launch(Dispatchers.Main) {
                     startWithMdnsDiscovery(host, port, hasValidCustomPort, customPort ?: -1)
                 }
             } else {
-                // 没有 WRITE_SECURE_SETTINGS 权限，使用传入的端口
                 _useMdnsDiscovery.value = false
                 launch(Dispatchers.Main) {
                     startAdbConnection(host, port)
@@ -1126,11 +1117,9 @@ internal class StarterViewModel(
                 adbMdns = null
 
                 if (shouldSwitchToCustomPort && customPort in 1..65535) {
-                    // 需要切换到自定义端口
                     _useMdnsDiscovery.value = false
                     switchPortThenStart(host, discoveredPort, customPort)
                 } else {
-                    // 直接使用发现的端口
                     _useMdnsDiscovery.value = true
                     startAdbConnection(host, discoveredPort)
                 }
@@ -1172,7 +1161,6 @@ internal class StarterViewModel(
             },
             onSuccess = {
                 addOutputLine("端口已切换到 $newPort")
-                // 等待端口生效后启动
                 viewModelScope.launch {
                     delay(1000)
                     startAdbConnection(host, newPort)

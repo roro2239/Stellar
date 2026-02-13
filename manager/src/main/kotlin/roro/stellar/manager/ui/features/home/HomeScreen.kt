@@ -197,7 +197,6 @@ fun HomeScreen(
         }
     }
 
-    // 询问是否开启无线调试的对话框
     if (showEnableWirelessAdbDialog) {
         StellarConfirmDialog(
             onDismissRequest = {
