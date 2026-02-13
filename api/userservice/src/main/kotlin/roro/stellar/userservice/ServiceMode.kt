@@ -7,8 +7,6 @@ enum class ServiceMode(val value: Int) {
 
     companion object {
         @JvmStatic
-        fun fromValue(value: Int): ServiceMode {
-            return entries.find { it.value == value } ?: ONE_TIME
-        }
+        fun fromValue(value: Int): ServiceMode = entries.find { it.value == value } ?: ONE_TIME
     }
 }

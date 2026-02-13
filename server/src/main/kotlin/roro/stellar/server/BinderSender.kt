@@ -14,12 +14,16 @@ import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.UserHandleCompat.PER_USER_RANGE
 import kotlin.system.exitProcess
 
 object BinderSender {
     private val LOGGER = Logger("BinderSender")
     private var stellarService: StellarService? = null
     private var initialManagerUid: Int = -1
+
+    // Shizuku Manager 特征权限
+    private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
 
     @Throws(RemoteException::class)
     private fun sendBinder(uid: Int, pid: Int) {
@@ -31,7 +35,7 @@ object BinderSender {
 
         LOGGER.i("向 uid %d, pid %d 发送 binder: packages=%s", uid, pid, TextUtils.join(", ", packages))
 
-        val userId = uid / 100000
+        val userId = uid / PER_USER_RANGE
         for (packageName in packages) {
             val pi = PackageManagerApis.getPackageInfoNoThrow(
                 packageName,
@@ -66,6 +70,15 @@ object BinderSender {
 
                 // 检查是否支持 Shizuku
                 if (metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
+                    // 检查是否是 Shizuku 管理器，如果是则不发送 binder
+                    val permPi = PackageManagerApis.getPackageInfoNoThrow(
+                        packageName, PackageManager.GET_PERMISSIONS.toLong(), userId
+                    )
+                    if (permPi?.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) {
+                        LOGGER.i("sendBinder: 跳过 Shizuku 管理器: %s", packageName)
+                        return
+                    }
+
                     LOGGER.i("sendBinder: 发送 Shizuku Binder 到应用: %s", packageName)
                     StellarService.sendShizukuBinderToUserApp(stellarService, packageName, userId)
                     return
@@ -124,7 +137,7 @@ object BinderSender {
                 "onForegroundActivitiesChanged: pid=%d, uid=%d, foregroundActivities=%s",
                 pid,
                 uid,
-                if (foregroundActivities) "true" else "false"
+                foregroundActivities.toString()
             )
 
             synchronized(PID_LIST) {
@@ -141,10 +154,7 @@ object BinderSender {
             LOGGER.d("onProcessDied: pid=%d, uid=%d", pid, uid)
 
             synchronized(PID_LIST) {
-                val index = PID_LIST.indexOf(pid)
-                if (index != -1) {
-                    PID_LIST.removeAt(index)
-                }
+                PID_LIST.remove(pid)
             }
         }
 
@@ -163,7 +173,7 @@ object BinderSender {
         }
 
         companion object {
-            private val PID_LIST: MutableList<Int?> = ArrayList<Int?>()
+            private val PID_LIST: MutableList<Int> = ArrayList()
         }
     }
 
@@ -238,16 +248,14 @@ object BinderSender {
 
         fun uidGone(uid: Int) {
             synchronized(UID_LIST) {
-                val index = UID_LIST.indexOf(uid)
-                if (index != -1) {
-                    UID_LIST.removeAt(index)
+                if (UID_LIST.remove(uid)) {
                     LOGGER.v("UID %d 已死亡", uid)
                 }
             }
         }
 
         companion object {
-            private val UID_LIST: MutableList<Int?> = ArrayList<Int?>()
+            private val UID_LIST: MutableList<Int> = ArrayList()
         }
     }
 }

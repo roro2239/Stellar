@@ -9,14 +9,12 @@ class StellarConfig {
     @SerializedName("packages")
     var packages: MutableMap<Int, PackageEntry> = mutableMapOf()
 
-    class PackageEntry() {
+    class PackageEntry {
         @SerializedName("packages")
         var packages: MutableList<String> = ArrayList()
         @SerializedName("permissions")
         var permissions: MutableMap<String, Int> = mutableMapOf()
     }
-
-    constructor()
 
     companion object {
         const val LATEST_VERSION: Int = 1

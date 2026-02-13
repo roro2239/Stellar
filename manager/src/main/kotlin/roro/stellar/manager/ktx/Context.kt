@@ -5,19 +5,15 @@ import android.os.UserManager
 import roro.stellar.manager.StellarApplication
 
 val Context.application: StellarApplication
-    get() {
-        return applicationContext as StellarApplication
-    }
+    get() = applicationContext as StellarApplication
 
-fun Context.createDeviceProtectedStorageContextCompat(): Context {
-    return createDeviceProtectedStorageContext()
-}
+fun Context.createDeviceProtectedStorageContextCompat(): Context =
+    createDeviceProtectedStorageContext()
 
-fun Context.createDeviceProtectedStorageContextCompatWhenLocked(): Context {
-    return if (getSystemService(UserManager::class.java)?.isUserUnlocked != true) {
+fun Context.createDeviceProtectedStorageContextCompatWhenLocked(): Context =
+    if (getSystemService(UserManager::class.java)?.isUserUnlocked != true) {
         createDeviceProtectedStorageContext()
     } else {
         this
     }
-}
 

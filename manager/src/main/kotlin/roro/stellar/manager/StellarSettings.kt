@@ -68,7 +68,6 @@ object StellarSettings {
     @LaunchMethod
     fun getLastLaunchMode(): Int = getPreferences().getInt("mode", LaunchMethod.UNKNOWN)
 
-    fun setLastLaunchMode(@LaunchMethod method: Int) {
+    fun setLastLaunchMode(@LaunchMethod method: Int) =
         getPreferences().edit().putInt("mode", method).apply()
-    }
 }

@@ -19,12 +19,7 @@ class BinderContainer(val binder: IBinder?) : Parcelable {
     override fun describeContents(): Int = 0
 
     companion object CREATOR : Parcelable.Creator<BinderContainer> {
-        override fun createFromParcel(parcel: Parcel): BinderContainer {
-            return BinderContainer(parcel)
-        }
-
-        override fun newArray(size: Int): Array<BinderContainer?> {
-            return arrayOfNulls(size)
-        }
+        override fun createFromParcel(parcel: Parcel): BinderContainer = BinderContainer(parcel)
+        override fun newArray(size: Int): Array<BinderContainer?> = arrayOfNulls(size)
     }
 }

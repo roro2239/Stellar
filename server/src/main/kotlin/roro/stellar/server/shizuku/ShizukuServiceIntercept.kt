@@ -23,6 +23,11 @@ class ShizukuServiceIntercept(
         private const val TAG = "ShizukuServiceIntercept"
         // Shizuku Manager 特征权限 (signature 级别，只有 Manager 会请求)
         private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
+        // 用户 ID 乘数
+        private const val PER_USER_RANGE = 100000
+
+        private fun getAppId(uid: Int): Int = uid % PER_USER_RANGE
+        private fun getUserId(uid: Int): Int = uid / PER_USER_RANGE
     }
 
     private val clientManager get() = callback.clientManager
@@ -33,6 +38,9 @@ class ShizukuServiceIntercept(
         ShizukuUserServiceAdapter(callback.userServiceManager)
     }
 
+    // Shizuku Manager 缓存 (uid -> isManager)
+    private val shizukuManagerCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
+
     private inline fun <T> withClearedIdentity(block: () -> T): T {
         val id = Binder.clearCallingIdentity()
         try {
@@ -42,26 +50,22 @@ class ShizukuServiceIntercept(
         }
     }
 
-    private fun getAppId(uid: Int): Int = uid % 100000
-
-    private fun checkCallerManagerPermission(callingUid: Int): Boolean {
-        return getAppId(callingUid) == callback.managerAppId
-    }
+    private fun checkCallerManagerPermission(callingUid: Int): Boolean =
+        getAppId(callingUid) == callback.managerAppId
 
     /**
      * 检查 UID 是否属于 Shizuku 管理器
      * Shizuku 管理器不应获得 Shizuku 权限
      */
     private fun isShizukuManager(uid: Int): Boolean {
-        val userId = uid / 100000
-        val packages = callback.getPackagesForUid(uid)
-        for (packageName in packages) {
-            val pi = PackageManagerApis.getPackageInfoNoThrow(packageName, 0x00001000, userId) // GET_PERMISSIONS
-            if (pi?.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) {
-                return true
+        return shizukuManagerCache.getOrPut(uid) {
+            val userId = getUserId(uid)
+            val packages = callback.getPackagesForUid(uid)
+            packages.any { packageName ->
+                PackageManagerApis.getPackageInfoNoThrow(packageName, 0x00001000, userId)
+                    ?.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true
             }
         }
-        return false
     }
 
     /**
@@ -79,15 +83,14 @@ class ShizukuServiceIntercept(
      */
     private fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
         if (isShizukuManager(uid)) return false
-        return clientManager.findClient(uid, pid)?.onetimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: false
+        return clientManager.findClient(uid, pid)?.onetimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) == true
     }
 
     /**
      * 获取上次拒绝时间
      */
-    private fun getLastDenyTime(uid: Int, pid: Int): Long {
-        return clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
-    }
+    private fun getLastDenyTime(uid: Int, pid: Int): Long =
+        clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
 
     /**
      * 检查调用者是否有权限
@@ -134,16 +137,11 @@ class ShizukuServiceIntercept(
         val newData = Parcel.obtain()
         try {
             newData.appendFrom(data, data.dataPosition(), data.dataAvail())
-        } catch (e: Throwable) {
-            Log.w(TAG, "transactRemote appendFrom failed", e)
-            newData.recycle()
-            return
-        }
-
-        try {
             withClearedIdentity {
                 targetBinder.transact(targetCode, newData, reply, targetFlags)
             }
+        } catch (e: Throwable) {
+            Log.w(TAG, "transactRemote failed", e)
         } finally {
             newData.recycle()
         }

@@ -201,17 +201,11 @@ class AdbKey(private val adbKeyStore: AdbKeyStore, name: String) {
                 return if (alias == this.alias) privateKey else null
             }
 
-            override fun getClientAliases(keyType: String?, issuers: Array<out Principal>?): Array<String>? {
-                return null
-            }
+            override fun getClientAliases(keyType: String?, issuers: Array<out Principal>?): Array<String>? = null
 
-            override fun getServerAliases(keyType: String, issuers: Array<out Principal>?): Array<String>? {
-                return null
-            }
+            override fun getServerAliases(keyType: String, issuers: Array<out Principal>?): Array<String>? = null
 
-            override fun chooseServerAlias(keyType: String, issuers: Array<out Principal>?, socket: Socket?): String? {
-                return null
-            }
+            override fun chooseServerAlias(keyType: String, issuers: Array<out Principal>?, socket: Socket?): String? = null
         }
 
     private val trustManager
@@ -243,9 +237,7 @@ class AdbKey(private val adbKeyStore: AdbKeyStore, name: String) {
                 override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
                 }
 
-                override fun getAcceptedIssuers(): Array<X509Certificate> {
-                    return emptyArray()
-                }
+                override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
             }
 
     @delegate:RequiresApi(Build.VERSION_CODES.R)

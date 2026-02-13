@@ -21,20 +21,14 @@ object StellarSystemApis {
 
     private val users = arrayListOf<UserInfoCompat>()
 
-    private fun getUsers(): List<UserInfoCompat> {
-        return if (!Stellar.pingBinder()) {
-            arrayListOf(UserInfoCompat(UserHandleCompat.myUserId(), "Owner"))
+    private fun getUsers(): List<UserInfoCompat> =
+        if (!Stellar.pingBinder()) {
+            listOf(UserInfoCompat(UserHandleCompat.myUserId(), "Owner"))
         } else try {
-            val list = UserManagerApis.getUsers(true, true, true)
-            val users: MutableList<UserInfoCompat> = ArrayList<UserInfoCompat>()
-            for (ui in list) {
-                users.add(UserInfoCompat(ui.id, ui.name))
-            }
-            return users
-        } catch (tr: Throwable) {
-            arrayListOf(UserInfoCompat(UserHandleCompat.myUserId(), "Owner"))
+            UserManagerApis.getUsers(true, true, true).map { UserInfoCompat(it.id, it.name) }
+        } catch (_: Throwable) {
+            listOf(UserInfoCompat(UserHandleCompat.myUserId(), "Owner"))
         }
-    }
 
     fun getUsers(useCache: Boolean = true): List<UserInfoCompat> {
         synchronized(users) {
@@ -46,39 +40,27 @@ object StellarSystemApis {
         }
     }
 
-    fun getUserInfo(userId: Int): UserInfoCompat {
-        return getUsers(useCache = true).firstOrNull { it.id == userId } ?: UserInfoCompat(
-            UserHandleCompat.myUserId(),
-            "Unknown"
-        )
-    }
+    fun getUserInfo(userId: Int): UserInfoCompat =
+        getUsers(useCache = true).firstOrNull { it.id == userId }
+            ?: UserInfoCompat(UserHandleCompat.myUserId(), "Unknown")
 
-    fun getInstalledPackages(flags: Long, userId: Int): List<PackageInfo> {
-        return if (!Stellar.pingBinder()) {
-            ArrayList()
+    fun getInstalledPackages(flags: Long, userId: Int): List<PackageInfo> =
+        if (!Stellar.pingBinder()) {
+            emptyList()
         } else try {
-            val listSlice: ParceledListSlice<PackageInfo>? =
-                PackageManagerApis.getInstalledPackages(
-                    flags,
-                    userId
-                )
-            return if (listSlice != null) {
-                listSlice.list
-            } else ArrayList()
+            PackageManagerApis.getInstalledPackages(flags, userId)?.list ?: emptyList()
         } catch (tr: RemoteException) {
             throw RuntimeException(tr.message, tr)
         }
-    }
 
-    fun checkPermission(permName: String, pkgName: String, userId: Int): Int {
-        return if (!Stellar.pingBinder()) {
+    fun checkPermission(permName: String, pkgName: String, userId: Int): Int =
+        if (!Stellar.pingBinder()) {
             PackageManager.PERMISSION_DENIED
         } else try {
             PermissionManagerApis.checkPermission(permName, pkgName, userId)
         } catch (tr: RemoteException) {
             throw RuntimeException(tr.message, tr)
         }
-    }
 
     fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
         if (!Stellar.pingBinder()) {

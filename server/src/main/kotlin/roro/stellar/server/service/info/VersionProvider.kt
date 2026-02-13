@@ -9,10 +9,7 @@ class VersionProvider {
     private val managerPackageInfo: PackageInfo?
         get() = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
 
-    fun getVersionName(): String? {
-        val pi = managerPackageInfo ?: return "unknown"
-        return pi.versionName ?: "unknown"
-    }
+    fun getVersionName(): String = managerPackageInfo?.versionName ?: "unknown"
 
     fun getVersionCode(): Int {
         val pi = managerPackageInfo ?: return -1
