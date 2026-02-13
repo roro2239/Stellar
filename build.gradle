@@ -34,5 +34,5 @@ apply from: 'api/manifest.gradle'
  */
 ext {
     versionCode = 100091
-    versionName = "1.0.9"
+    versionName = "1.0.9beta1"
 }
