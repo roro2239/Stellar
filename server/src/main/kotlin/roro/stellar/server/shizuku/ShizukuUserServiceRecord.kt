@@ -28,7 +28,7 @@ class ShizukuUserServiceRecord(
      */
     fun onServiceConnected(binder: IBinder) {
         serviceBinder = binder
-        broadcastConnected()
+        broadcast("connected") { it.connected(binder) }
     }
 
     /**
@@ -36,33 +36,17 @@ class ShizukuUserServiceRecord(
      */
     fun onServiceDisconnected() {
         serviceBinder = null
-        broadcastDied()
+        broadcast("died") { it.died() }
     }
 
-    private fun broadcastConnected() {
-        val binder = serviceBinder ?: return
+    private inline fun broadcast(action: String, block: (IShizukuServiceConnection) -> Unit) {
         val count = callbacks.beginBroadcast()
         try {
             for (i in 0 until count) {
                 try {
-                    callbacks.getBroadcastItem(i).connected(binder)
+                    block(callbacks.getBroadcastItem(i))
                 } catch (e: Exception) {
-                    LOGGER.w(e, "广播 connected 失败")
-                }
-            }
-        } finally {
-            callbacks.finishBroadcast()
-        }
-    }
-
-    private fun broadcastDied() {
-        val count = callbacks.beginBroadcast()
-        try {
-            for (i in 0 until count) {
-                try {
-                    callbacks.getBroadcastItem(i).died()
-                } catch (e: Exception) {
-                    LOGGER.w(e, "广播 died 失败")
+                    LOGGER.w(e, "广播 $action 失败")
                 }
             }
         } finally {

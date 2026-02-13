@@ -170,9 +170,8 @@ object UpdateUtils {
         }
     }
     
-    fun hasInstallPermission(context: Context): Boolean {
-        return context.packageManager.canRequestPackageInstalls()
-    }
+    fun hasInstallPermission(context: Context): Boolean =
+        context.packageManager.canRequestPackageInstalls()
     
     fun requestInstallPermission(context: Context) {
         try {

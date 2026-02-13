@@ -153,16 +153,11 @@ object StellarUserService {
         }
     }
 
-    private fun getConnectionKey(args: UserServiceArgs): String {
-        return "${args.className}:${args.processNameSuffix}"
-    }
+    private fun getConnectionKey(args: UserServiceArgs): String =
+        "${args.className}:${args.processNameSuffix}"
 
     private fun dispatchCallback(handler: Handler?, action: () -> Unit) {
-        if (handler != null) {
-            handler.post(action)
-        } else {
-            action()
-        }
+        handler?.post(action) ?: action()
     }
 
     private fun createAidlCallback(

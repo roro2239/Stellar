@@ -18,8 +18,7 @@ class StellarRemoteProcess : Process, Parcelable {
     private var remote: IRemoteProcess?
 
     private var os: OutputStream? = null
-
-    private var `is`: InputStream? = null
+    private var inputStream: InputStream? = null
 
     internal constructor(remote: IRemoteProcess?) {
         this.remote = remote
@@ -27,121 +26,68 @@ class StellarRemoteProcess : Process, Parcelable {
             this.remote!!.asBinder().linkToDeath({
                 this.remote = null
                 Log.v(TAG, "")
-
                 CACHE.remove(this@StellarRemoteProcess)
             }, 0)
         } catch (e: RemoteException) {
             Log.e(TAG, "", e)
         }
-
         CACHE.add(this)
     }
 
+    private constructor(parcel: Parcel) {
+        remote = IRemoteProcess.Stub.asInterface(parcel.readStrongBinder())
+    }
+
+    private fun requireRemote(): IRemoteProcess = remote ?: throw IllegalStateException("Process is dead")
+
     override fun getOutputStream(): OutputStream {
         if (os == null) {
-            try {
-                os = ParcelFileDescriptor.AutoCloseOutputStream(remote!!.getOutputStream())
-            } catch (e: RemoteException) {
-                throw RuntimeException(e)
-            }
+            os = ParcelFileDescriptor.AutoCloseOutputStream(requireRemote().getOutputStream())
         }
         return os!!
     }
 
     override fun getInputStream(): InputStream {
-        if (`is` == null) {
-            try {
-                `is` = ParcelFileDescriptor.AutoCloseInputStream(remote!!.getInputStream())
-            } catch (e: RemoteException) {
-                throw RuntimeException(e)
-            }
+        if (inputStream == null) {
+            inputStream = ParcelFileDescriptor.AutoCloseInputStream(requireRemote().getInputStream())
         }
-        return `is`!!
+        return inputStream!!
     }
 
-    override fun getErrorStream(): InputStream {
-        try {
-            return ParcelFileDescriptor.AutoCloseInputStream(remote!!.getErrorStream())
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    override fun getErrorStream(): InputStream =
+        ParcelFileDescriptor.AutoCloseInputStream(requireRemote().getErrorStream())
 
     @Throws(InterruptedException::class)
-    override fun waitFor(): Int {
-        try {
-            return remote!!.waitFor()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    override fun waitFor(): Int = requireRemote().waitFor()
 
-    override fun exitValue(): Int {
-        try {
-            return remote!!.exitValue()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    override fun exitValue(): Int = requireRemote().exitValue()
 
-    override fun destroy() {
-        try {
-            remote!!.destroy()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    override fun destroy() = requireRemote().destroy()
 
-    fun alive(): Boolean {
-        try {
-            return remote!!.alive()
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    fun alive(): Boolean = requireRemote().alive()
 
     @Throws(InterruptedException::class)
-    fun waitForTimeout(timeout: Long, unit: TimeUnit): Boolean {
-        try {
-            return remote!!.waitForTimeout(timeout, unit.toString())
-        } catch (e: RemoteException) {
-            throw RuntimeException(e)
-        }
-    }
+    fun waitForTimeout(timeout: Long, unit: TimeUnit): Boolean =
+        requireRemote().waitForTimeout(timeout, unit.toString())
 
-    fun asBinder(): IBinder? {
-        return remote!!.asBinder()
-    }
+    fun asBinder(): IBinder? = remote?.asBinder()
 
-    private constructor(`in`: Parcel) {
-        remote = IRemoteProcess.Stub.asInterface(`in`.readStrongBinder())
-    }
-
-    override fun describeContents(): Int {
-        return 0
-    }
+    override fun describeContents(): Int = 0
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
         dest.writeStrongBinder(remote!!.asBinder())
     }
 
     companion object {
-        private val CACHE: MutableSet<StellarRemoteProcess?> =
-            Collections.synchronizedSet<StellarRemoteProcess?>(
-                ArraySet<StellarRemoteProcess?>()
-            )
-
         private const val TAG = "StellarRemoteProcess"
+
+        private val CACHE: MutableSet<StellarRemoteProcess?> =
+            Collections.synchronizedSet(ArraySet())
 
         @JvmField
         val CREATOR: Creator<StellarRemoteProcess?> = object : Creator<StellarRemoteProcess?> {
-            override fun createFromParcel(`in`: Parcel): StellarRemoteProcess {
-                return StellarRemoteProcess(`in`)
-            }
-
-            override fun newArray(size: Int): Array<StellarRemoteProcess?> {
-                return arrayOfNulls(size)
-            }
+            override fun createFromParcel(parcel: Parcel): StellarRemoteProcess = StellarRemoteProcess(parcel)
+            override fun newArray(size: Int): Array<StellarRemoteProcess?> = arrayOfNulls(size)
         }
     }
 }

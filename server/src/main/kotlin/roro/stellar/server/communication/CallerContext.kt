@@ -11,11 +11,9 @@ data class CallerContext(
     val userId: Int = getUserId(uid)
 
     companion object {
-        fun fromBinder(): CallerContext {
-            return CallerContext(
-                uid = Binder.getCallingUid(),
-                pid = Binder.getCallingPid()
-            )
-        }
+        fun fromBinder() = CallerContext(
+            uid = Binder.getCallingUid(),
+            pid = Binder.getCallingPid()
+        )
     }
 }

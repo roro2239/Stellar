@@ -12,37 +12,22 @@ class StellarRemoteProcessAdapter(
     private val stellarProcess: IStellarRemoteProcess
 ) : IShizukuRemoteProcess.Stub() {
 
-    override fun getOutputStream(): ParcelFileDescriptor? {
-        return stellarProcess.outputStream
-    }
+    override fun getOutputStream(): ParcelFileDescriptor? = stellarProcess.outputStream
 
-    override fun getInputStream(): ParcelFileDescriptor? {
-        return stellarProcess.inputStream
-    }
+    override fun getInputStream(): ParcelFileDescriptor? = stellarProcess.inputStream
 
-    override fun getErrorStream(): ParcelFileDescriptor? {
-        return stellarProcess.errorStream
-    }
+    override fun getErrorStream(): ParcelFileDescriptor? = stellarProcess.errorStream
 
-    override fun waitFor(): Int {
-        return stellarProcess.waitFor()
-    }
+    override fun waitFor(): Int = stellarProcess.waitFor()
 
-    override fun exitValue(): Int {
-        return stellarProcess.exitValue()
-    }
+    override fun exitValue(): Int = stellarProcess.exitValue()
 
-    override fun destroy() {
-        stellarProcess.destroy()
-    }
+    override fun destroy() = stellarProcess.destroy()
 
     @Throws(RemoteException::class)
-    override fun alive(): Boolean {
-        return stellarProcess.alive()
-    }
+    override fun alive(): Boolean = stellarProcess.alive()
 
     @Throws(RemoteException::class)
-    override fun waitForTimeout(timeout: Long, unitName: String?): Boolean {
-        return stellarProcess.waitForTimeout(timeout, unitName)
-    }
+    override fun waitForTimeout(timeout: Long, unitName: String?): Boolean =
+        stellarProcess.waitForTimeout(timeout, unitName)
 }

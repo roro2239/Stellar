@@ -13,25 +13,17 @@ class UserServiceCoordinator(
         pid: Int,
         args: Bundle?,
         callback: IUserServiceCallback?
-    ): String? {
-        if (args == null) return null
-
-        return userServiceManager.startUserService(uid, pid, args, callback)
-    }
+    ): String? = args?.let { userServiceManager.startUserService(uid, pid, it, callback) }
 
     fun stopUserService(token: String?) {
-        if (token == null) return
-
-        userServiceManager.stopUserService(token)
+        token?.let { userServiceManager.stopUserService(it) }
     }
 
     fun attachUserService(binder: IBinder?, options: Bundle?) {
-        if (binder == null || options == null) return
-
-        userServiceManager.attachUserService(binder, options)
+        if (binder != null && options != null) {
+            userServiceManager.attachUserService(binder, options)
+        }
     }
 
-    fun getUserServiceCount(uid: Int): Int {
-        return userServiceManager.getUserServiceCount(uid)
-    }
+    fun getUserServiceCount(uid: Int): Int = userServiceManager.getUserServiceCount(uid)
 }

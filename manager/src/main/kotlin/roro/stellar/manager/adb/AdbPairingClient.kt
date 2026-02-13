@@ -49,13 +49,9 @@ private class PeerInfo(
         Log.d(TAG, "写入对等信息 ${toStringShort()}")
     }
 
-    override fun toString(): String {
-        return "PeerInfo(${toStringShort()})"
-    }
+    override fun toString(): String = "PeerInfo(${toStringShort()})"
 
-    fun toStringShort(): String {
-        return "type=$type, data=${data.contentToString()}"
-    }
+    fun toStringShort(): String = "type=$type, data=${data.contentToString()}"
 
     companion object {
 
@@ -88,13 +84,9 @@ private class PairingPacketHeader(
         Log.d(TAG, "写入配对包头 ${toStringShort()}")
     }
 
-    override fun toString(): String {
-        return "PairingPacketHeader(${toStringShort()})"
-    }
+    override fun toString(): String = "PairingPacketHeader(${toStringShort()})"
 
-    fun toStringShort(): String {
-        return "version=${version.toInt()}, type=${type.toInt()}, payload=$payload"
-    }
+    fun toStringShort(): String = "version=${version.toInt()}, type=${type.toInt()}, payload=$payload"
 
     companion object {
 
@@ -226,9 +218,8 @@ class AdbPairingClient(private val host: String, private val port: Int, private 
         this.pairingContext = pairingContext
     }
 
-    private fun createHeader(type: PairingPacketHeader.Type, payloadSize: Int): PairingPacketHeader {
-        return PairingPacketHeader(kCurrentKeyHeaderVersion, type.value, payloadSize)
-    }
+    private fun createHeader(type: PairingPacketHeader.Type, payloadSize: Int): PairingPacketHeader =
+        PairingPacketHeader(kCurrentKeyHeaderVersion, type.value, payloadSize)
 
     private fun readHeader(): PairingPacketHeader? {
         val bytes = ByteArray(kPairingPacketHeaderSize)
@@ -290,18 +281,9 @@ class AdbPairingClient(private val host: String, private val port: Int, private 
     }
 
     override fun close() {
-        try {
-            inputStream.close()
-        } catch (e: Throwable) {
-        }
-        try {
-            outputStream.close()
-        } catch (e: Throwable) {
-        }
-        try {
-            socket.close()
-        } catch (e: Exception) {
-        }
+        runCatching { inputStream.close() }
+        runCatching { outputStream.close() }
+        runCatching { socket.close() }
 
         if (state != State.Ready) {
             pairingContext.destroy()

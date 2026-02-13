@@ -25,15 +25,10 @@ class DemoUserService : IDemoUserService.Stub() {
         }
     }
 
-    override fun getSystemProperty(name: String): String {
-        return try {
-            val process = Runtime.getRuntime().exec(arrayOf("getprop", name))
-            val reader = java.io.BufferedReader(
-                java.io.InputStreamReader(process.inputStream)
-            )
-            reader.readLine() ?: ""
-        } catch (e: Exception) {
-            ""
-        }
+    override fun getSystemProperty(name: String): String = try {
+        val process = Runtime.getRuntime().exec(arrayOf("getprop", name))
+        java.io.BufferedReader(java.io.InputStreamReader(process.inputStream)).readLine() ?: ""
+    } catch (e: Exception) {
+        ""
     }
 }

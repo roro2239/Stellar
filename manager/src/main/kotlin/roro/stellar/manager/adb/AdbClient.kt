@@ -220,32 +220,14 @@ class AdbClient(private val host: String, private val port: Int, private val key
     }
 
     override fun close() {
-        try {
-            plainInputStream.close()
-        } catch (e: Throwable) {
-        }
-        try {
-            plainOutputStream.close()
-        } catch (e: Throwable) {
-        }
-        try {
-            socket.close()
-        } catch (e: Exception) {
-        }
+        runCatching { plainInputStream.close() }
+        runCatching { plainOutputStream.close() }
+        runCatching { socket.close() }
 
         if (useTls) {
-            try {
-                tlsInputStream.close()
-            } catch (e: Throwable) {
-            }
-            try {
-                tlsOutputStream.close()
-            } catch (e: Throwable) {
-            }
-            try {
-                tlsSocket.close()
-            } catch (e: Exception) {
-            }
+            runCatching { tlsInputStream.close() }
+            runCatching { tlsOutputStream.close() }
+            runCatching { tlsSocket.close() }
         }
     }
 }

@@ -27,7 +27,6 @@ object FollowStellarStartupExt {
                 }
             }
         }
-
     }
 
     private fun broadcast(

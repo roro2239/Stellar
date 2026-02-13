@@ -33,40 +33,25 @@ class StellarBinderWrapper(private val original: IBinder) : IBinder {
     }
 
     @Throws(RemoteException::class)
-    override fun getInterfaceDescriptor(): String? {
-        return original.interfaceDescriptor
-    }
+    override fun getInterfaceDescriptor(): String? = original.interfaceDescriptor
 
-    override fun pingBinder(): Boolean {
-        return original.pingBinder()
-    }
+    override fun pingBinder(): Boolean = original.pingBinder()
 
-    override fun isBinderAlive(): Boolean {
-        return original.isBinderAlive
-    }
+    override fun isBinderAlive(): Boolean = original.isBinderAlive
 
-    override fun queryLocalInterface(descriptor: String): IInterface? {
-        return null
-    }
+    override fun queryLocalInterface(descriptor: String): IInterface? = null
 
     @Throws(RemoteException::class)
-    override fun dump(fd: FileDescriptor, args: Array<String?>?) {
-        original.dump(fd, args)
-    }
+    override fun dump(fd: FileDescriptor, args: Array<String?>?) = original.dump(fd, args)
 
     @Throws(RemoteException::class)
-    override fun dumpAsync(fd: FileDescriptor, args: Array<String?>?) {
-        original.dumpAsync(fd, args)
-    }
+    override fun dumpAsync(fd: FileDescriptor, args: Array<String?>?) = original.dumpAsync(fd, args)
 
     @Throws(RemoteException::class)
-    override fun linkToDeath(recipient: DeathRecipient, flags: Int) {
-        original.linkToDeath(recipient, flags)
-    }
+    override fun linkToDeath(recipient: DeathRecipient, flags: Int) = original.linkToDeath(recipient, flags)
 
-    override fun unlinkToDeath(recipient: DeathRecipient, flags: Int): Boolean {
-        return original.unlinkToDeath(recipient, flags)
-    }
+    override fun unlinkToDeath(recipient: DeathRecipient, flags: Int): Boolean =
+        original.unlinkToDeath(recipient, flags)
 
     companion object {
 

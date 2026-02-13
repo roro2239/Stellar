@@ -62,11 +62,7 @@ class UserServiceBinder(
         reply?.writeInt(android.os.Process.myPid())
     }
 
-    override fun pingBinder(): Boolean {
-        return userBinder.pingBinder()
-    }
+    override fun pingBinder(): Boolean = userBinder.pingBinder()
 
-    override fun isBinderAlive(): Boolean {
-        return userBinder.isBinderAlive
-    }
+    override fun isBinderAlive(): Boolean = userBinder.isBinderAlive
 }

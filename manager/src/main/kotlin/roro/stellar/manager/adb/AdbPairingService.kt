@@ -48,17 +48,14 @@ class AdbPairingService : Service() {
         @Volatile
         private var isRunning = false
 
-        fun startIntent(context: Context): Intent {
-            return Intent(context, AdbPairingService::class.java).setAction(startAction)
-        }
+        fun startIntent(context: Context): Intent =
+            Intent(context, AdbPairingService::class.java).setAction(startAction)
 
-        private fun stopIntent(context: Context): Intent {
-            return Intent(context, AdbPairingService::class.java).setAction(stopAction)
-        }
+        private fun stopIntent(context: Context): Intent =
+            Intent(context, AdbPairingService::class.java).setAction(stopAction)
 
-        private fun replyIntent(context: Context, port: Int): Intent {
-            return Intent(context, AdbPairingService::class.java).setAction(replyAction).putExtra(portKey, port)
-        }
+        private fun replyIntent(context: Context, port: Int): Intent =
+            Intent(context, AdbPairingService::class.java).setAction(replyAction).putExtra(portKey, port)
     }
 
     private var adbMdns: AdbMdns? = null
@@ -529,22 +526,20 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun createInputNotification(port: Int): Notification {
-        return Notification.Builder(this, notificationChannel)
+    private fun createInputNotification(port: Int): Notification =
+        Notification.Builder(this, notificationChannel)
             .setContentTitle("已找到配对服务")
             .setSmallIcon(R.drawable.stellar_icon)
             .addAction(replyNotificationAction(port))
             .build()
-    }
 
-    private fun createMaxRefreshNotification(): Notification {
-        return Notification.Builder(this, notificationChannel)
+    private fun createMaxRefreshNotification(): Notification =
+        Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
             .setContentTitle("未找到配对服务")
             .setContentText("请确保已打开无线调试配对页面")
             .addAction(retryNotificationAction)
             .build()
-    }
 
     private val workingNotification by lazy {
         Notification.Builder(this, notificationChannel)
@@ -553,17 +548,14 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun createManualInputNotification(port: Int): Notification {
-        return Notification.Builder(this, notificationChannel)
+    private fun createManualInputNotification(port: Int): Notification =
+        Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
             .setContentTitle("已停止搜索")
             .setContentText(if (port > 0) "请输入配对码" else "未找到配对服务，请重试")
             .addAction(if (port > 0) replyNotificationAction(port) else retryNotificationAction)
             .build()
-    }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 }
 

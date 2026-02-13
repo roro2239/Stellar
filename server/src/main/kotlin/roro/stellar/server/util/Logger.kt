@@ -31,27 +31,15 @@ data class LogEntry(
     }
 }
 
-class Logger {
-    private val tag: String?
+class Logger(private val tag: String?, private val fileLogger: Logger? = null) {
 
-    private val LOGGER: Logger?
-
-    constructor(tag: String?) {
-        this.tag = tag
-        this.LOGGER = null
-    }
-
-    constructor(tag: String, file: String) {
-        this.tag = tag
-        this.LOGGER = Logger.getLogger(tag)
+    constructor(tag: String, file: String) : this(tag, Logger.getLogger(tag).also { logger ->
         try {
-            val fh = FileHandler(file)
-            fh.setFormatter(SimpleFormatter())
-            LOGGER.addHandler(fh)
+            logger.addHandler(FileHandler(file).apply { formatter = SimpleFormatter() })
         } catch (e: IOException) {
             e.printStackTrace()
         }
-    }
+    })
 
     companion object {
         private const val MAX_LOG_ENTRIES = 500
@@ -64,134 +52,47 @@ class Logger {
         fun getLogsFormatted(): List<String> = logBuffer.map { it.format() }
 
         @JvmStatic
-        fun clearLogs() {
-            logBuffer.clear()
-        }
+        fun clearLogs() = logBuffer.clear()
 
         @JvmStatic
         internal fun addLog(level: Int, tag: String?, message: String) {
-            val entry = LogEntry(System.currentTimeMillis(), level, tag, message)
-            logBuffer.add(entry)
+            logBuffer.add(LogEntry(System.currentTimeMillis(), level, tag, message))
+            // 移除多余的旧日志
             while (logBuffer.size > MAX_LOG_ENTRIES) {
                 logBuffer.removeAt(0)
             }
         }
     }
 
-    fun isLoggable(tag: String?, level: Int): Boolean {
-        return true
-    }
+    // Verbose
+    fun v(msg: String) = println(Log.VERBOSE, msg)
+    fun v(fmt: String, vararg args: Any?) = println(Log.VERBOSE, String.format(Locale.ENGLISH, fmt, *args))
+    fun v(msg: String?, tr: Throwable?) = println(Log.VERBOSE, msg + '\n' + Log.getStackTraceString(tr))
 
-    fun v(msg: String) {
-        if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, msg)
-        }
-    }
+    // Debug
+    fun d(msg: String) = println(Log.DEBUG, msg)
+    fun d(fmt: String, vararg args: Any?) = println(Log.DEBUG, String.format(Locale.ENGLISH, fmt, *args))
+    fun d(msg: String?, tr: Throwable?) = println(Log.DEBUG, msg + '\n' + Log.getStackTraceString(tr))
 
-    fun v(fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, String.format(Locale.ENGLISH, fmt, *args))
-        }
-    }
+    // Info
+    fun i(msg: String) = println(Log.INFO, msg)
+    fun i(fmt: String, vararg args: Any?) = println(Log.INFO, String.format(Locale.ENGLISH, fmt, *args))
+    fun i(msg: String?, tr: Throwable?) = println(Log.INFO, msg + '\n' + Log.getStackTraceString(tr))
 
-    fun v(msg: String?, tr: Throwable?) {
-        if (isLoggable(tag, Log.VERBOSE)) {
-            println(Log.VERBOSE, msg + '\n' + Log.getStackTraceString(tr))
-        }
-    }
+    // Warn
+    fun w(msg: String) = println(Log.WARN, msg)
+    fun w(fmt: String, vararg args: Any?) = println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args))
+    fun w(tr: Throwable?, fmt: String, vararg args: Any?) = println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr))
+    fun w(msg: String?, tr: Throwable?) = println(Log.WARN, msg + '\n' + Log.getStackTraceString(tr))
 
-    fun d(msg: String) {
-        if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, msg)
-        }
-    }
-
-    fun d(fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, String.format(Locale.ENGLISH, fmt, *args))
-        }
-    }
-
-    fun d(msg: String?, tr: Throwable?) {
-        if (isLoggable(tag, Log.DEBUG)) {
-            println(Log.DEBUG, msg + '\n' + Log.getStackTraceString(tr))
-        }
-    }
-
-    fun i(msg: String) {
-        if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, msg)
-        }
-    }
-
-    fun i(fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, String.format(Locale.ENGLISH, fmt, *args))
-        }
-    }
-
-    fun i(msg: String?, tr: Throwable?) {
-        if (isLoggable(tag, Log.INFO)) {
-            println(Log.INFO, msg + '\n' + Log.getStackTraceString(tr))
-        }
-    }
-
-    fun w(msg: String) {
-        if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, msg)
-        }
-    }
-
-    fun w(fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, String.format(Locale.ENGLISH, fmt, *args))
-        }
-    }
-
-    fun w(tr: Throwable?, fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.WARN)) {
-            println(
-                Log.WARN,
-                String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr)
-            )
-        }
-    }
-
-    fun w(msg: String?, tr: Throwable?) {
-        if (isLoggable(tag, Log.WARN)) {
-            println(Log.WARN, msg + '\n' + Log.getStackTraceString(tr))
-        }
-    }
-
-    fun e(msg: String) {
-        if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, msg)
-        }
-    }
-
-    fun e(fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args))
-        }
-    }
-
-    fun e(msg: String?, tr: Throwable?) {
-        if (isLoggable(tag, Log.ERROR)) {
-            println(Log.ERROR, msg + '\n' + Log.getStackTraceString(tr))
-        }
-    }
-
-    fun e(tr: Throwable?, fmt: String, vararg args: Any?) {
-        if (isLoggable(tag, Log.ERROR)) {
-            println(
-                Log.ERROR,
-                String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr)
-            )
-        }
-    }
+    // Error
+    fun e(msg: String) = println(Log.ERROR, msg)
+    fun e(fmt: String, vararg args: Any?) = println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args))
+    fun e(msg: String?, tr: Throwable?) = println(Log.ERROR, msg + '\n' + Log.getStackTraceString(tr))
+    fun e(tr: Throwable?, fmt: String, vararg args: Any?) = println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr))
 
     fun println(priority: Int, msg: String): Int {
-        LOGGER?.info(msg)
+        fileLogger?.info(msg)
         addLog(priority, tag, msg)
         return Log.println(priority, tag, msg)
     }

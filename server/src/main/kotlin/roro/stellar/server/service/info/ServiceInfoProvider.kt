@@ -1,35 +1,18 @@
 package roro.stellar.server.service.info
 
-import android.os.Build
-import android.os.SELinux
-import android.system.Os
 import roro.stellar.StellarApiConstants
 import roro.stellar.server.util.OsUtils
 
 class ServiceInfoProvider(
     private val versionProvider: VersionProvider
 ) {
-    fun getVersion(): Int {
-        return StellarApiConstants.SERVER_VERSION
-    }
+    fun getVersion(): Int = StellarApiConstants.SERVER_VERSION
 
-    fun getUid(): Int {
-        return Os.getuid()
-    }
+    fun getUid(): Int = OsUtils.uid
 
-    fun getSELinuxContext(): String? {
-        return try {
-            SELinux.getContext()
-        } catch (tr: Throwable) {
-            null
-        }
-    }
+    fun getSELinuxContext(): String? = OsUtils.sELinuxContext
 
-    fun getVersionName(): String? {
-        return versionProvider.getVersionName()
-    }
+    fun getVersionName(): String? = versionProvider.getVersionName()
 
-    fun getVersionCode(): Int {
-        return versionProvider.getVersionCode()
-    }
+    fun getVersionCode(): Int = versionProvider.getVersionCode()
 }

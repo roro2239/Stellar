@@ -301,37 +301,23 @@ class ConfigManager {
             .setVersion(StellarConfig.LATEST_VERSION.toDouble())
             .create()
 
-        private const val WRITE_DELAY = (1 * 1000).toLong()
+        private const val WRITE_DELAY = 1000L
 
         private val FILE = File("/data/user_de/0/com.android.shell/stellar.json")
         private val ATOMIC_FILE = AtomicFile(FILE)
 
         fun load(): StellarConfig {
-            val stream: FileInputStream
-            try {
-                stream = ATOMIC_FILE.openRead()
+            return try {
+                ATOMIC_FILE.openRead().use { stream ->
+                    GSON_IN.fromJson(InputStreamReader(stream), StellarConfig::class.java)
+                }
             } catch (_: FileNotFoundException) {
                 LOGGER.i("no existing config file " + ATOMIC_FILE.baseFile + "; starting empty")
-                return StellarConfig()
-            }
-
-            var config: StellarConfig? = null
-            try {
-                config = GSON_IN.fromJson(
-                    InputStreamReader(stream),
-                    StellarConfig::class.java
-                )
+                StellarConfig()
             } catch (tr: Throwable) {
                 LOGGER.w(tr, "加载配置失败")
-            } finally {
-                try {
-                    stream.close()
-                } catch (e: IOException) {
-                    LOGGER.w("关闭配置文件失败: $e")
-                }
+                StellarConfig()
             }
-            if (config != null) return config
-            return StellarConfig()
         }
 
         fun write(config: StellarConfig) {

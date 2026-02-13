@@ -9,9 +9,7 @@ object PortBlacklistUtils {
         3306, 5432, 27017, 6379
     )
     
-    fun isPortBlacklisted(port: Int): Boolean {
-        return BLACKLIST_PORTS.contains(port)
-    }
+    fun isPortBlacklisted(port: Int): Boolean = port in BLACKLIST_PORTS
     
     fun generateSafeRandomPort(
         minPort: Int = 1000,

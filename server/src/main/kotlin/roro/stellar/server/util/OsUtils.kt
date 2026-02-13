@@ -8,14 +8,9 @@ object OsUtils {
 
     val pid: Int = Os.getpid()
 
-    val sELinuxContext: String?
-
-    init {
-        var context: String? = try {
-            SELinux.getContext()
-        } catch (_: Throwable) {
-            null
-        }
-        sELinuxContext = context
+    val sELinuxContext: String? = try {
+        SELinux.getContext()
+    } catch (_: Throwable) {
+        null
     }
 }
