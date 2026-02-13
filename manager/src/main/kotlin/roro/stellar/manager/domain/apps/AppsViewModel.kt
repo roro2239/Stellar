@@ -18,17 +18,11 @@ import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.common.state.Resource
 
-/**
- * 应用类型枚举
- */
 enum class AppType {
-    STELLAR,  // Stellar 原生应用
-    SHIZUKU   // Shizuku 兼容应用
+    STELLAR,
+    SHIZUKU
 }
 
-/**
- * 带类型标记的应用信息
- */
 data class AppInfo(
     val packageInfo: PackageInfo,
     val appType: AppType
