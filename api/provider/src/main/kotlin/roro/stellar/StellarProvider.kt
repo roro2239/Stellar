@@ -30,9 +30,7 @@ open class StellarProvider : ContentProvider() {
         isProviderProcess = true
     }
 
-    override fun onCreate(): Boolean {
-        return true
-    }
+    override fun onCreate(): Boolean = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
         if (extras == null) {
@@ -135,30 +133,20 @@ open class StellarProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<String?>?,
         sortOrder: String?
-    ): Cursor? {
-        return null
-    }
+    ): Cursor? = null
 
-    override fun getType(uri: Uri): String? {
-        return null
-    }
+    override fun getType(uri: Uri): String? = null
 
-    override fun insert(uri: Uri, values: ContentValues?): Uri? {
-        return null
-    }
+    override fun insert(uri: Uri, values: ContentValues?): Uri? = null
 
-    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String?>?): Int {
-        return 0
-    }
+    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String?>?): Int = 0
 
     override fun update(
         uri: Uri,
         values: ContentValues?,
         selection: String?,
         selectionArgs: Array<String?>?
-    ): Int {
-        return 0
-    }
+    ): Int = 0
 
     companion object {
         private const val TAG = "StellarProvider"

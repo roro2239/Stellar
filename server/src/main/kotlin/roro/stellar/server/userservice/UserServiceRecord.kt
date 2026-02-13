@@ -79,31 +79,28 @@ class UserServiceRecord(
 
         LOGGER.i("停止服务: %s", className)
 
+        // 调用服务的 destroy 方法
         serviceBinder?.let { binder ->
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
             try {
-                val data = Parcel.obtain()
-                val reply = Parcel.obtain()
-                try {
-                    binder.transact(UserServiceConstants.TRANSACTION_DESTROY, data, reply, 0)
-                    reply.readException()
-                    LOGGER.i("已调用服务内置 destroy()")
-                } finally {
-                    data.recycle()
-                    reply.recycle()
-                }
+                binder.transact(UserServiceConstants.TRANSACTION_DESTROY, data, reply, 0)
+                reply.readException()
+                LOGGER.i("已调用服务内置 destroy()")
             } catch (e: Exception) {
                 LOGGER.w(e, "调用服务 destroy() 失败")
+            } finally {
+                data.recycle()
+                reply.recycle()
             }
         }
 
-        serviceBinder?.let { binder ->
-            deathRecipient?.let { recipient ->
-                try {
-                    binder.unlinkToDeath(recipient, 0)
-                } catch (_: Exception) {}
-            }
+        // 取消死亡监听
+        deathRecipient?.let { recipient ->
+            serviceBinder?.unlinkToDeath(recipient, 0)
         }
 
+        // 通知回调
         try {
             callback?.onServiceDisconnected()
         } catch (e: Exception) {

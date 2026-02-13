@@ -108,11 +108,7 @@ object DemoFunctions {
         try {
             logger.log("--- 权限检查 ---")
 
-            val status = if (Stellar.checkSelfPermission()) {
-                "已授予"
-            } else {
-                "未授予"
-            }
+            val status = if (Stellar.checkSelfPermission()) "已授予" else "未授予"
             logger.log("权限状态: $status")
 
             val shouldShow = Stellar.shouldShowRequestPermissionRationale()
@@ -394,8 +390,7 @@ object DemoFunctions {
     fun callUserService(context: Context, logger: Logger) {
         logger.log("--- 调用 UserService ---")
 
-        val binder = userServiceBinder
-        if (binder == null) {
+        val binder = userServiceBinder ?: run {
             logger.log("[Error] UserService 未连接")
             return
         }

@@ -41,9 +41,8 @@ object CommandExecutor {
         }
     }
 
-    fun getCommandsByMode(mode: CommandMode): List<CommandItem> {
-        return loadCommands().filter { it.mode == mode }
-    }
+    fun getCommandsByMode(mode: CommandMode): List<CommandItem> =
+        loadCommands().filter { it.mode == mode }
 
     fun executeCommandsByMode(mode: CommandMode) {
         val commands = getCommandsByMode(mode)
@@ -74,7 +73,5 @@ object CommandExecutor {
         }
     }
 
-    fun executeFollowServiceCommands() {
-        executeCommandsByMode(CommandMode.FOLLOW_SERVICE)
-    }
+    fun executeFollowServiceCommands() = executeCommandsByMode(CommandMode.FOLLOW_SERVICE)
 }

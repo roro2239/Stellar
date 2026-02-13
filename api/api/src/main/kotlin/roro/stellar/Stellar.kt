@@ -300,31 +300,18 @@ object Stellar {
         }
     }
 
-    internal fun requireService(): IStellarService {
-        checkNotNull(service)
-        return service!!
-    }
+    internal fun requireService(): IStellarService = service ?: error("Service not connected")
 
-    fun getService(): IStellarService? {
-        return service
-    }
+    fun getService(): IStellarService? = service
 
-    fun getPackageName(): String? {
-        return packageName
-    }
+    fun getPackageName(): String? = packageName
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-    fun getClientBinder(): IBinder? {
-        return Stellar_APPLICATION.asBinder()
-    }
+    fun getClientBinder(): IBinder? = Stellar_APPLICATION.asBinder()
 
-    fun pingBinder(): Boolean {
-        return binder != null && binder!!.pingBinder()
-    }
+    fun pingBinder(): Boolean = binder?.pingBinder() == true
 
-    private fun rethrowAsRuntimeException(e: RemoteException?): RuntimeException {
-        return RuntimeException(e)
-    }
+    private fun rethrowAsRuntimeException(e: RemoteException?): RuntimeException = RuntimeException(e)
 
     fun transactRemote(data: Parcel, reply: Parcel?, flags: Int) {
         try {

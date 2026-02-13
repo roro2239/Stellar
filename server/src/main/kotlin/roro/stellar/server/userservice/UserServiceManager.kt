@@ -151,9 +151,8 @@ class UserServiceManager {
         return true
     }
 
-    fun getUserServiceCount(callingUid: Int): Int {
-        return servicesByToken.values.count { it.callingUid == callingUid }
-    }
+    fun getUserServiceCount(callingUid: Int): Int =
+        servicesByToken.values.count { it.callingUid == callingUid }
 
     fun removeUserServicesForPackage(packageName: String) {
         val records = servicesByPackage[packageName]?.toList() ?: return
@@ -186,18 +185,13 @@ class UserServiceManager {
         }
     }
 
-    private fun findRecordByKey(key: String, callingUid: Int): UserServiceRecord? {
-        return servicesByToken.values.find {
-            it.getKey() == key && it.callingUid == callingUid
-        }
-    }
+    private fun findRecordByKey(key: String, callingUid: Int): UserServiceRecord? =
+        servicesByToken.values.find { it.getKey() == key && it.callingUid == callingUid }
 
     private fun removeRecord(record: UserServiceRecord) {
         servicesByToken.remove(record.token)
         servicesByPackage[record.packageName]?.remove(record)
-
-        apkListeners.remove(record)?.let { listener ->
-        }
+        apkListeners.remove(record)
     }
 
     private fun setupApkObserver(record: UserServiceRecord, apkPath: String) {
@@ -254,11 +248,10 @@ class UserServiceManager {
         )
     }
 
-    private fun getDebugArgs(): String {
-        return " -Xcompiler-option --debuggable" +
-               " -XjdwpProvider:adbconnection" +
-               " -XjdwpOptions:suspend=n,server=y"
-    }
+    private fun getDebugArgs(): String =
+        " -Xcompiler-option --debuggable" +
+        " -XjdwpProvider:adbconnection" +
+        " -XjdwpOptions:suspend=n,server=y"
 
     private fun notifyStartFailed(callback: IUserServiceCallback?, errorCode: Int, message: String) {
         try {

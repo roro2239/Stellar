@@ -13,81 +13,48 @@ class PermissionManager(
     private val clientManager: ClientManager,
     private val configManager: ConfigManager
 ) {
-    private val checker: PermissionChecker
-    private val requester: PermissionRequester
-    private val confirmation: PermissionConfirmation
+    private val confirmation = PermissionConfirmation()
+    private val checker = PermissionChecker(clientManager, configManager)
+    private val requester = PermissionRequester(clientManager, configManager, confirmation)
 
     companion object {
         private val LOGGER = Logger("PermissionManager")
     }
 
-    init {
-        checker = PermissionChecker(clientManager, configManager)
-        confirmation = PermissionConfirmation()
-        requester = PermissionRequester(clientManager, configManager, confirmation)
-    }
-
-    fun checkSelfPermission(uid: Int, pid: Int, permission: String): Boolean {
-        return checker.checkSelfPermission(uid, pid, permission)
-    }
+    fun checkSelfPermission(uid: Int, pid: Int, permission: String): Boolean =
+        checker.checkSelfPermission(uid, pid, permission)
 
     fun requestPermission(uid: Int, pid: Int, permission: String, requestCode: Int) {
-        val userId = getUserId(uid)
-        requester.requestPermission(uid, pid, userId, permission, requestCode)
+        requester.requestPermission(uid, pid, getUserId(uid), permission, requestCode)
     }
 
-    fun shouldShowRequestPermissionRationale(uid: Int): Boolean {
-        return checker.shouldShowRequestPermissionRationale(uid)
-    }
+    fun shouldShowRequestPermissionRationale(uid: Int): Boolean =
+        checker.shouldShowRequestPermissionRationale(uid)
 
-    fun getSupportedPermissions(): Array<String> {
-        return StellarApiConstants.PERMISSIONS
-    }
+    fun getSupportedPermissions(): Array<String> = StellarApiConstants.PERMISSIONS
 
     fun dispatchPermissionResult(
         requestUid: Int,
         requestPid: Int,
         requestCode: Int,
         data: Bundle
-    ) {
-        requester.dispatchPermissionResult(requestUid, requestPid, requestCode, data)
-    }
+    ) = requester.dispatchPermissionResult(requestUid, requestPid, requestCode, data)
 
-    fun getFlagForUid(uid: Int, permission: String): Int {
-        val entry = configManager.find(uid)
-        return entry?.permissions?.get(permission) ?: ConfigManager.FLAG_ASK
-    }
+    fun getFlagForUid(uid: Int, permission: String): Int =
+        configManager.find(uid)?.permissions?.get(permission) ?: ConfigManager.FLAG_ASK
 
     fun updateFlagForUid(uid: Int, permission: String, newFlag: Int) {
-        val records = clientManager.findClients(uid)
+        for (record in clientManager.findClients(uid)) {
+            val shouldStopApp = StellarApiConstants.isRuntimePermission(permission) &&
+                    record.allowedMap[permission] == true &&
+                    newFlag != ConfigManager.FLAG_GRANTED
 
-        for (record in records) {
-            fun stopApp() {
-                if (StellarApiConstants.isRuntimePermission(permission) &&
-                    record.allowedMap[permission] == true) {
-                    ActivityManagerApis.forceStopPackageNoThrow(
-                        record.packageName,
-                        getUserId(uid)
-                    )
-                }
+            if (shouldStopApp) {
+                ActivityManagerApis.forceStopPackageNoThrow(record.packageName, getUserId(uid))
             }
 
-            when (newFlag) {
-                ConfigManager.FLAG_ASK -> {
-                    stopApp()
-                    record.allowedMap[permission] = false
-                    record.onetimeMap[permission] = false
-                }
-                ConfigManager.FLAG_DENIED -> {
-                    stopApp()
-                    record.allowedMap[permission] = false
-                    record.onetimeMap[permission] = false
-                }
-                ConfigManager.FLAG_GRANTED -> {
-                    record.allowedMap[permission] = true
-                    record.onetimeMap[permission] = false
-                }
-            }
+            record.allowedMap[permission] = newFlag == ConfigManager.FLAG_GRANTED
+            record.onetimeMap[permission] = false
         }
 
         configManager.updatePermission(uid, permission, newFlag)
@@ -100,6 +67,7 @@ class PermissionManager(
             throw RuntimeException("授予权限失败: ${e.message}", e)
         }
     }
+
     fun revokeRuntimePermission(packageName: String, permissionName: String, userId: Int) {
         try {
             PermissionManagerApis.revokeRuntimePermission(packageName, permissionName, userId)

@@ -7,35 +7,21 @@ import android.os.Parcelable.Creator
 import androidx.annotation.RestrictTo
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
-open class BinderContainer : Parcelable {
-    var binder: IBinder?
+open class BinderContainer(var binder: IBinder?) : Parcelable {
 
-    constructor(binder: IBinder?) {
-        this.binder = binder
-    }
+    protected constructor(parcel: Parcel) : this(parcel.readStrongBinder())
 
-    override fun describeContents(): Int {
-        return 0
-    }
+    override fun describeContents(): Int = 0
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
-        dest.writeStrongBinder(this.binder)
-    }
-
-    protected constructor(`in`: Parcel) {
-        this.binder = `in`.readStrongBinder()
+        dest.writeStrongBinder(binder)
     }
 
     companion object {
         @JvmField
         val CREATOR: Creator<BinderContainer?> = object : Creator<BinderContainer?> {
-            override fun createFromParcel(source: Parcel): BinderContainer {
-                return BinderContainer(source)
-            }
-
-            override fun newArray(size: Int): Array<BinderContainer?> {
-                return arrayOfNulls(size)
-            }
+            override fun createFromParcel(source: Parcel): BinderContainer = BinderContainer(source)
+            override fun newArray(size: Int): Array<BinderContainer?> = arrayOfNulls(size)
         }
     }
 }

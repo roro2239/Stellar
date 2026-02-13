@@ -34,7 +34,7 @@ object ParcelFileDescriptorUtil {
     class TransferThread(val mIn: InputStream, val mOut: OutputStream) :
         Thread("ParcelFileDescriptor Transfer Thread") {
         init {
-            setDaemon(true)
+            isDaemon = true
         }
 
         override fun run() {
@@ -49,16 +49,8 @@ object ParcelFileDescriptorUtil {
             } catch (e: IOException) {
                 Log.e("TransferThread", "传输线程错误: " + Log.getStackTraceString(e))
             } finally {
-                try {
-                    mIn.close()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
-                try {
-                    mOut.close()
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
+                runCatching { mIn.close() }
+                runCatching { mOut.close() }
             }
         }
     }

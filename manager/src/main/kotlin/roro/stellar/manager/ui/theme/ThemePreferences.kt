@@ -12,9 +12,7 @@ enum class ThemeMode(val value: String) {
     AUTO("auto");
     
     companion object {
-        fun fromValue(value: String): ThemeMode {
-            return entries.find { it.value == value } ?: AUTO
-        }
+        fun fromValue(value: String): ThemeMode = entries.find { it.value == value } ?: AUTO
     }
 }
 
@@ -39,12 +37,10 @@ object ThemePreferences {
         }
     }
     
-    fun getThemeModeDisplayName(mode: ThemeMode): String {
-        return when (mode) {
-            ThemeMode.LIGHT -> "浅色"
-            ThemeMode.DARK -> "深色"
-            ThemeMode.AUTO -> "跟随系统"
-        }
+    fun getThemeModeDisplayName(mode: ThemeMode): String = when (mode) {
+        ThemeMode.LIGHT -> "浅色"
+        ThemeMode.DARK -> "深色"
+        ThemeMode.AUTO -> "跟随系统"
     }
 }
 

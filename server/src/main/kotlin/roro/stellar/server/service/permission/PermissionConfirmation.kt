@@ -32,9 +32,9 @@ class PermissionConfirmation {
         val pi = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, userId)
         val userInfo = UserManagerApis.getUserInfo(userId)
         val isWorkProfileUser = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            "android.os.usertype.profile.MANAGED" == userInfo.userType
+            userInfo.userType == "android.os.usertype.profile.MANAGED"
         } else {
-            (userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE) != 0
+            userInfo.flags and UserInfo.FLAG_MANAGED_PROFILE != 0
         }
 
         if (pi == null && !isWorkProfileUser) {

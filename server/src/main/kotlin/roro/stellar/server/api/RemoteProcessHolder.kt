@@ -40,8 +40,8 @@ class RemoteProcessHolder(
 
     override fun getOutputStream(): ParcelFileDescriptor? {
         if (out == null) {
-            try {
-                out = ParcelFileDescriptorUtil.pipeTo(process.outputStream)
+            out = try {
+                ParcelFileDescriptorUtil.pipeTo(process.outputStream)
             } catch (e: IOException) {
                 throw IllegalStateException(e)
             }
@@ -51,8 +51,8 @@ class RemoteProcessHolder(
 
     override fun getInputStream(): ParcelFileDescriptor? {
         if (`in` == null) {
-            try {
-                `in` = ParcelFileDescriptorUtil.pipeFrom(process.inputStream)
+            `in` = try {
+                ParcelFileDescriptorUtil.pipeFrom(process.inputStream)
             } catch (e: IOException) {
                 throw IllegalStateException(e)
             }
@@ -60,38 +60,27 @@ class RemoteProcessHolder(
         return `in`
     }
 
-    override fun getErrorStream(): ParcelFileDescriptor? {
-        try {
-            return ParcelFileDescriptorUtil.pipeFrom(process.errorStream)
-        } catch (e: IOException) {
-            throw IllegalStateException(e)
-        }
+    override fun getErrorStream(): ParcelFileDescriptor? = try {
+        ParcelFileDescriptorUtil.pipeFrom(process.errorStream)
+    } catch (e: IOException) {
+        throw IllegalStateException(e)
     }
 
-    override fun waitFor(): Int {
-        try {
-            return process.waitFor()
-        } catch (e: InterruptedException) {
-            throw IllegalStateException(e)
-        }
+    override fun waitFor(): Int = try {
+        process.waitFor()
+    } catch (e: InterruptedException) {
+        throw IllegalStateException(e)
     }
 
-    override fun exitValue(): Int {
-        return process.exitValue()
-    }
+    override fun exitValue(): Int = process.exitValue()
 
-    override fun destroy() {
-        process.destroy()
-    }
+    override fun destroy() = process.destroy()
 
-    @Throws(RemoteException::class)
-    override fun alive(): Boolean {
-        try {
-            this.exitValue()
-            return false
-        } catch (e: IllegalThreadStateException) {
-            return true
-        }
+    override fun alive(): Boolean = try {
+        exitValue()
+        false
+    } catch (e: IllegalThreadStateException) {
+        true
     }
 
     @Throws(RemoteException::class)

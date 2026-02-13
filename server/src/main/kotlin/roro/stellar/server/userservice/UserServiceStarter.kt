@@ -19,6 +19,7 @@ import dev.rikka.tools.refine.Refine
 import rikka.hidden.compat.ActivityManagerApis
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.api.IContentProviderUtils
+import roro.stellar.server.util.UserHandleCompat.PER_USER_RANGE
 
 object UserServiceStarter {
     private const val TAG = "StellarUserServiceStarter"
@@ -69,7 +70,7 @@ object UserServiceStarter {
             return
         }
 
-        val userId = uid / 100000
+        val userId = uid / PER_USER_RANGE
 
         Log.i(TAG, "启动 UserService: package=$packageName, class=$className, uid=$uid, userId=$userId")
 
@@ -145,15 +146,12 @@ object UserServiceStarter {
                 constructor.newInstance()
             }
 
-            when (instance) {
-                is IBinder -> {
-                    Log.i(TAG, "UserService 实例创建成功: $className")
-                    instance
-                }
-                else -> {
-                    Log.e(TAG, "服务类不是 Binder 的子类: ${instance.javaClass.name}")
-                    null
-                }
+            if (instance is IBinder) {
+                Log.i(TAG, "UserService 实例创建成功: $className")
+                instance
+            } else {
+                Log.e(TAG, "服务类不是 Binder 的子类: ${instance.javaClass.name}")
+                null
             }
         } catch (e: Throwable) {
             Log.e(TAG, "创建 UserService 失败", e)

@@ -318,16 +318,16 @@ class AdbWirelessHelper {
 
     fun shouldChangePort(currentPort: Int): Pair<Boolean, Int> {
         val portEnabled = StellarSettings.getPreferences().getBoolean(TCPIP_PORT_ENABLED, true)
-        if (!portEnabled) return Pair(false, -1)
+        if (!portEnabled) return false to -1
 
         val portStr = StellarSettings.getPreferences().getString(TCPIP_PORT, "")
-        if (portStr.isNullOrEmpty()) return Pair(false, -1)
+        if (portStr.isNullOrEmpty()) return false to -1
 
         return try {
             val newPort = portStr.toInt()
-            Pair(newPort != currentPort && newPort in 1..65535, newPort)
+            (newPort != currentPort && newPort in 1..65535) to newPort
         } catch (_: NumberFormatException) {
-            Pair(false, -1)
+            false to -1
         }
     }
 }

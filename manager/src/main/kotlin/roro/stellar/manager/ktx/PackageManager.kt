@@ -12,12 +12,11 @@ fun PackageManager.setComponentEnabled(componentName: ComponentName, enabled: Bo
     }
 }
 
-fun PackageManager.isComponentEnabled(componentName: ComponentName, defaultValue: Boolean = true): Boolean {
-    return when (getComponentEnabledSetting(componentName)) {
+fun PackageManager.isComponentEnabled(componentName: ComponentName, defaultValue: Boolean = true): Boolean =
+    when (getComponentEnabledSetting(componentName)) {
         PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
         PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
         PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> defaultValue
         else -> false
     }
-}
 

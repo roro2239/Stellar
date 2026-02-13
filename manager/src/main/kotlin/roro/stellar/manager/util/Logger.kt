@@ -6,9 +6,7 @@ import java.util.Locale
 class Logger(
     private val tag: String?
 ) {
-    fun isLoggable(tag: String?, level: Int): Boolean {
-        return true
-    }
+    fun isLoggable(tag: String?, level: Int): Boolean = true
 
     fun v(msg: String) {
         if (isLoggable(tag, Log.VERBOSE)) {
