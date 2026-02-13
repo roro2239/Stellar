@@ -347,6 +347,12 @@ class ShizukuServiceIntercept(
             Log.w(TAG, "notifyPermissionResult: 未找到 uid=$uid, pid=$pid 的客户端")
             return
         }
-        record.dispatchShizukuPermissionResult(requestCode, allowed)
+        record.dispatchShizukuPermissionResult(
+            requestCode,
+            allowed,
+            callback.serviceUid,
+            callback.serviceVersion,
+            callback.serviceSeLinuxContext
+        )
     }
 }

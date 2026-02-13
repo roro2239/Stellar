@@ -44,7 +44,7 @@ open class ClientRecord(
     /**
      * 分发 Shizuku 权限结果
      */
-    fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean) {
+    fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean, serviceUid: Int, serviceVersion: Int, serviceSeContext: String?) {
         val app = shizukuApplication ?: return
         if (!allowed) lastDenyTimeMap[ShizukuApiConstants.PERMISSION_NAME] = System.currentTimeMillis()
         try {
@@ -52,6 +52,22 @@ open class ClientRecord(
             data.putBoolean(ShizukuApiConstants.EXTRA_ALLOWED, allowed)
             app.dispatchRequestPermissionResult(requestCode, data)
             LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
+
+            // 重新调用 bindApplication 更新客户端缓存的权限状态
+            if (allowed) {
+                // 兼容旧版客户端 (API <= v12)
+                val replyServerVersion = if (apiVersion == -1) 12 else ShizukuApiConstants.SERVER_VERSION
+                val reply = Bundle().apply {
+                    putInt(ShizukuApiConstants.BindApplication.SERVER_UID, serviceUid)
+                    putInt(ShizukuApiConstants.BindApplication.SERVER_VERSION, replyServerVersion)
+                    putInt(ShizukuApiConstants.BindApplication.SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION)
+                    putString(ShizukuApiConstants.BindApplication.SERVER_SECONTEXT, serviceSeContext)
+                    putBoolean(ShizukuApiConstants.BindApplication.PERMISSION_GRANTED, true)
+                    putBoolean(ShizukuApiConstants.BindApplication.SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE, false)
+                }
+                app.bindApplication(reply)
+                LOGGER.i("已重新绑定 Shizuku 客户端: uid=$uid, pid=$pid, granted=true, version=$replyServerVersion")
+            }
         } catch (e: Throwable) {
             LOGGER.w(e, "dispatchShizukuPermissionResult failed for client (uid=%d, pid=%d)", uid, pid)
         }
