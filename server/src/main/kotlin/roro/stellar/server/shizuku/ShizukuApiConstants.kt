@@ -2,26 +2,20 @@ package roro.stellar.server.shizuku
 
 object ShizukuApiConstants {
 
-    /** Shizuku 权限名称，用于 ConfigManager */
     const val PERMISSION_NAME = "shizuku"
 
-    /** 用于检测应用是否支持 Shizuku */
     const val META_DATA_KEY = "moe.shizuku.client.V3_SUPPORT"
 
-    // Shizuku 服务版本
     const val SERVER_VERSION = 13
     const val SERVER_PATCH_VERSION = 6
 
-    // Binder 相关
     const val BINDER_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
     const val BINDER_TRANSACTION_transact = 1
 
-    // Shizuku 原始标志值 (用于 AIDL 接口兼容)
     const val FLAG_ASK = 0
-    const val FLAG_GRANTED = 1 shl 1  // 2
-    const val FLAG_DENIED = 1 shl 2   // 4
+    const val FLAG_GRANTED = 1 shl 1
+    const val FLAG_DENIED = 1 shl 2
 
-    // Stellar 权限标志值
     private const val STELLAR_FLAG_ASK = 0
     private const val STELLAR_FLAG_GRANTED = 1
     private const val STELLAR_FLAG_DENIED = 2
@@ -29,7 +23,6 @@ object ShizukuApiConstants {
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
     const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
 
-    // bindApplication 回复常量
     object BindApplication {
         const val SERVER_VERSION = "shizuku:attach-reply-version"
         const val SERVER_PATCH_VERSION = "shizuku:attach-reply-patch-version"
@@ -39,13 +32,11 @@ object ShizukuApiConstants {
         const val SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE = "shizuku:attach-reply-should-show-request-permission-rationale"
     }
 
-    // attachApplication 参数常量
     object AttachApplication {
         const val PACKAGE_NAME = "shizuku:attach-package-name"
         const val API_VERSION = "shizuku:attach-api-version"
     }
 
-    // Shizuku 用户服务参数常量
     object UserServiceArgs {
         const val COMPONENT = "shizuku:user-service-arg-component"
         const val DEBUGGABLE = "shizuku:user-service-arg-debuggable"
@@ -59,20 +50,12 @@ object ShizukuApiConstants {
         const val TOKEN = "shizuku:user-service-arg-token"
     }
 
-    /**
-     * 将 Stellar 权限标志转换为 Shizuku 标志
-     * Stellar: ASK=0, GRANTED=1, DENIED=2
-     * Shizuku: ASK=0, GRANTED=2, DENIED=4
-     */
     fun stellarToShizukuFlag(stellarFlag: Int): Int = when (stellarFlag) {
         STELLAR_FLAG_GRANTED -> FLAG_GRANTED
         STELLAR_FLAG_DENIED -> FLAG_DENIED
         else -> FLAG_ASK
     }
 
-    /**
-     * 将 Shizuku 标志转换为 Stellar 权限标志
-     */
     fun shizukuToStellarFlag(shizukuFlag: Int): Int = when {
         (shizukuFlag and FLAG_GRANTED) != 0 -> STELLAR_FLAG_GRANTED
         (shizukuFlag and FLAG_DENIED) != 0 -> STELLAR_FLAG_DENIED

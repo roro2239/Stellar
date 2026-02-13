@@ -108,7 +108,6 @@ class ConfigManager {
                         permissions.add(permission)
                     }
                 }
-                // 检查是否是 Shizuku 客户端，保留 shizuku 权限
                 if (applicationInfo.metaData?.getBoolean("moe.shizuku.client.V3_SUPPORT", false) == true) {
                     permissions.add("shizuku")
                 }
@@ -157,10 +156,6 @@ class ConfigManager {
         }
     }
 
-    /**
-     * 获取指定 UID 的权限标志
-     * @return FLAG_ASK, FLAG_GRANTED 或 FLAG_DENIED
-     */
     fun getPermissionFlag(uid: Int, permission: String): Int {
         synchronized(this) {
             return findLocked(uid)?.permissions?.get(permission) ?: FLAG_ASK
@@ -259,7 +254,6 @@ class ConfigManager {
     private fun updatePermissionLocked(uid: Int, permission: String, newFlag: Int) {
         var entry = findLocked(uid)
         if (entry == null) {
-            // 配置不存在，先创建一个空配置
             entry = PackageEntry()
             val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
             entry.packages.addAll(packages)
@@ -284,6 +278,22 @@ class ConfigManager {
     fun remove(uid: Int) {
         synchronized(this) {
             removeLocked(uid)
+        }
+    }
+
+    fun isShizukuCompatEnabled(): Boolean {
+        synchronized(this) {
+            return config.shizukuCompatEnabled
+        }
+    }
+
+    fun setShizukuCompatEnabled(enabled: Boolean) {
+        synchronized(this) {
+            if (config.shizukuCompatEnabled != enabled) {
+                config.shizukuCompatEnabled = enabled
+                LOGGER.i("Shizuku 兼容层状态已更改: %s", if (enabled) "启用" else "禁用")
+                scheduleWriteLocked()
+            }
         }
     }
 

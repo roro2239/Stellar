@@ -14,7 +14,6 @@ open class ClientRecord(
     val packageName: String,
     val apiVersion: Int
 ) {
-    // Shizuku 应用引用
     var shizukuApplication: IShizukuApplication? = null
 
     val lastDenyTimeMap: MutableMap<String, Long> = mutableMapOf()
@@ -38,9 +37,6 @@ open class ClientRecord(
         }
     }
 
-    /**
-     * 分发 Shizuku 权限结果
-     */
     fun dispatchShizukuPermissionResult(requestCode: Int, allowed: Boolean, serviceUid: Int, serviceVersion: Int, serviceSeContext: String?) {
         val app = shizukuApplication ?: return
         if (!allowed) lastDenyTimeMap[ShizukuApiConstants.PERMISSION_NAME] = System.currentTimeMillis()
@@ -51,9 +47,7 @@ open class ClientRecord(
             })
             LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
 
-            // 重新调用 bindApplication 更新客户端缓存的权限状态
             if (allowed) {
-                // 兼容旧版客户端 (API <= v12)
                 val replyServerVersion = if (apiVersion == -1) 12 else ShizukuApiConstants.SERVER_VERSION
                 app.bindApplication(Bundle().apply {
                     putInt(ShizukuApiConstants.BindApplication.SERVER_UID, serviceUid)

@@ -10,10 +10,6 @@ import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Shizuku 用户服务适配器
- * 将 Shizuku API 调用转换为 Stellar API 调用
- */
 class ShizukuUserServiceAdapter(
     private val userServiceManager: UserServiceManager
 ) {
@@ -21,16 +17,10 @@ class ShizukuUserServiceAdapter(
         private val LOGGER = Logger("ShizukuUserServiceAdapter")
     }
 
-    // key -> ShizukuUserServiceRecord
     private val records = ConcurrentHashMap<String, ShizukuUserServiceRecord>()
 
-    // stellarToken -> key (用于 attachUserService 时查找)
     private val tokenToKey = ConcurrentHashMap<String, String>()
 
-    /**
-     * 添加用户服务 (Shizuku API)
-     * @return 0 成功, -1 失败 (noCreate 模式下服务不存在)
-     */
     fun addUserService(
         conn: IShizukuServiceConnection,
         options: Bundle,
@@ -53,10 +43,8 @@ class ShizukuUserServiceAdapter(
         val key = "$packageName:${tag ?: className}"
         LOGGER.i("addUserService: key=$key, daemon=$daemon, noCreate=$noCreate")
 
-        // 检查是否已有记录
         val existingRecord = records[key]
 
-        // noCreate 模式：只查询已存在的服务，不创建新服务
         if (noCreate) {
             val binder = existingRecord?.serviceBinder
             if (binder == null || !binder.pingBinder()) {
@@ -71,7 +59,6 @@ class ShizukuUserServiceAdapter(
             return 0
         }
 
-        // 正常模式：如果服务已存在且连接，直接返回
         if (existingRecord != null) {
             existingRecord.callbacks.register(conn)
             val binder = existingRecord.serviceBinder
@@ -85,7 +72,6 @@ class ShizukuUserServiceAdapter(
             }
         }
 
-        // 转换为 Stellar 参数
         val stellarArgs = Bundle().apply {
             putString(UserServiceConstants.ARG_PACKAGE_NAME, packageName)
             putString(UserServiceConstants.ARG_CLASS_NAME, className)
@@ -97,14 +83,11 @@ class ShizukuUserServiceAdapter(
                 UserServiceConstants.ARG_SERVICE_MODE,
                 if (daemon) UserServiceConstants.MODE_DAEMON else UserServiceConstants.MODE_ONE_TIME
             )
-            // Shizuku 不支持 verificationToken，使用空字符串
             putString(UserServiceConstants.ARG_VERIFICATION_TOKEN, "")
         }
 
-        // 创建 Stellar 回调适配器
         val stellarCallback = createStellarCallback(key, conn, daemon)
 
-        // 调用 Stellar 服务
         val stellarToken = userServiceManager.startUserService(
             callingUid, callingPid, stellarArgs, stellarCallback
         )
@@ -114,7 +97,6 @@ class ShizukuUserServiceAdapter(
             return -1
         }
 
-        // 创建或更新记录
         val record = records.getOrPut(key) {
             ShizukuUserServiceRecord(key, stellarToken, daemon)
         }
@@ -125,9 +107,6 @@ class ShizukuUserServiceAdapter(
         return 0
     }
 
-    /**
-     * 移除用户服务 (Shizuku API)
-     */
     fun removeUserService(
         conn: IShizukuServiceConnection,
         options: Bundle
@@ -147,22 +126,17 @@ class ShizukuUserServiceAdapter(
         val record = records[key] ?: return 1
 
         if (remove) {
-            // 完全移除服务
             records.remove(key)
             tokenToKey.remove(record.stellarToken)
             userServiceManager.stopUserService(record.stellarToken)
             record.onServiceDisconnected()
         } else {
-            // 只取消注册回调
             record.callbacks.unregister(conn)
         }
 
         return 0
     }
 
-    /**
-     * Stellar 服务附加时调用
-     */
     fun onStellarServiceAttached(stellarToken: String, binder: IBinder) {
         val key = tokenToKey[stellarToken] ?: run {
             LOGGER.d("onStellarServiceAttached: 未找到 token=$stellarToken 对应的记录 (可能是 Stellar 原生服务)")
@@ -178,9 +152,6 @@ class ShizukuUserServiceAdapter(
         record.onServiceConnected(binder)
     }
 
-    /**
-     * 服务断开时调用
-     */
     fun onStellarServiceDisconnected(stellarToken: String) {
         val key = tokenToKey[stellarToken] ?: return
         val record = records[key] ?: return
@@ -188,7 +159,6 @@ class ShizukuUserServiceAdapter(
         LOGGER.i("onStellarServiceDisconnected: key=$key")
         record.onServiceDisconnected()
 
-        // 非守护模式下，移除记录
         if (!record.daemon) {
             records.remove(key)
             tokenToKey.remove(stellarToken)
@@ -202,7 +172,6 @@ class ShizukuUserServiceAdapter(
     ): IUserServiceCallback.Stub {
         return object : IUserServiceCallback.Stub() {
             override fun onServiceConnected(service: IBinder, verificationToken: String?) {
-                // Shizuku 不验证 verificationToken
                 LOGGER.i("Stellar onServiceConnected: key=$key")
                 val record = records[key]
                 record?.onServiceConnected(service)
@@ -216,7 +185,6 @@ class ShizukuUserServiceAdapter(
 
             override fun onServiceStartFailed(errorCode: Int, message: String?) {
                 LOGGER.w("Stellar onServiceStartFailed: key=$key, code=$errorCode, msg=$message")
-                // Shizuku API 没有失败回调，只能通过 died() 通知
                 try {
                     conn.died()
                 } catch (e: Exception) {

@@ -10,20 +10,15 @@ import moe.shizuku.server.IShizukuServiceConnection
 import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ConfigManager
 
-/**
- * Shizuku 服务拦截器
- * 将 Shizuku API 调用转发到 Stellar 服务
- * 复用 Stellar 的权限管理和客户端管理
- */
 class ShizukuServiceIntercept(
     private val callback: ShizukuServiceCallback
 ) : IShizukuService.Stub() {
 
     companion object {
         private const val TAG = "ShizukuServiceIntercept"
-        // Shizuku Manager 特征权限 (signature 级别，只有 Manager 会请求)
+
         private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
-        // 用户 ID 乘数
+
         private const val PER_USER_RANGE = 100000
 
         private fun getAppId(uid: Int): Int = uid % PER_USER_RANGE
@@ -33,12 +28,18 @@ class ShizukuServiceIntercept(
     private val clientManager get() = callback.clientManager
     private val configManager get() = callback.configManager
 
-    // Shizuku 用户服务适配器
+    private fun isEnabled(): Boolean = configManager.isShizukuCompatEnabled()
+
+    private fun enforceEnabled(method: String) {
+        if (!isEnabled()) {
+            throw SecurityException("Shizuku compat layer is disabled")
+        }
+    }
+
     private val userServiceAdapter by lazy {
         ShizukuUserServiceAdapter(callback.userServiceManager)
     }
 
-    // Shizuku Manager 缓存 (uid -> isManager)
     private val shizukuManagerCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
 
     private inline fun <T> withClearedIdentity(block: () -> T): T {
@@ -53,10 +54,6 @@ class ShizukuServiceIntercept(
     private fun checkCallerManagerPermission(callingUid: Int): Boolean =
         getAppId(callingUid) == callback.managerAppId
 
-    /**
-     * 检查 UID 是否属于 Shizuku 管理器
-     * Shizuku 管理器不应获得 Shizuku 权限
-     */
     private fun isShizukuManager(uid: Int): Boolean {
         return shizukuManagerCache.getOrPut(uid) {
             val userId = getUserId(uid)
@@ -68,53 +65,35 @@ class ShizukuServiceIntercept(
         }
     }
 
-    /**
-     * 检查 Shizuku 权限（持久权限）
-     * Shizuku 管理器始终返回 DENIED
-     */
     private fun checkPermission(uid: Int): Int {
         if (isShizukuManager(uid)) return ConfigManager.FLAG_DENIED
         return configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
     }
 
-    /**
-     * 检查一次性权限
-     * Shizuku 管理器始终返回 false
-     */
     private fun checkOnetimePermission(uid: Int, pid: Int): Boolean {
         if (isShizukuManager(uid)) return false
         return clientManager.findClient(uid, pid)?.onetimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) == true
     }
 
-    /**
-     * 获取上次拒绝时间
-     */
     private fun getLastDenyTime(uid: Int, pid: Int): Long =
         clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
 
-    /**
-     * 检查调用者是否有权限
-     */
     private fun enforceCallingPermission(method: String) {
+        enforceEnabled(method)
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
         if (callingPid == callback.servicePid) return
         if (checkCallerManagerPermission(callingUid)) return
 
-        // 检查持久权限
         if (checkPermission(callingUid) == ConfigManager.FLAG_GRANTED) return
 
-        // 检查一次性权限
         if (checkOnetimePermission(callingUid, callingPid)) return
 
         throw SecurityException("Permission denied for $method")
     }
 
-    /**
-     * transactRemote - Shizuku 核心功能
-     * 允许客户端通过 Shizuku 代理调用任意系统 Binder
-     */
     private fun transactRemote(data: Parcel, reply: Parcel?, flags: Int) {
         enforceCallingPermission("transactRemote")
 
@@ -125,7 +104,6 @@ class ShizukuServiceIntercept(
         val callingPid = Binder.getCallingPid()
         val clientRecord = clientManager.findClient(callingUid, callingPid)
 
-        // API >= 13 会传递 targetFlags
         val targetFlags = if (clientRecord != null && clientRecord.apiVersion >= 13) {
             data.readInt()
         } else {
@@ -148,14 +126,12 @@ class ShizukuServiceIntercept(
     }
 
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-        // transactRemote (Transaction Code = 1)
         if (code == ShizukuApiConstants.BINDER_TRANSACTION_transact) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
             transactRemote(data, reply, flags)
             return true
         }
 
-        // 旧版 attachApplication (Transaction Code = 14, API <= v12)
         if (code == 14) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR)
             val binder = data.readStrongBinder()
@@ -184,6 +160,8 @@ class ShizukuServiceIntercept(
     }
 
     override fun checkPermission(permission: String?): Int {
+        if (!isEnabled()) return -1
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
@@ -249,6 +227,8 @@ class ShizukuServiceIntercept(
     }
 
     override fun requestPermission(requestCode: Int) {
+        if (!isEnabled()) return
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
         Log.d(TAG, "requestPermission: uid=$callingUid, pid=$callingPid, code=$requestCode")
@@ -256,6 +236,8 @@ class ShizukuServiceIntercept(
     }
 
     override fun checkSelfPermission(): Boolean {
+        if (!isEnabled()) return false
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
@@ -264,6 +246,8 @@ class ShizukuServiceIntercept(
     }
 
     override fun shouldShowRequestPermissionRationale(): Boolean {
+        if (!isEnabled()) return false
+
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
 
@@ -275,6 +259,10 @@ class ShizukuServiceIntercept(
 
     override fun attachApplication(application: IShizukuApplication?, args: android.os.Bundle?) {
         if (application == null) return
+        if (!isEnabled()) {
+            Log.w(TAG, "attachApplication: Shizuku compat layer is disabled")
+            return
+        }
 
         val callingUid = Binder.getCallingUid()
         val callingPid = Binder.getCallingPid()
@@ -289,14 +277,11 @@ class ShizukuServiceIntercept(
 
         clientManager.attachShizukuApplication(callingUid, callingPid, application, packageName, apiVersion)
 
-        // 检查权限状态
         val hasPermission = checkPermission(callingUid) == ConfigManager.FLAG_GRANTED ||
                 checkOnetimePermission(callingUid, callingPid)
 
-        // 兼容旧版客户端 (API <= v12)
         val replyServerVersion = if (apiVersion == -1) 12 else ShizukuApiConstants.SERVER_VERSION
 
-        // 构建回复 Bundle
         val reply = android.os.Bundle().apply {
             putInt(ShizukuApiConstants.BindApplication.SERVER_UID, callback.serviceUid)
             putInt(ShizukuApiConstants.BindApplication.SERVER_VERSION, replyServerVersion)
@@ -334,7 +319,6 @@ class ShizukuServiceIntercept(
     }
 
     override fun dispatchPackageChanged(intent: android.content.Intent?) {
-        // Sui only
     }
 
     override fun isHidden(uid: Int): Boolean = false
@@ -345,23 +329,20 @@ class ShizukuServiceIntercept(
         requestCode: Int,
         data: android.os.Bundle?
     ) {
-        // 权限结果通过 StellarService.dispatchPermissionConfirmationResult 统一处理
     }
 
     override fun getFlagsForUid(uid: Int, mask: Int): Int {
+        if (!isEnabled()) return 0
         return ShizukuApiConstants.stellarToShizukuFlag(checkPermission(uid))
     }
 
     override fun updateFlagsForUid(uid: Int, mask: Int, value: Int) {
+        if (!isEnabled()) return
         val stellarFlag = ShizukuApiConstants.shizukuToStellarFlag(value)
         configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, stellarFlag)
-        // 清除一次性权限
         clientManager.findClients(uid).forEach { it.onetimeMap.remove(ShizukuApiConstants.PERMISSION_NAME) }
     }
 
-    /**
-     * 通知客户端权限结果
-     */
     fun notifyPermissionResult(uid: Int, pid: Int, requestCode: Int, allowed: Boolean) {
         val record = clientManager.findClient(uid, pid)
         if (record?.shizukuApplication == null) {

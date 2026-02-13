@@ -518,6 +518,24 @@ object Stellar {
         }
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    fun isShizukuCompatEnabled(): Boolean {
+        try {
+            return requireService().isShizukuCompatEnabled
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+    fun setShizukuCompatEnabled(enabled: Boolean) {
+        try {
+            requireService().setShizukuCompatEnabled(enabled)
+        } catch (e: RemoteException) {
+            throw rethrowAsRuntimeException(e)
+        }
+    }
+
     fun interface OnBinderReceivedListener {
         fun onBinderReceived()
     }

@@ -5,10 +5,6 @@ import android.os.RemoteCallbackList
 import moe.shizuku.server.IShizukuServiceConnection
 import roro.stellar.server.util.Logger
 
-/**
- * Shizuku 用户服务记录
- * 管理 IShizukuServiceConnection 回调列表
- */
 class ShizukuUserServiceRecord(
     val key: String,
     val stellarToken: String,
@@ -23,17 +19,11 @@ class ShizukuUserServiceRecord(
     var serviceBinder: IBinder? = null
         private set
 
-    /**
-     * 服务连接成功，广播给所有回调
-     */
     fun onServiceConnected(binder: IBinder) {
         serviceBinder = binder
         broadcast("connected") { it.connected(binder) }
     }
 
-    /**
-     * 服务断开，广播给所有回调
-     */
     fun onServiceDisconnected() {
         serviceBinder = null
         broadcast("died") { it.died() }

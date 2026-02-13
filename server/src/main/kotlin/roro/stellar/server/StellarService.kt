@@ -40,13 +40,6 @@ import roro.stellar.server.shizuku.ShizukuServiceIntercept
 import java.io.File
 import kotlin.system.exitProcess
 
-/**
- * Stellar 服务 - 通讯层入口
- * 职责：
- * 1. 接收 AIDL 调用
- * 2. 委托给通讯桥接层处理
- * 3. 管理服务生命周期
- */
 class StellarService : IStellarService.Stub() {
 
     private val clientManager: ClientManager
@@ -155,8 +148,6 @@ class StellarService : IStellarService.Stub() {
         return bridge.handleGetVersionCode(caller)
     }
 
-    // ========== AIDL 接口实现 - 权限管理 ==========
-
     override fun checkSelfPermission(permission: String?): Boolean {
         if (permission == null) return false
         val caller = CallerContext.fromBinder()
@@ -185,7 +176,6 @@ class StellarService : IStellarService.Stub() {
     ) {
         if (data == null) return
 
-        // 检查是否是 Shizuku 权限请求
         val permission = data.getString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, "stellar")
         if (permission == ShizukuApiConstants.PERMISSION_NAME) {
             val allowed = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false)
@@ -195,22 +185,17 @@ class StellarService : IStellarService.Stub() {
 
             val record = clientManager.findClient(requestUid, requestPid)
             if (onetime) {
-                // 一次性权限：设置到 ClientRecord
                 record?.onetimeMap?.set(ShizukuApiConstants.PERMISSION_NAME, allowed)
             } else {
-                // 持久权限：更新到 ConfigManager
                 val newFlag = if (allowed) ConfigManager.FLAG_GRANTED else ConfigManager.FLAG_DENIED
                 configManager.updatePermission(requestUid, ShizukuApiConstants.PERMISSION_NAME, newFlag)
-                // 清除一次性权限
                 clientManager.findClients(requestUid).forEach { it.onetimeMap.remove(ShizukuApiConstants.PERMISSION_NAME) }
             }
 
-            // 记录拒绝时间
             if (!allowed) {
                 record?.lastDenyTimeMap?.set(ShizukuApiConstants.PERMISSION_NAME, System.currentTimeMillis())
             }
 
-            // 通知客户端应用
             shizukuServiceIntercept.notifyPermissionResult(requestUid, requestPid, requestCode, allowed)
             return
         }
@@ -220,10 +205,8 @@ class StellarService : IStellarService.Stub() {
     }
 
     override fun getFlagForUid(uid: Int, permission: String): Int {
-        // Shizuku 权限也统一从 ConfigManager 获取
         if (permission == ShizukuApiConstants.PERMISSION_NAME) {
             val stellarFlag = configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
-            // 转换为 Shizuku 标志格式返回给管理器
             return ShizukuApiConstants.stellarToShizukuFlag(stellarFlag)
         }
 
@@ -232,12 +215,9 @@ class StellarService : IStellarService.Stub() {
     }
 
     override fun updateFlagForUid(uid: Int, permission: String, flag: Int) {
-        // Shizuku 权限也统一更新到 ConfigManager
         if (permission == ShizukuApiConstants.PERMISSION_NAME) {
-            // 从 Shizuku 标志转换为 Stellar 标志
             val stellarFlag = ShizukuApiConstants.shizukuToStellarFlag(flag)
             configManager.updatePermission(uid, ShizukuApiConstants.PERMISSION_NAME, stellarFlag)
-            // 清除一次性权限
             clientManager.findClients(uid).forEach { it.onetimeMap.remove(ShizukuApiConstants.PERMISSION_NAME) }
             return
         }
@@ -256,14 +236,10 @@ class StellarService : IStellarService.Stub() {
         bridge.handleRevokeRuntimePermission(caller, packageName, permissionName, userId)
     }
 
-    // ========== AIDL 接口实现 - 进程管理 ==========
-
     override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
         val caller = CallerContext.fromBinder()
         return bridge.handleNewProcess(caller, cmd ?: emptyArray(), env, dir)
     }
-
-    // ========== AIDL 接口实现 - 系统属性 ==========
 
     override fun getSystemProperty(name: String?, defaultValue: String?): String {
         val caller = CallerContext.fromBinder()
@@ -274,8 +250,6 @@ class StellarService : IStellarService.Stub() {
         val caller = CallerContext.fromBinder()
         bridge.handleSetSystemProperty(caller, name ?: "", value ?: "")
     }
-
-    // ========== AIDL 接口实现 - 用户服务 ==========
 
     override fun startUserService(args: Bundle?, callback: IUserServiceCallback?): String? {
         val caller = CallerContext.fromBinder()
@@ -296,8 +270,6 @@ class StellarService : IStellarService.Stub() {
         return bridge.handleGetUserServiceCount(caller)
     }
 
-    // ========== AIDL 接口实现 - 日志管理 ==========
-
     override fun getLogs(): List<String> {
         val caller = CallerContext.fromBinder()
         return bridge.handleGetLogs(caller)
@@ -308,7 +280,18 @@ class StellarService : IStellarService.Stub() {
         bridge.handleClearLogs(caller)
     }
 
-    // ========== AIDL 接口实现 - 服务控制 ==========
+    override fun isShizukuCompatEnabled(): Boolean {
+        val caller = CallerContext.fromBinder()
+        permissionEnforcer.enforceManager(caller, "isShizukuCompatEnabled")
+        return configManager.isShizukuCompatEnabled()
+    }
+
+    override fun setShizukuCompatEnabled(enabled: Boolean) {
+        val caller = CallerContext.fromBinder()
+        permissionEnforcer.enforceManager(caller, "setShizukuCompatEnabled")
+        configManager.setShizukuCompatEnabled(enabled)
+        LOGGER.i("Shizuku 兼容层已%s", if (enabled) "启用" else "禁用")
+    }
 
     override fun exit() {
         val caller = CallerContext.fromBinder()
@@ -316,8 +299,6 @@ class StellarService : IStellarService.Stub() {
         LOGGER.i("exit")
         exitProcess(0)
     }
-
-    // ========== 客户端连接管理 ==========
 
     override fun attachApplication(application: IStellarApplication?, args: Bundle?) {
         if (application == null || args == null) {
@@ -397,7 +378,6 @@ class StellarService : IStellarService.Stub() {
         }
     }
 
-    // ========== 自定义事务处理 ==========
 
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
@@ -462,8 +442,6 @@ class StellarService : IStellarService.Stub() {
         return rikka.hidden.compat.PermissionManagerApis.checkPermission(permission, serviceCore.serviceInfo.getUid())
     }
 
-    // ========== 应用列表管理 ==========
-
     private fun getApplications(userId: Int): ParcelableListSlice<PackageInfo?> {
         val list = ArrayList<PackageInfo?>()
         val users = ArrayList<Int?>()
@@ -478,12 +456,9 @@ class StellarService : IStellarService.Stub() {
                 (PackageManager.GET_META_DATA or PackageManager.GET_PERMISSIONS).toLong(),
                 user!!
             )) {
-                // 排除 Stellar 管理器
                 if (MANAGER_APPLICATION_ID == pi.packageName) continue
-                // 排除 Shizuku 管理器
                 if (pi.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) continue
                 val applicationInfo = pi.applicationInfo ?: continue
-
                 val uid = applicationInfo.uid
                 var flag = -1
 
@@ -497,7 +472,6 @@ class StellarService : IStellarService.Stub() {
                 if (flag != -1) {
                     list.add(pi)
                 } else if (applicationInfo.metaData != null) {
-                    // 检查 Stellar 权限声明
                     val stellarPermission = applicationInfo.metaData.getString(
                         StellarApiConstants.PERMISSION_KEY,
                         ""
@@ -505,7 +479,6 @@ class StellarService : IStellarService.Stub() {
                     if (stellarPermission.split(",").contains("stellar")) {
                         list.add(pi)
                     } else if (applicationInfo.metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
-                        // 检查 Shizuku 支持
                         list.add(pi)
                     }
                 }
@@ -513,8 +486,6 @@ class StellarService : IStellarService.Stub() {
         }
         return ParcelableListSlice<PackageInfo?>(list)
     }
-
-    // ========== 文件监听 ==========
 
     @Suppress("DEPRECATION")
     private fun registerPackageRemovedReceiver(ai: ApplicationInfo) {
@@ -559,10 +530,7 @@ class StellarService : IStellarService.Stub() {
         return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
     }
 
-    // ========== Shizuku 兼容层 ==========
-
     private fun createShizukuCallback(): ShizukuServiceCallback {
-        // 缓存不变的属性
         val cachedUid = android.system.Os.getuid()
         val cachedPid = android.os.Process.myPid()
         val cachedSeContext = try { android.os.SELinux.getContext() } catch (e: Throwable) { null }
@@ -607,29 +575,24 @@ class StellarService : IStellarService.Stub() {
                     return
                 }
 
-                // 检查当前权限状态
                 val currentFlag = configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
 
-                // 如果已经被永久拒绝，直接返回拒绝结果
                 if (currentFlag == ConfigManager.FLAG_DENIED) {
                     LOGGER.i("Shizuku 权限已被永久拒绝: uid=$uid")
                     shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, false)
                     return
                 }
 
-                // 如果已经被永久授权，直接返回授权结果
                 if (currentFlag == ConfigManager.FLAG_GRANTED) {
                     LOGGER.i("Shizuku 权限已被永久授权: uid=$uid")
                     shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, true)
                     return
                 }
 
-                // 确保配置存在
                 if (configManager.find(uid) == null) {
                     configManager.createConfigWithAllPermissions(uid, packageName)
                 }
 
-                // 检查是否在短时间内被拒绝过（10秒内），决定是否显示"不再询问"选项
                 val lastDenyTime = clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
                 val denyOnce = (System.currentTimeMillis() - lastDenyTime) > 10000
 
@@ -648,8 +611,6 @@ class StellarService : IStellarService.Stub() {
         }
     }
 
-    // ========== Binder 发送 ==========
-
     fun sendBinderToClient() {
         for (userId in UserManagerApis.getUserIdsNoThrow()) {
             sendBinderToClient(this, userId)
@@ -660,11 +621,8 @@ class StellarService : IStellarService.Stub() {
         sendBinderToManger(this)
     }
 
-    // ========== Companion Object ==========
-
     companion object {
         private val LOGGER: Logger = Logger("StellarService")
-        // Shizuku Manager 特征权限 (signature 级别，只有 Manager 会请求)
         private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
 
         @JvmStatic
@@ -799,7 +757,6 @@ class StellarService : IStellarService.Stub() {
                 }
 
                 if (retry && onRetry != null) {
-                    // 这是重试后的成功情况，不需要额外日志
                 }
 
                 val extra = Bundle()
