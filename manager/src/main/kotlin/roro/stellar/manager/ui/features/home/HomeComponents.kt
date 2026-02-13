@@ -1,5 +1,10 @@
 package roro.stellar.manager.ui.features.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +29,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,28 +81,34 @@ fun ServerStatusCard(
             }
         } else null
     ) {
-        if (isRunning) {
-            val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
-            Spacer(modifier = Modifier.height(12.dp))
+        AnimatedVisibility(
+            visible = isRunning,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            InfoRow("版本", "$apiVersion.$patchVersion", contentColor)
-            InfoRow("运行模式", user, contentColor)
+                InfoRow("版本", "$apiVersion.$patchVersion", contentColor)
+                InfoRow("运行模式", user, contentColor)
 
-            if (needsUpdate) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = contentColor.copy(alpha = 0.15f),
-                    shape = AppShape.shapes.iconSmall
-                ) {
-                    Text(
-                        text = "可升级到版本 ${Stellar.latestServiceVersion}.${StellarApiConstants.SERVER_PATCH_VERSION}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = contentColor,
-                        modifier = Modifier.padding(12.dp)
-                    )
+                if (needsUpdate) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        color = contentColor.copy(alpha = 0.15f),
+                        shape = AppShape.shapes.iconSmall
+                    ) {
+                        Text(
+                            text = "可升级到版本 ${Stellar.latestServiceVersion}.${StellarApiConstants.SERVER_PATCH_VERSION}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = contentColor,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                 }
             }
         }
