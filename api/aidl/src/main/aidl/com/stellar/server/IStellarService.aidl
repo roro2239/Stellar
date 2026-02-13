@@ -53,8 +53,6 @@ interface IStellarService {
     void revokeRuntimePermission(String packageName, String permissionName, int userId) = 108;
 
 
-    // ============================================
-
     String startUserService(in Bundle args, in IUserServiceCallback callback) = 200;
 
     void stopUserService(String token) = 201;
@@ -63,11 +61,12 @@ interface IStellarService {
 
     int getUserServiceCount() = 203;
 
-    // ============================================
-    // 日志相关接口
-
     List<String> getLogs() = 300;
 
     void clearLogs() = 301;
+
+    boolean isShizukuCompatEnabled() = 400;
+
+    void setShizukuCompatEnabled(boolean enabled) = 401;
 
 }
