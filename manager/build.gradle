@@ -130,7 +130,8 @@ dependencies {
     implementation managerLibs.bundles.kotlinxCoroutines
 
     implementation project(':server')
-    implementation 'com.github.roro2239:Stellar-API:1.0.1'
+    implementation project(':api')
+    implementation project(':provider')
 
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub
