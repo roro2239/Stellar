@@ -118,18 +118,17 @@ class AdbWirelessHelper {
         try {
             val isAlreadyEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1 &&
                                   Settings.Global.getInt(contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
-            
+
             if (isAlreadyEnabled) {
                 Log.i(AppConstants.TAG, "无线调试已经启用，跳过重复操作")
                 return
             }
-            
+
             Settings.Global.putInt(contentResolver, "adb_wifi_enabled", 1)
             Settings.Global.putInt(contentResolver, Settings.Global.ADB_ENABLED, 1)
             Settings.Global.putLong(contentResolver, "adb_allowed_connection_time", 0L)
 
             Log.i(AppConstants.TAG, "通过安全设置启用无线调试")
-            Toast.makeText(context, "无线调试已启用", Toast.LENGTH_SHORT).show()
         } catch (se: SecurityException) {
             Log.e(AppConstants.TAG, "启用无线调试时权限被拒绝", se)
             throw se

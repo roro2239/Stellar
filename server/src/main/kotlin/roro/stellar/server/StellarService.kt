@@ -51,7 +51,6 @@ class StellarService : IStellarService.Stub() {
     internal val permissionEnforcer: PermissionEnforcer
     private val bridge: StellarCommunicationBridge
 
-    // Shizuku 兼容层 - 复用 Stellar 客户端管理和权限系统
     private val shizukuServiceIntercept: ShizukuServiceIntercept
 
     init {
@@ -109,6 +108,8 @@ class StellarService : IStellarService.Stub() {
                 try {
                     sendBinderToClient()
                     sendBinderToManager()
+                    grantManagerWriteSecureSettings()
+                    grantAccessibilityService()
                     FollowStellarStartupExt.schedule(configManager)
                     LOGGER.i("Stellar 服务启动完成")
                 } catch (e: Throwable) {
@@ -339,6 +340,17 @@ class StellarService : IStellarService.Stub() {
         } else {
             LOGGER.i("使用已存在的客户端记录: uid=%d, pid=%d, package=%s", callingUid, callingPid, requestPackageName)
             clientRecord = existingClient
+        }
+
+        if (isManager) {
+            try {
+                application.asBinder().linkToDeath({
+                    LOGGER.i("管理器进程已死亡，正在授予无障碍服务权限...")
+                    grantAccessibilityService()
+                }, 0)
+            } catch (e: Throwable) {
+                LOGGER.w(e, "监控管理器进程死亡失败")
+            }
         }
 
         LOGGER.i("attachApplication 完成: %s %d %d", requestPackageName, callingUid, callingPid)
@@ -619,6 +631,67 @@ class StellarService : IStellarService.Stub() {
 
     fun sendBinderToManager() {
         sendBinderToManger(this)
+    }
+
+    private fun grantManagerWriteSecureSettings() {
+        try {
+            val pm = rikka.hidden.compat.PermissionManagerApis.checkPermission(
+                android.Manifest.permission.WRITE_SECURE_SETTINGS,
+                managerAppId
+            )
+            if (pm == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                LOGGER.i("管理器已拥有 WRITE_SECURE_SETTINGS 权限")
+                return
+            }
+
+            LOGGER.i("正在授予管理器 WRITE_SECURE_SETTINGS 权限...")
+            Runtime.getRuntime().exec(arrayOf(
+                "pm", "grant", MANAGER_APPLICATION_ID,
+                android.Manifest.permission.WRITE_SECURE_SETTINGS
+            )).waitFor()
+            LOGGER.i("WRITE_SECURE_SETTINGS 权限授予完成")
+        } catch (e: Throwable) {
+            LOGGER.e(e, "授予 WRITE_SECURE_SETTINGS 权限失败")
+        }
+    }
+
+    private fun grantAccessibilityService() {
+        try {
+            val serviceName = "$MANAGER_APPLICATION_ID/.service.StellarAccessibilityService"
+
+            val process = Runtime.getRuntime().exec(arrayOf(
+                "settings", "get", "secure",
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ))
+            val currentServices = process.inputStream.bufferedReader().readText().trim()
+            process.waitFor()
+
+            if (currentServices.contains(serviceName)) {
+                LOGGER.i("无障碍服务已启用")
+                return
+            }
+
+            val newServices = if (currentServices.isEmpty() || currentServices == "null") {
+                serviceName
+            } else {
+                "$currentServices:$serviceName"
+            }
+
+            LOGGER.i("正在授予无障碍服务权限...")
+            Runtime.getRuntime().exec(arrayOf(
+                "settings", "put", "secure",
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                newServices
+            )).waitFor()
+            Runtime.getRuntime().exec(arrayOf(
+                "settings", "put", "secure",
+                "accessibility_enabled",
+                "1"
+            )).waitFor()
+            LOGGER.i("无障碍服务权限授予完成")
+        } catch (e: Throwable) {
+            LOGGER.e(e, "授予无障碍服务权限失败")
+        }
     }
 
     companion object {
