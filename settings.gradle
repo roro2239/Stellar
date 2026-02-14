@@ -25,20 +25,12 @@ dependencyResolutionManagement {
         mavenCentral()
         maven {
             url("https://jitpack.io")
-            content {
-                includeGroup("com.github.topjohnwu.libsu")
-                includeGroup("com.github.Kyant0")
-            }
         }
     }
 
     versionCatalogs {
         serverLibs {
             from(files('server/server.versions.toml'))
-        }
-
-        apiLibs {
-            from(files('api/api.versions.toml'))
         }
 
         managerLibs {
@@ -65,23 +57,6 @@ if (propFile.canRead()) {
         }
     }
 }
-include ':aidl'
-project(':aidl').projectDir = file("$root${File.separator}aidl")
-
-include ':shared'
-project(':shared').projectDir = file("$root${File.separator}shared")
-
-include ':api'
-project(':api').projectDir = file("$root${File.separator}api")
-
-include ':provider'
-project(':provider').projectDir = file("$root${File.separator}provider")
-
-include ':hidden-api-stub'
-project(':hidden-api-stub').projectDir = file("$root${File.separator}hidden-api-stub")
-
-include ':userservice'
-project(':userservice').projectDir = file("$root${File.separator}userservice")
 
 include ':shizuku-aidl'
 project(':shizuku-aidl').projectDir = file('shizuku/aidl')

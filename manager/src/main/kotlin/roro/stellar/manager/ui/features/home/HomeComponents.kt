@@ -188,8 +188,7 @@ fun StartRootCard(
                 Text(
                     text = "通过 Root 权限启动服务",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -249,8 +248,7 @@ fun StartWirelessAdbCard(
                 Text(
                     text = "仅限 Android 11 以上设备",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -310,8 +308,7 @@ fun StartWiredAdbCard(
                 Text(
                     text = "通过 ADB 启动服务",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

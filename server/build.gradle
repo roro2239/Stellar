@@ -20,9 +20,7 @@ dependencies {
 
     api serverLibs.parcelablelist
 
-    implementation project(':aidl')
-    implementation project(':shared')
-    compileOnly project(':provider')
+    implementation 'com.github.roro2239:Stellar-API:1.0.1'
     implementation project(':shizuku-aidl')
     implementation project(':shizuku-api')
 
