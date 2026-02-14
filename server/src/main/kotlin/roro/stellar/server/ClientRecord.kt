@@ -43,7 +43,7 @@ open class ClientRecord(
 
         try {
             app.dispatchRequestPermissionResult(requestCode, Bundle().apply {
-                putBoolean(ShizukuApiConstants.EXTRA_ALLOWED, allowed)
+                putBoolean(ShizukuApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
             })
             LOGGER.i("已通知 Shizuku 客户端权限结果: uid=$uid, pid=$pid, allowed=$allowed")
 

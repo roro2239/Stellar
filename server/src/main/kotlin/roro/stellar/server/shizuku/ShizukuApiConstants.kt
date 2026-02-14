@@ -21,7 +21,9 @@ object ShizukuApiConstants {
     private const val STELLAR_FLAG_DENIED = 2
 
     const val EXTRA_BINDER = "moe.shizuku.privileged.api.intent.extra.BINDER"
-    const val EXTRA_ALLOWED = "moe.shizuku.privileged.api.intent.extra.ALLOWED"
+
+    // 权限回调使用的 key（与原版 Shizuku 一致）
+    const val REQUEST_PERMISSION_REPLY_ALLOWED = "shizuku:request-permission-reply-allowed"
 
     object BindApplication {
         const val SERVER_VERSION = "shizuku:attach-reply-version"
