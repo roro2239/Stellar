@@ -39,8 +39,7 @@ fun HomeScreen(
     topAppBarState: TopAppBarState,
     homeViewModel: HomeViewModel,
     appsViewModel: AppsViewModel,
-    onNavigateToStarter: (isRoot: Boolean, host: String?, port: Int, hasSecureSettings: Boolean) -> Unit = { _, _, _, _ -> },
-    onNavigateToAdbPairing: () -> Unit = {}
+    onNavigateToStarter: (isRoot: Boolean, host: String?, port: Int, hasSecureSettings: Boolean) -> Unit = { _, _, _, _ -> }
 ) {
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val context = LocalContext.current
@@ -57,10 +56,7 @@ fun HomeScreen(
 
     var showStopDialog by remember { mutableStateOf(false) }
     var showAdbCommandDialog by remember { mutableStateOf(false) }
-    var triggerAdbAutoConnect by remember { mutableStateOf(false) }
-    var showEnableWirelessAdbDialog by remember { mutableStateOf(false) }
-    var enableWirelessAdbConfirmCallback by remember { mutableStateOf<(() -> Unit)?>(null) }
-    
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -108,9 +104,8 @@ fun HomeScreen(
                     item {
                         StartWirelessAdbCard(
                             onStartClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                    triggerAdbAutoConnect = true
-                                }
+                                // 直接导航到 StarterScreen，由 StarterScreen 检测环境状态
+                                onNavigateToStarter(false, "127.0.0.1", 0, false)
                             }
                         )
                     }
@@ -177,45 +172,5 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-    
-    if (triggerAdbAutoConnect && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        androidx.compose.runtime.key(System.currentTimeMillis()) {
-            roro.stellar.manager.ui.features.home.others.AdbAutoConnect(
-                onStartConnection = { port, hasSecureSettings ->
-                    onNavigateToStarter(false, "127.0.0.1", port, hasSecureSettings)
-                },
-                onNeedsPairing = {
-                    onNavigateToAdbPairing()
-                },
-                onAskEnableWirelessAdb = { onConfirm ->
-                    enableWirelessAdbConfirmCallback = onConfirm
-                    showEnableWirelessAdbDialog = true
-                },
-                onComplete = { triggerAdbAutoConnect = false }
-            )
-        }
-    }
-
-    if (showEnableWirelessAdbDialog) {
-        StellarConfirmDialog(
-            onDismissRequest = {
-                showEnableWirelessAdbDialog = false
-                enableWirelessAdbConfirmCallback = null
-            },
-            title = "开启无线调试",
-            message = "检测到您有 WRITE_SECURE_SETTINGS 权限，是否开启无线调试？",
-            confirmText = "开启",
-            dismissText = "取消",
-            onConfirm = {
-                showEnableWirelessAdbDialog = false
-                enableWirelessAdbConfirmCallback?.invoke()
-                enableWirelessAdbConfirmCallback = null
-            },
-            onDismiss = {
-                showEnableWirelessAdbDialog = false
-                enableWirelessAdbConfirmCallback = null
-            }
-        )
     }
 }

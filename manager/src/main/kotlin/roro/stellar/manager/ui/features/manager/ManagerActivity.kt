@@ -2,12 +2,10 @@ package roro.stellar.manager.ui.features.manager
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,13 +41,6 @@ class ManagerActivity : ComponentActivity() {
                 putExtra(EXTRA_HOST, host)
                 putExtra(EXTRA_PORT, port)
                 putExtra(EXTRA_HAS_SECURE_SETTINGS, hasSecureSettings)
-            }
-        }
-
-        @RequiresApi(Build.VERSION_CODES.R)
-        fun createPairingIntent(context: Context): Intent {
-            return Intent(context, ManagerActivity::class.java).apply {
-                putExtra(EXTRA_ROUTE, ManagerRoute.Pairing.route)
             }
         }
     }
@@ -107,19 +98,8 @@ private fun ManagerNavHost(
                 host = host,
                 port = port,
                 hasSecureSettings = hasSecureSettings,
-                onClose = onClose,
-                onNavigateToAdbPairing = {
-                    navController.navigate(ManagerRoute.Pairing.route)
-                }
+                onClose = onClose
             )
-        }
-
-        composable(ManagerRoute.Pairing.route) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                AdbPairingScreen(
-                    onBackPressed = onClose
-                )
-            }
         }
     }
 }
@@ -127,5 +107,4 @@ private fun ManagerNavHost(
 sealed class ManagerRoute(val route: String) {
     data object Logs : ManagerRoute("logs")
     data object Starter : ManagerRoute("starter")
-    data object Pairing : ManagerRoute("pairing")
 }

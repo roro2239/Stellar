@@ -173,11 +173,22 @@ class AdbWirelessHelper {
                     return true
                 }
             } catch (e: Exception) {
+                // 检查输出是否包含成功消息
                 if (commandOutput.contains("restarting in TCP mode port:")) {
                     Log.i(AppConstants.TAG, "端口切换成功（连接已断开，这是正常的）")
                     return true
                 }
-                Log.w(AppConstants.TAG, "切换端口尝试 $attempt/$maxRetries 失败: ${e.message}")
+
+                // 连接断开可能意味着 tcpip 命令已执行，检查新端口是否可用
+                Log.d(AppConstants.TAG, "连接断开，等待检查新端口 $newPort 是否可用...")
+                Thread.sleep(1000)
+
+                if (waitForAdbPortAvailable(host, newPort, timeoutMs = 5000L)) {
+                    Log.i(AppConstants.TAG, "端口切换成功: 新端口 $newPort 已可用")
+                    return true
+                }
+
+                Log.w(AppConstants.TAG, "切换端口尝试 $attempt/$maxRetries 失败: ${e.message ?: "连接断开"}")
                 if (attempt < maxRetries) {
                     Thread.sleep(1000L * attempt)
                 }
@@ -299,7 +310,7 @@ class AdbWirelessHelper {
                     Log.i(AppConstants.TAG, "端口切换成功: $port -> $newPort")
                     onSuccess()
                 } else {
-                    onError(Exception("端口切换失败"))
+                    onError(Exception("无法切换到端口 $newPort，请检查端口是否被占用"))
                 }
             } catch (e: Throwable) {
                 Log.e(AppConstants.TAG, "changeTcpipPortAfterStart出错", e)

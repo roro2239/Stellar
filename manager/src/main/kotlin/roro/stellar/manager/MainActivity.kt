@@ -175,9 +175,6 @@ private fun MainScreenContent(
                         appsViewModel = appsViewModel,
                         onNavigateToStarter = { isRoot, host, port, hasSecureSettings ->
                             context.startActivity(ManagerActivity.createStarterIntent(context, isRoot, host, port, hasSecureSettings))
-                        },
-                        onNavigateToAdbPairing = {
-                            context.startActivity(ManagerActivity.createPairingIntent(context))
                         }
                     )
                 }
