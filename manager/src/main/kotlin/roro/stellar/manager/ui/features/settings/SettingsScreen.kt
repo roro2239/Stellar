@@ -1,9 +1,10 @@
 package roro.stellar.manager.ui.features.settings
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -33,7 +34,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Subject
+import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
@@ -163,6 +164,7 @@ fun SettingsScreen(
         isServiceConnected = Stellar.pingBinder()
         if (isServiceConnected) {
             try {
+                @SuppressLint("RestrictedApi")
                 shizukuCompatEnabled = withContext(Dispatchers.IO) {
                     Stellar.isShizukuCompatEnabled()
                 }
@@ -262,6 +264,7 @@ fun SettingsScreen(
                 onCheckedChange = { newValue ->
                     scope.launch {
                         try {
+                            @SuppressLint("RestrictedApi")
                             withContext(Dispatchers.IO) {
                                 Stellar.setShizukuCompatEnabled(newValue)
                             }
@@ -417,7 +420,7 @@ fun SettingsScreen(
             }
 
             SettingsClickableCard(
-                icon = Icons.Default.Subject,
+                icon = Icons.AutoMirrored.Filled.Subject,
                 title = "服务日志",
                 subtitle = "查看 Stellar 服务运行日志",
                 onClick = onNavigateToLogs
@@ -610,7 +613,7 @@ fun SettingsScreen(
                      
                      Button(
                          onClick = {
-                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku"))
+                             val intent = Intent(Intent.ACTION_VIEW, "https://github.com/RikkaApps/Shizuku".toUri())
                              try {
                                  context.startActivity(intent)
                              } catch (_: Exception) {
