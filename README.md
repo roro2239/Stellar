@@ -134,7 +134,7 @@ su (root) → libchid.so 2000 → libstellar.so --apk=...
 
 ### 基本使用流程
 
-1. 添加 JitPack 依赖：`com.github.RORO2239:Stellar:latest.release`
+1. 添加 JitPack 依赖：`com.github.roro2239:Stellar-API:latest.release`
 2. 配置 `StellarProvider` 到 AndroidManifest
 3. 初始化 Stellar 并请求权限
 4. 使用 Stellar API 执行特权操作
