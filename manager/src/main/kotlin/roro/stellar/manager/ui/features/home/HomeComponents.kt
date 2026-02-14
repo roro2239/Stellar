@@ -246,7 +246,7 @@ fun StartWirelessAdbCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Android 11 及以上设备可通过无限调试启动 Stellar 服务",
+                    text = "通过无限调试启动 Stellar 服务",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

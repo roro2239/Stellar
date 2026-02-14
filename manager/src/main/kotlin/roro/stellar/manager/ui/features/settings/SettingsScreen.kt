@@ -1,10 +1,8 @@
 package roro.stellar.manager.ui.features.settings
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -128,7 +126,7 @@ fun SettingsScreen(
         val isRoot = withContext(Dispatchers.IO) {
             try {
                 Shell.getShell().isRoot
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
         }
@@ -211,14 +209,36 @@ fun SettingsScreen(
             }
 
             SettingsSwitchCard(
+                icon = Icons.Default.Wifi,
+                title = "开机启动（无线调试）",
+                subtitle = "Stellar 可以通过无线调试开机启动",
+                checked = startOnBootWireless,
+                onCheckedChange = { newValue ->
+                    if (newValue) {
+                        Toast.makeText(context, "请在自启动管理中授权本应用", Toast.LENGTH_SHORT).show()
+                        AutoStartUtils.openAutoStartSettings(context)
+                        startOnBoot = false
+                        savePreference(KEEP_START_ON_BOOT, false)
+                    }
+                    startOnBootWireless = newValue
+                    toggleBootComponent(
+                        context,
+                        componentName,
+                        KEEP_START_ON_BOOT_WIRELESS,
+                        newValue || startOnBoot
+                    )
+                }
+            )
+
+            SettingsSwitchCard(
                 icon = Icons.Default.PowerSettingsNew,
                 title = "开机启动（Root）",
-                subtitle = "已 root 设备，Stellar 可以开机启动",
+                subtitle = "Stellar 可以通过Root权限开机启动",
                 checked = startOnBoot,
                 enabled = hasRootPermission == true,
                 onCheckedChange = { newValue ->
                     if (newValue) {
-                        Toast.makeText(context, "请在自启动管理中允许本应用", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "请在自启动管理中授权本应用", Toast.LENGTH_SHORT).show()
                         AutoStartUtils.openAutoStartSettings(context)
                         startOnBootWireless = false
                         savePreference(KEEP_START_ON_BOOT_WIRELESS, false)
@@ -230,18 +250,6 @@ fun SettingsScreen(
                         KEEP_START_ON_BOOT,
                         newValue || startOnBootWireless
                     )
-                }
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Default.Security,
-                title = "降权激活",
-                subtitle = "Root 启动后降权到 shell 用户运行",
-                checked = dropPrivileges,
-                enabled = hasRootPermission == true,
-                onCheckedChange = { newValue ->
-                    dropPrivileges = newValue
-                    savePreference(DROP_PRIVILEGES, newValue)
                 }
             )
 
@@ -271,24 +279,14 @@ fun SettingsScreen(
             )
 
             SettingsSwitchCard(
-                icon = Icons.Default.Wifi,
-                title = "开机启动（无线调试）",
-                subtitle = "Stellar 可以通过无线调试开机启动",
-                checked = startOnBootWireless,
+                icon = Icons.Default.Security,
+                title = "降权激活",
+                subtitle = "Root 启动后降权到 Shell 用户运行",
+                checked = dropPrivileges,
+                enabled = hasRootPermission == true,
                 onCheckedChange = { newValue ->
-                    if (newValue) {
-                        Toast.makeText(context, "请在自启动管理中允许本应用", Toast.LENGTH_SHORT).show()
-                        AutoStartUtils.openAutoStartSettings(context)
-                        startOnBoot = false
-                        savePreference(KEEP_START_ON_BOOT, false)
-                    }
-                    startOnBootWireless = newValue
-                    toggleBootComponent(
-                        context,
-                        componentName,
-                        KEEP_START_ON_BOOT_WIRELESS,
-                        newValue || startOnBoot
-                    )
+                    dropPrivileges = newValue
+                    savePreference(DROP_PRIVILEGES, newValue)
                 }
             )
 
@@ -532,7 +530,7 @@ fun SettingsScreen(
                                          } else {
                                              Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show()
                                          }
-                                     } catch (e: Exception) {
+                                     } catch (_: Exception) {
                                          Toast.makeText(context, "检查更新失败", Toast.LENGTH_SHORT).show()
                                      } finally {
                                          isCheckingUpdate = false
@@ -615,7 +613,7 @@ fun SettingsScreen(
                              val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/RikkaApps/Shizuku"))
                              try {
                                  context.startActivity(intent)
-                             } catch (e: Exception) {
+                             } catch (_: Exception) {
                                  Toast.makeText(context, "无法打开浏览器", Toast.LENGTH_SHORT).show()
                              }
                          },
