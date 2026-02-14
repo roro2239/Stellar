@@ -44,12 +44,16 @@ dependencyResolutionManagement {
         managerLibs {
             from(files('manager/manager.versions.toml'))
         }
+
+        demoLibs {
+            from(files('api/demo/demo.versions.toml'))
+        }
     }
 }
 
 if (System.getenv("JITPACK") != "true") {
-    include ':server'
     include ':manager'
+    include ':server'
 }
 def root = "api"
 
@@ -88,3 +92,6 @@ project(':shizuku-aidl').projectDir = file('shizuku/aidl')
 
 include ':shizuku-api'
 project(':shizuku-api').projectDir = file('shizuku/api')
+
+include ':demo'
+project(':demo').projectDir = file("$root${File.separator}demo")
