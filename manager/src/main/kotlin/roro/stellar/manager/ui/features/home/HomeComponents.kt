@@ -186,7 +186,7 @@ fun StartRootCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "通过 Root 权限启动服务",
+                    text = "通过 Root 权限启动 Stellar 服务",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -246,7 +246,7 @@ fun StartWirelessAdbCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "仅限 Android 11 以上设备",
+                    text = "Android 11 及以上设备可通过无限调试启动 Stellar 服务",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -306,7 +306,7 @@ fun StartWiredAdbCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "通过 ADB 启动服务",
+                    text = "通过 ADB 启动 Stellar 服务",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
