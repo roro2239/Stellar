@@ -18,6 +18,8 @@ subprojects {
     }
 }
 
+apply from: 'api/manifest.gradle'
+
 /**
  * 版本号规则:
  * versionCode: XYYZZZ
