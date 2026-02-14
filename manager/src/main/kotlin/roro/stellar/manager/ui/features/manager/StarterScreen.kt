@@ -1,7 +1,17 @@
 package roro.stellar.manager.ui.features.manager
 
+import android.Manifest
+import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -9,7 +19,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,14 +29,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,15 +48,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
-import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
+import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.BuildConfig
+import roro.stellar.manager.AppConstants
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.StellarSettings
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
@@ -54,30 +61,19 @@ import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 import javax.net.ssl.SSLException
-import javax.net.ssl.SSLProtocolException
 
 private class NotRootedException : Exception("没有 Root 权限")
 
 enum class StepStatus { PENDING, RUNNING, COMPLETED, ERROR, WARNING }
 
-data class StartStep(
+data class StepData(
     val title: String,
     val icon: ImageVector,
-    val status: StepStatus = StepStatus.PENDING
+    val status: StepStatus = StepStatus.PENDING,
+    val description: String = "",
+    val needsUserAction: Boolean = false,
+    val isOptional: Boolean = false
 )
-
-sealed class StarterState {
-    data class Loading(
-        val command: String,
-        val isSuccess: Boolean = false,
-        val warningStepIndex: Int? = null
-    ) : StarterState()
-    data class Error(
-        val error: Throwable,
-        val command: String,
-        val failedStepIndex: Int
-    ) : StarterState()
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,19 +82,34 @@ internal fun StarterScreen(
     host: String?,
     port: Int,
     hasSecureSettings: Boolean = false,
-    onClose: () -> Unit,
-    onNavigateToAdbPairing: (() -> Unit)? = null
+    onClose: () -> Unit
 ) {
     val context = LocalContext.current
     val viewModel: StarterViewModel = viewModel(
         key = "starter_${isRoot}_${host}_${port}_$hasSecureSettings",
         factory = StarterViewModelFactory(context, isRoot, host, port, hasSecureSettings)
     )
-    val state by viewModel.state.collectAsState()
-    val useMdnsDiscovery by viewModel.useMdnsDiscovery.collectAsState()
+    val steps by viewModel.steps.collectAsState()
+    val currentStepIndex by viewModel.currentStepIndex.collectAsState()
+    val isCompleted by viewModel.isCompleted.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val outputLines by viewModel.outputLines.collectAsState()
+    val command by viewModel.command.collectAsState()
 
-    LaunchedEffect(state) {
-        if (state is StarterState.Loading && (state as StarterState.Loading).isSuccess) {
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(currentStepIndex, steps) {
+        if (currentStepIndex > 0) {
+            val targetScroll = (currentStepIndex * 140).coerceAtMost(scrollState.maxValue)
+            scrollState.animateScrollTo(
+                targetScroll,
+                animationSpec = tween(durationMillis = 500, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            )
+        }
+    }
+
+    LaunchedEffect(isCompleted) {
+        if (isCompleted) {
             delay(3000)
             onClose()
         }
@@ -108,7 +119,7 @@ internal fun StarterScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             FixedTopAppBar(
-                title = "Stellar 启动器",
+                title = if (isRoot) "Root 启动" else "无线调试启动",
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
@@ -117,835 +128,661 @@ internal fun StarterScreen(
             )
         }
     ) { paddingValues ->
-        when (state) {
-            is StarterState.Loading -> {
-                val loadingState = state as StarterState.Loading
-                LoadingContent(
-                    paddingValues = paddingValues,
-                    command = loadingState.command,
-                    outputLines = viewModel.outputLines.collectAsState().value,
-                    isSuccess = loadingState.isSuccess,
-                    isRoot = isRoot,
-                    warningStepIndex = loadingState.warningStepIndex,
-                    useMdnsDiscovery = useMdnsDiscovery
-                )
-            }
-            is StarterState.Error -> {
-                val errorState = state as StarterState.Error
-                ErrorContent(
-                    paddingValues = paddingValues,
-                    command = errorState.command,
-                    outputLines = viewModel.outputLines.collectAsState().value,
-                    error = errorState.error,
-                    failedStepIndex = errorState.failedStepIndex,
-                    isRoot = isRoot,
-                    onRetry = { viewModel.retry() },
-                    onClose = onClose,
-                    onNavigateToAdbPairing = onNavigateToAdbPairing
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadingContent(
-    paddingValues: PaddingValues,
-    command: String,
-    outputLines: List<String>,
-    isSuccess: Boolean,
-    isRoot: Boolean,
-    warningStepIndex: Int? = null,
-    useMdnsDiscovery: Boolean = false
-) {
-    val context = LocalContext.current
-    var countdown by remember { mutableIntStateOf(3) }
-    val scrollState = rememberScrollState()
-
-    LaunchedEffect(isSuccess) {
-        if (isSuccess) {
-            while (countdown > 0) {
-                delay(1000)
-                countdown--
-            }
-        }
-    }
-
-    val steps = remember(isRoot, useMdnsDiscovery) {
-        if (isRoot) {
-            listOf(
-                StartStep("检查 Root 权限", Icons.Filled.Security),
-                StartStep("检查现有服务", Icons.Filled.Search),
-                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
-                StartStep("等待 Binder 响应", Icons.Filled.Sync),
-                StartStep("启动完成", Icons.Filled.CheckCircle)
-            )
-        } else if (useMdnsDiscovery) {
-            listOf(
-                StartStep("连接 ADB 服务", Icons.Filled.Cable),
-                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
-                StartStep("检查现有服务", Icons.Filled.Search),
-                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
-                StartStep("等待 Binder 响应", Icons.Filled.Sync),
-                StartStep("启动完成", Icons.Filled.CheckCircle)
-            )
-        } else {
-            listOf(
-                StartStep("连接 ADB 服务", Icons.Filled.Cable),
-                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
-                StartStep("检查现有服务", Icons.Filled.Search),
-                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
-                StartStep("等待 Binder 响应", Icons.Filled.Sync),
-                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
-                StartStep("启动完成", Icons.Filled.CheckCircle)
-            )
-        }
-    }
-
-    // 根据输出判断当前步骤
-    val totalSteps = steps.size
-    val currentStepIndex by remember(outputLines, isSuccess, useMdnsDiscovery) {
-        derivedStateOf {
-            when {
-                isSuccess -> totalSteps - 1
-                // 切换端口 (仅非 mDNS 的 ADB 模式有此步骤，index 5)
-                outputLines.any { it.contains("切换端口") || it.contains("restarting in TCP mode") } ->
-                    if (isRoot || useMdnsDiscovery) totalSteps - 2 else 5
-                // 等待 Binder 响应 (Root: 3, ADB mDNS: 4, ADB 普通: 4)
-                outputLines.any { it.contains("stellar_starter 正常退出") } ->
-                    if (isRoot) 3 else 4
-                outputLines.any { it.contains("启动服务进程") } -> if (isRoot) 2 else 3
-                outputLines.any { it.contains("检查现有服务") || it.contains("终止现有服务") } ->
-                    if (isRoot) 1 else 2
-                // ADB 模式: 连接 ADB 服务 (index 0)
-                outputLines.any { it.contains("Connecting") } -> 0
-                outputLines.any { it.startsWith("$") } -> 0
-                outputLines.isNotEmpty() -> 0
-                else -> 0
-            }
-        }
-    }
-
-    // 自动滚动到当前步骤
-    LaunchedEffect(currentStepIndex) {
-        scrollState.animateScrollTo(currentStepIndex * 180)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = paddingValues.calculateTopPadding())
-    ) {
-        // 固定顶部状态卡片
-        Column(
-            modifier = Modifier.padding(
-                top = AppSpacing.topBarContentSpacing,
-                start = AppSpacing.screenHorizontalPadding,
-                end = AppSpacing.screenHorizontalPadding
-            )
-        ) {
-            StarterStatusCard(isSuccess = isSuccess, isError = false, countdown = countdown)
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.cardSpacing))
-
-        // 可滚动的步骤列表
         Column(
             modifier = Modifier
-                .weight(1f)
+                .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = AppSpacing.screenHorizontalPadding),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
+                .padding(paddingValues)
+                .padding(
+                    horizontal = AppSpacing.screenHorizontalPadding,
+                    vertical = AppSpacing.topBarContentSpacing
+                )
+                .padding(bottom = AppSpacing.screenBottomPadding)
         ) {
             steps.forEachIndexed { index, step ->
-                val status = when {
-                    warningStepIndex == index -> StepStatus.WARNING
-                    index < currentStepIndex -> StepStatus.COMPLETED
-                    index == currentStepIndex -> if (isSuccess && index == totalSteps - 1) StepStatus.COMPLETED else StepStatus.RUNNING
-                    else -> StepStatus.PENDING
+                // 跳过不需要的可选步骤
+                if (step.isOptional && step.status == StepStatus.PENDING && index < currentStepIndex) {
+                    return@forEachIndexed
                 }
 
                 var visible by remember { mutableStateOf(false) }
                 LaunchedEffect(index) {
-                    delay(index * 50L)
+                    delay(index * 100L) // 增加延迟，让卡片依次出现
                     visible = true
                 }
 
                 AnimatedVisibility(
                     visible = visible,
-                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -24 }
                 ) {
-                    StepCard(step = step.copy(status = status), index = index + 1)
+                    // 为状态变化添加动画
+                    val animatedAlpha by animateFloatAsState(
+                        targetValue = if (step.status == StepStatus.PENDING) 0.7f else 1f,
+                        animationSpec = tween(300),
+                        label = "alpha"
+                    )
+
+                    Box(modifier = Modifier.graphicsLayer { alpha = animatedAlpha }) {
+                        TimelineStep(
+                            isFirst = index == 0,
+                            isLast = index == steps.lastIndex && errorMessage == null,
+                            title = step.title,
+                            icon = step.icon,
+                            status = step.status,
+                            description = step.description,
+                            action = if (step.needsUserAction && step.status == StepStatus.RUNNING) {
+                                { StepActionContent(step, viewModel, context) }
+                            } else null
+                        )
+                    }
                 }
             }
 
-            if (isSuccess && outputLines.isNotEmpty()) {
-                var copyLogVisible by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    delay(totalSteps * 50L + 100L)
-                    copyLogVisible = true
-                    delay(150)
-                    scrollState.animateScrollTo(scrollState.maxValue)
+            if (errorMessage != null) {
+                var logVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(errorMessage) {
+                    delay(steps.size * 100L + 200L)
+                    logVisible = true
+                    delay(300)
+                    scrollState.animateScrollTo(
+                        scrollState.maxValue,
+                        animationSpec = tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    )
                 }
 
                 AnimatedVisibility(
-                    visible = copyLogVisible,
-                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+                    visible = logVisible,
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -24 }
                 ) {
-                    CopyLogCard(
-                        command = command,
-                        outputLines = outputLines,
-                        context = context
-                    )
+                    Column {
+                        if (outputLines.isNotEmpty()) {
+                            TimelineLogCard(
+                                isLast = false,
+                                title = "错误报告",
+                                icon = Icons.Filled.Description,
+                                command = command,
+                                outputLines = outputLines,
+                                context = context,
+                                isSuccess = false,
+                                errorMessage = errorMessage
+                            )
+                        }
+
+                        TimelineActionStep(
+                            isLast = false,
+                            title = "重试",
+                            icon = Icons.Filled.Refresh,
+                            onClick = { viewModel.retry() }
+                        )
+
+                        TimelineActionStep(
+                            isLast = true,
+                            title = "返回",
+                            icon = Icons.Filled.ArrowBack,
+                            onClick = onClose
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (isCompleted && outputLines.isNotEmpty()) {
+                var logVisible by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    delay(steps.size * 100L + 200L)
+                    logVisible = true
+                    delay(300)
+                    scrollState.animateScrollTo(
+                        scrollState.maxValue,
+                        animationSpec = tween(500, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = logVisible,
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -24 }
+                ) {
+                    TimelineLogCard(
+                        isLast = true,
+                        title = "启动日志",
+                        icon = Icons.Filled.Description,
+                        command = command,
+                        outputLines = outputLines,
+                        context = context,
+                        isSuccess = true
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun StepCard(step: StartStep, index: Int) {
-    val isCompleted = step.status == StepStatus.COMPLETED
-    val isRunning = step.status == StepStatus.RUNNING
-    val isPending = step.status == StepStatus.PENDING
-    val isError = step.status == StepStatus.ERROR
-    val isWarning = step.status == StepStatus.WARNING
+private fun StepActionContent(
+    step: StepData,
+    viewModel: StarterViewModel,
+    context: Context
+) {
+    val hasNotificationPermission by viewModel.hasNotificationPermission.collectAsState()
 
-    val containerColor = when {
-        isCompleted -> MaterialTheme.colorScheme.primaryContainer
-        isWarning -> MaterialTheme.colorScheme.tertiaryContainer
-        isError -> MaterialTheme.colorScheme.errorContainer
-        isRunning -> MaterialTheme.colorScheme.surfaceContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerLow
-    }
-    val contentColor = when {
-        isCompleted -> MaterialTheme.colorScheme.onPrimaryContainer
-        isWarning -> MaterialTheme.colorScheme.onTertiaryContainer
-        isError -> MaterialTheme.colorScheme.onErrorContainer
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    val iconBgColor = when {
-        isCompleted -> contentColor.copy(alpha = 0.15f)
-        isWarning -> contentColor.copy(alpha = 0.15f)
-        isError -> contentColor.copy(alpha = 0.15f)
-        isRunning -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerHighest
-    }
-    val iconTint = when {
-        isCompleted -> contentColor
-        isWarning -> MaterialTheme.colorScheme.tertiary
-        isError -> MaterialTheme.colorScheme.error
-        isRunning -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.setNotificationPermission(isGranted)
+        if (!isGranted) {
+            Toast.makeText(context, "需要通知权限才能继续配对", Toast.LENGTH_LONG).show()
+        }
     }
 
-    val scale by animateFloatAsState(
-        targetValue = if (isCompleted) 1f else 1f,
-        animationSpec = tween(200),
-        label = "scale"
-    )
+    Column {
+        Spacer(Modifier.height(12.dp))
 
-    Card(
+        when (step.title) {
+            "开启无线调试" -> {
+                Button(
+                    onClick = {
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                                }
+                            )
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShape.shapes.cardMedium
+                ) {
+                    Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("打开开发者选项", Modifier.padding(vertical = 4.dp))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { viewModel.continueAfterSetup() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShape.shapes.cardMedium
+                ) {
+                    Text("已开启，继续", Modifier.padding(vertical = 4.dp))
+                }
+            }
+
+            "授权通知权限" -> {
+                if (!hasNotificationPermission) {
+                    Button(
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                try {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    )
+                                } catch (e: ActivityNotFoundException) {
+                                    Toast.makeText(context, "无法打开通知设置", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShape.shapes.cardMedium
+                    ) {
+                        Text("授予权限", Modifier.padding(vertical = 4.dp))
+                    }
+                }
+            }
+
+            "无线调试配对" -> {
+                Button(
+                    onClick = {
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                                }
+                            )
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShape.shapes.cardMedium
+                ) {
+                    Text("打开无线调试设置", Modifier.padding(vertical = 4.dp))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { viewModel.continueAfterSetup() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AppShape.shapes.cardMedium
+                ) {
+                    Text("配对完成，继续", Modifier.padding(vertical = 4.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineStep(
+    isFirst: Boolean,
+    isLast: Boolean,
+    title: String,
+    icon: ImageVector,
+    status: StepStatus,
+    description: String,
+    action: (@Composable ColumnScope.() -> Unit)? = null
+) {
+    val isCompleted = status == StepStatus.COMPLETED
+    val isRunning = status == StepStatus.RUNNING
+    val isPending = status == StepStatus.PENDING
+    val isError = status == StepStatus.ERROR
+    val isWarning = status == StepStatus.WARNING
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale },
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPadding),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(36.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(iconBgColor),
+                    .size(36.dp)
+                    .background(
+                        when {
+                            isCompleted -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            isError -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                            isWarning -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                            isRunning -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)
+                        },
+                        CircleShape
+                    )
+                    .padding(6.dp)
+                    .background(
+                        when {
+                            isCompleted -> MaterialTheme.colorScheme.primary
+                            isError -> MaterialTheme.colorScheme.error
+                            isWarning -> MaterialTheme.colorScheme.tertiary
+                            isRunning -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        },
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 when {
                     isCompleted -> Icon(
-                        Icons.Filled.Check,
+                        imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    isError -> Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.size(16.dp)
                     )
                     isWarning -> Icon(
-                        Icons.Filled.Warning,
+                        imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    isError -> Icon(
-                        Icons.Filled.Close,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.onTertiary,
+                        modifier = Modifier.size(16.dp)
                     )
                     isRunning -> CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(14.dp),
                         strokeWidth = 2.dp,
-                        color = iconTint
-                    )
-                    else -> Text(
-                        text = "$index",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = iconTint
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-            Text(
-                text = step.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isRunning || isCompleted || isError) FontWeight.Medium else FontWeight.Normal,
-                color = if (isPending) contentColor.copy(alpha = 0.5f) else contentColor
-            )
-        }
-    }
-}
-
-@Composable
-private fun CopyLogCard(
-    command: String,
-    outputLines: List<String>,
-    context: android.content.Context
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPadding),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.Description,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+            if (!isLast) {
+                Box(
+                    Modifier
+                        .width(2.dp)
+                        .weight(1f)
+                        .background(
+                            when {
+                                isCompleted -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                isError -> MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                                else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                            }
+                        )
                 )
             }
-
-            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-            Text(
-                text = "启动日志",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-
-            FilledTonalButton(
-                onClick = {
-                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                        as android.content.ClipboardManager
-                    val logText = buildString {
-                        appendLine("=== Stellar 启动日志 ===")
-                        appendLine()
-                        appendLine("执行命令:")
-                        appendLine(command)
-                        appendLine()
-                        appendLine("命令输出:")
-                        outputLines.forEach { appendLine(it) }
-                    }
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 启动日志", logText))
-                    android.widget.Toast.makeText(context, "日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
-                },
-                shape = AppShape.shapes.buttonSmall14
-            ) {
-                Icon(
-                    Icons.Filled.ContentCopy,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("复制", style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StarterStatusCard(
-    isSuccess: Boolean,
-    isError: Boolean = false,
-    countdown: Int = 0
-) {
-    val containerColor = when {
-        isError -> MaterialTheme.colorScheme.errorContainer
-        isSuccess -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceContainer
-    }
-    val contentColor = when {
-        isError -> MaterialTheme.colorScheme.onErrorContainer
-        isSuccess -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    val iconColor = when {
-        isError -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPaddingLarge),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(AppSpacing.iconContainerSizeLarge)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(contentColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                when {
-                    isError -> Icon(
-                        imageVector = Icons.Filled.Error,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(AppSpacing.iconSizeLarge)
-                    )
-                    isSuccess -> Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(AppSpacing.iconSizeLarge)
-                    )
-                    else -> CircularProgressIndicator(
-                        modifier = Modifier.size(AppSpacing.iconSizeLarge),
-                        strokeWidth = 3.dp,
-                        color = iconColor
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = when {
-                        isError -> "启动失败"
-                        isSuccess -> "启动成功"
-                        else -> "正在启动"
-                    },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor
-                )
-                Spacer(modifier = Modifier.height(AppSpacing.titleSubtitleSpacing))
-                Text(
-                    text = when {
-                        isError -> "请查看错误信息"
-                        isSuccess -> "Stellar 服务已成功启动"
-                        else -> "请稍候片刻..."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.7f)
-                )
-            }
-
-            if (isSuccess && countdown > 0) {
-                Surface(
-                    shape = AppShape.shapes.iconSmall,
-                    color = contentColor.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = "${countdown}s",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = contentColor,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CommandCard(
-    command: String,
-    outputLines: List<String>,
-    isError: Boolean
-) {
-    val terminalBgColor = MaterialTheme.colorScheme.surfaceContainerHighest
-    val commandColor = MaterialTheme.colorScheme.primary
-    val outputColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val errorColor = MaterialTheme.colorScheme.error
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(containerColor = terminalBgColor)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 280.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(AppSpacing.cardPadding)
-        ) {
-            Text(
-                text = "$ $command",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp
-                ),
-                color = commandColor,
-                fontWeight = FontWeight.Medium
-            )
-
-            if (outputLines.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                outputLines.forEach { line ->
-                    val lineColor = when {
-                        isError -> errorColor
-                        line.startsWith("错误") || line.contains("Error") -> errorColor
-                        else -> outputColor
-                    }
-                    Text(
-                        text = line,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp,
-                            lineHeight = 16.sp
-                        ),
-                        color = lineColor
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ErrorContent(
-    paddingValues: PaddingValues,
-    command: String,
-    outputLines: List<String>,
-    error: Throwable,
-    failedStepIndex: Int,
-    isRoot: Boolean,
-    onRetry: () -> Unit,
-    onClose: () -> Unit,
-    onNavigateToAdbPairing: (() -> Unit)? = null
-) {
-    val context = LocalContext.current
-    val scrollState = rememberScrollState()
-    val needsPairing = error is SSLException || error is ConnectException
-
-    val steps = remember(isRoot) {
-        if (isRoot) {
-            listOf(
-                StartStep("检查 Root 权限", Icons.Filled.Security),
-                StartStep("检查现有服务", Icons.Filled.Search),
-                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
-                StartStep("等待 Binder 响应", Icons.Filled.Sync),
-                StartStep("启动完成", Icons.Filled.CheckCircle)
-            )
-        } else {
-            listOf(
-                StartStep("连接 ADB 服务", Icons.Filled.Cable),
-                StartStep("验证连接状态", Icons.Filled.VerifiedUser),
-                StartStep("检查现有服务", Icons.Filled.Search),
-                StartStep("启动服务进程", Icons.Filled.RocketLaunch),
-                StartStep("等待 Binder 响应", Icons.Filled.Sync),
-                StartStep("切换 ADB 端口", Icons.Filled.SwapHoriz),
-                StartStep("启动完成", Icons.Filled.CheckCircle)
-            )
-        }
-    }
-
-    val totalSteps = steps.size
-
-    LaunchedEffect(failedStepIndex) {
-        delay(totalSteps * 50L + 350L)
-        scrollState.animateScrollTo(scrollState.maxValue)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = paddingValues.calculateTopPadding())
-    ) {
-        Column(
-            modifier = Modifier.padding(
-                top = AppSpacing.topBarContentSpacing,
-                start = AppSpacing.screenHorizontalPadding,
-                end = AppSpacing.screenHorizontalPadding
-            )
-        ) {
-            StarterStatusCard(isSuccess = false, isError = true, countdown = 0)
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.cardSpacing))
-
-        Column(
+        Surface(
             modifier = Modifier
                 .weight(1f)
-                .verticalScroll(scrollState)
-                .padding(horizontal = AppSpacing.screenHorizontalPadding),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
+                .padding(bottom = 12.dp),
+            shape = AppShape.shapes.cardLarge,
+            color = when {
+                isCompleted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                isError -> MaterialTheme.colorScheme.errorContainer
+                isWarning -> MaterialTheme.colorScheme.tertiaryContainer
+                isRunning -> MaterialTheme.colorScheme.surfaceContainer
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
         ) {
-            steps.forEachIndexed { index, step ->
-                val status = when {
-                    index < failedStepIndex -> StepStatus.COMPLETED
-                    index == failedStepIndex -> StepStatus.ERROR
-                    else -> StepStatus.PENDING
-                }
-
-                var visible by remember { mutableStateOf(false) }
-                LaunchedEffect(index) {
-                    delay(index * 50L)
-                    visible = true
-                }
-
-                AnimatedVisibility(
-                    visible = visible,
-                    enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    StepCard(step = step.copy(status = status), index = index + 1)
-                }
-            }
-
-            var copyVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                delay(totalSteps * 50L + 100L)
-                copyVisible = true
-            }
-
-            AnimatedVisibility(
-                visible = copyVisible,
-                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
-            ) {
-                CopyErrorReportCard(
-                    command = command,
-                    outputLines = outputLines,
-                    error = error,
-                    context = context
-                )
-            }
-
-            var retryVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                delay(totalSteps * 50L + 150L)
-                retryVisible = true
-            }
-
-            AnimatedVisibility(
-                visible = retryVisible,
-                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
-            ) {
-                ActionCard(
-                    icon = Icons.Filled.Refresh,
-                    title = if (needsPairing) "前往配对" else "重试",
-                    onClick = {
-                        if (needsPairing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            onNavigateToAdbPairing?.invoke()
-                            onClose()
-                        } else {
-                            onRetry()
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                when {
+                                    isCompleted -> MaterialTheme.colorScheme.primaryContainer
+                                    isError -> MaterialTheme.colorScheme.errorContainer
+                                    isWarning -> MaterialTheme.colorScheme.tertiaryContainer
+                                    isRunning -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                AppShape.shapes.iconSmall
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = when {
+                                isCompleted -> MaterialTheme.colorScheme.primary
+                                isError -> MaterialTheme.colorScheme.error
+                                isWarning -> MaterialTheme.colorScheme.tertiary
+                                isRunning -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            },
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            isPending -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            isError -> MaterialTheme.colorScheme.onErrorContainer
+                            isWarning -> MaterialTheme.colorScheme.onTertiaryContainer
+                            else -> MaterialTheme.colorScheme.onSurface
                         }
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = when {
+                        isPending -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        isError -> MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                        isWarning -> MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
+                action?.invoke(this)
             }
-
-            var backVisible by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                delay(totalSteps * 50L + 200L)
-                backVisible = true
-            }
-
-            AnimatedVisibility(
-                visible = backVisible,
-                enter = fadeIn(tween(100)) + slideInVertically(tween(100)) { -12 }
-            ) {
-                ActionCard(
-                    icon = Icons.Filled.ArrowBack,
-                    title = "返回",
-                    onClick = onClose
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-private fun CopyErrorReportCard(
+private fun TimelineLogCard(
+    isLast: Boolean,
+    title: String,
+    icon: ImageVector,
     command: String,
     outputLines: List<String>,
-    error: Throwable,
-    context: android.content.Context
+    context: Context,
+    isSuccess: Boolean,
+    errorMessage: String? = null
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPadding),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(36.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(MaterialTheme.colorScheme.errorContainer),
+                    .size(36.dp)
+                    .background(
+                        if (isSuccess) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                        CircleShape
+                    )
+                    .padding(6.dp)
+                    .background(
+                        if (isSuccess) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Filled.Description,
+                    imageVector = if (isSuccess) Icons.Default.Check else Icons.Default.Close,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-            Text(
-                text = "错误报告",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-
-            FilledTonalButton(
-                onClick = {
-                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                        as android.content.ClipboardManager
-
-                    val errorFromOutput = outputLines
-                        .filter { it.contains("错误：") || it.contains("Error:") }
-                        .lastOrNull()
-                        ?.let { line ->
-                            line.substringAfter("错误：", "")
-                                .ifEmpty { line.substringAfter("Error:", "") }
-                                .trim()
-                        }
-                    val errorMessage = errorFromOutput?.ifEmpty { null }
-                        ?: error.message
-                        ?: "未知错误"
-
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                    val currentTime = dateFormat.format(Date())
-
-                    val logText = buildString {
-                        appendLine("=== Stellar 启动错误报告 ===")
-                        appendLine()
-                        appendLine("时间: $currentTime")
-                        appendLine("错误信息: $errorMessage")
-                        appendLine()
-                        appendLine("执行命令:")
-                        appendLine(command)
-                        appendLine()
-                        if (outputLines.isNotEmpty()) {
-                            appendLine("命令输出:")
-                            outputLines.forEach { appendLine(it) }
-                            appendLine()
-                        }
-                        appendLine("软件信息:")
-                        appendLine("版本: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-                        appendLine()
-                        appendLine("设备信息:")
-                        appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-                        appendLine("设备: ${Build.MANUFACTURER} ${Build.MODEL}")
-                    }
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 错误报告", logText))
-                    android.widget.Toast.makeText(context, "错误报告已复制", android.widget.Toast.LENGTH_SHORT).show()
-                },
-                shape = AppShape.shapes.buttonSmall14
-            ) {
-                Icon(
-                    Icons.Filled.ContentCopy,
-                    contentDescription = null,
+                    tint = if (isSuccess) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError,
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("复制", style = MaterialTheme.typography.labelMedium)
+            }
+            if (!isLast) {
+                Box(
+                    Modifier
+                        .width(2.dp)
+                        .weight(1f)
+                        .background(
+                            if (isSuccess) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            else MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+                        )
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = 12.dp),
+            shape = AppShape.shapes.cardLarge,
+            color = MaterialTheme.colorScheme.surfaceContainer
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                if (isSuccess) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.errorContainer,
+                                AppShape.shapes.iconSmall
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isSuccess) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilledTonalButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                as android.content.ClipboardManager
+                            val packageInfo = try {
+                                context.packageManager.getPackageInfo(context.packageName, 0)
+                            } catch (e: Exception) { null }
+                            val versionName = packageInfo?.versionName ?: "未知"
+                            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                packageInfo?.longVersionCode?.toString() ?: "未知"
+                            } else {
+                                @Suppress("DEPRECATION")
+                                packageInfo?.versionCode?.toString() ?: "未知"
+                            }
+                            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                            val currentTime = dateFormat.format(java.util.Date())
+
+                            val logText = buildString {
+                                appendLine("=== Stellar ${if (isSuccess) "启动日志" else "错误报告"} ===")
+                                appendLine()
+                                appendLine("设备信息:")
+                                appendLine("  机型: ${Build.MANUFACTURER} ${Build.MODEL}")
+                                appendLine("  Android 版本: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                                appendLine("  应用版本: $versionName ($versionCode)")
+                                appendLine("  时间: $currentTime")
+                                appendLine()
+                                appendLine("执行命令:")
+                                appendLine(command)
+                                appendLine()
+                                appendLine("命令输出:")
+                                outputLines.forEach { appendLine(it) }
+                                if (!isSuccess && !errorMessage.isNullOrBlank()) {
+                                    appendLine()
+                                    appendLine("错误信息:")
+                                    appendLine(errorMessage)
+                                }
+                            }
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 日志", logText))
+                            android.widget.Toast.makeText(context, "日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        shape = AppShape.shapes.buttonSmall14
+                    ) {
+                        Icon(
+                            Icons.Filled.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("复制", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ActionCard(
-    icon: ImageVector,
+private fun TimelineActionStep(
+    isLast: Boolean,
     title: String,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        onClick = onClick
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPadding),
-            verticalAlignment = Alignment.CenterVertically
+        // 左侧时间线指示器
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(36.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .size(36.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        CircleShape
+                    )
+                    .padding(6.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary,
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    icon,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(14.dp)
                 )
             }
+            if (!isLast) {
+                Box(
+                    Modifier
+                        .width(2.dp)
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                )
+            }
+        }
 
-            Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = 12.dp),
+            shape = AppShape.shapes.cardLarge,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            onClick = onClick
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            AppShape.shapes.iconSmall
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
@@ -958,102 +795,572 @@ internal class StarterViewModel(
     private val hasSecureSettings: Boolean = false
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<StarterState>(
-        StarterState.Loading(command = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}")
+    // 步骤列表
+    private val _steps = MutableStateFlow<List<StepData>>(emptyList())
+    val steps: StateFlow<List<StepData>> = _steps.asStateFlow()
+
+    // 当前步骤索引
+    private val _currentStepIndex = MutableStateFlow(0)
+    val currentStepIndex: StateFlow<Int> = _currentStepIndex.asStateFlow()
+
+    // 是否完成
+    private val _isCompleted = MutableStateFlow(false)
+    val isCompleted: StateFlow<Boolean> = _isCompleted.asStateFlow()
+
+    // 错误信息
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // 执行命令
+    private val _command = MutableStateFlow(if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}")
+    val command: StateFlow<String> = _command.asStateFlow()
+
+    // 通知权限状态
+    private val _hasNotificationPermission = MutableStateFlow(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
+        }
     )
-    val state: StateFlow<StarterState> = _state.asStateFlow()
+    val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
 
     private val _outputLines = MutableStateFlow<List<String>>(emptyList())
     val outputLines: StateFlow<List<String>> = _outputLines.asStateFlow()
 
-    // 是否使用 mDNS 发现模式（不需要切换端口步骤）
-    private val _useMdnsDiscovery = MutableStateFlow(false)
-    val useMdnsDiscovery: StateFlow<Boolean> = _useMdnsDiscovery.asStateFlow()
-
-    private val lastCommand: String = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
-
     private val adbWirelessHelper = AdbWirelessHelper()
     private var adbMdns: AdbMdns? = null
+    private var detectedPort: Int = 0
 
-    init { startService() }
+    // 配对流程状态
+    private enum class PairingPhase { NONE, ENABLE_WIRELESS, PAIRING }
+    private var pairingPhase = PairingPhase.NONE
+
+    init {
+        initializeSteps()
+        startProcess()
+    }
+
+    private fun initializeSteps() {
+        _steps.value = if (isRoot) {
+            listOf(
+                StepData("检查 Root 权限", Icons.Filled.Security, StepStatus.PENDING, "等待检查"),
+                StepData("检查现有服务", Icons.Filled.Search, StepStatus.PENDING, "等待执行"),
+                StepData("启动服务进程", Icons.Filled.RocketLaunch, StepStatus.PENDING, "等待执行"),
+                StepData("等待 Binder 响应", Icons.Filled.Sync, StepStatus.PENDING, "等待执行"),
+                StepData("启动完成", Icons.Filled.CheckCircle, StepStatus.PENDING, "等待完成")
+            )
+        } else {
+            listOf(
+                StepData("检测 ADB 端口", Icons.Filled.Wifi, StepStatus.PENDING, "等待检测"),
+                StepData("检测配对状态", Icons.Filled.VpnKey, StepStatus.PENDING, "等待检测"),
+                StepData("连接 ADB 服务", Icons.Filled.Cable, StepStatus.PENDING, "等待连接"),
+                StepData("验证连接状态", Icons.Filled.VerifiedUser, StepStatus.PENDING, "等待验证"),
+                StepData("检查现有服务", Icons.Filled.Search, StepStatus.PENDING, "等待执行"),
+                StepData("启动服务进程", Icons.Filled.RocketLaunch, StepStatus.PENDING, "等待执行"),
+                StepData("等待 Binder 响应", Icons.Filled.Sync, StepStatus.PENDING, "等待执行"),
+                StepData("启动完成", Icons.Filled.CheckCircle, StepStatus.PENDING, "等待完成")
+            )
+        }
+    }
+
+    private fun updateStep(index: Int, status: StepStatus, description: String, needsUserAction: Boolean = false) {
+        viewModelScope.launch {
+            // 添加延迟，让步骤更新不要太快
+            if (status == StepStatus.RUNNING || status == StepStatus.COMPLETED) {
+                delay(300)
+            }
+            val currentSteps = _steps.value.toMutableList()
+            if (index in currentSteps.indices) {
+                currentSteps[index] = currentSteps[index].copy(
+                    status = status,
+                    description = description,
+                    needsUserAction = needsUserAction
+                )
+                _steps.value = currentSteps
+                if (status == StepStatus.RUNNING) {
+                    _currentStepIndex.value = index
+                }
+            }
+        }
+    }
+
+    private fun insertStep(afterIndex: Int, step: StepData) {
+        val currentSteps = _steps.value.toMutableList()
+        if (afterIndex in -1 until currentSteps.size) {
+            currentSteps.add(afterIndex + 1, step)
+            _steps.value = currentSteps
+        }
+    }
 
     private fun addOutputLine(line: String) {
         viewModelScope.launch { _outputLines.value = _outputLines.value + line }
     }
 
-    private fun setSuccess() {
-        viewModelScope.launch {
-            val currentState = _state.value
-            if (currentState is StarterState.Loading) {
-                _state.value = currentState.copy(isSuccess = true)
-                launch(Dispatchers.IO) { CommandExecutor.executeFollowServiceCommands() }
+    fun setNotificationPermission(granted: Boolean) {
+        _hasNotificationPermission.value = granted
+        if (granted) {
+            val currentSteps = _steps.value
+            val notificationStepIndex = currentSteps.indexOfFirst { it.title == "授权通知权限" }
+            if (notificationStepIndex >= 0) {
+                updateStep(notificationStepIndex, StepStatus.COMPLETED, "通知权限已授予")
+                val nextIndex = notificationStepIndex + 1
+                if (nextIndex < currentSteps.size) {
+                    updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
+                }
             }
+            startPairingService()
         }
     }
 
-    private fun setSuccessWithWarning(warningStepIndex: Int) {
-        viewModelScope.launch {
-            val currentState = _state.value
-            if (currentState is StarterState.Loading) {
-                _state.value = currentState.copy(isSuccess = true, warningStepIndex = warningStepIndex)
-                launch(Dispatchers.IO) { CommandExecutor.executeFollowServiceCommands() }
+    private fun startPairingService() {
+        val intent = AdbPairingService.startIntent(context)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
             }
+        } catch (e: Throwable) {
+            Log.e(AppConstants.TAG, "启动前台服务失败", e)
         }
     }
 
-    private fun setError(error: Throwable, failedStepIndex: Int = 0) {
+    fun continueAfterSetup() {
         viewModelScope.launch {
-            _state.value = StarterState.Error(
-                error = error,
-                command = lastCommand,
-                failedStepIndex = failedStepIndex
-            )
+            when (pairingPhase) {
+                PairingPhase.ENABLE_WIRELESS -> {
+                    // 用户已开启无线调试，重新检测端口
+                    _outputLines.value = emptyList()
+                    _errorMessage.value = null
+                    pairingPhase = PairingPhase.NONE
+                    initializeSteps()
+                    delay(300)
+                    startProcess()
+                }
+                PairingPhase.PAIRING -> {
+                    // 用户已完成配对，直接尝试连接
+                    if (detectedPort > 0) {
+                        _outputLines.value = emptyList()
+                        _errorMessage.value = null
+
+                        // 更新配对步骤为完成
+                        val currentSteps = _steps.value
+                        val pairingStepIndex = currentSteps.indexOfFirst { it.title == "无线调试配对" }
+                        if (pairingStepIndex >= 0) {
+                            updateStep(pairingStepIndex, StepStatus.COMPLETED, "配对完成")
+                        }
+
+                        pairingPhase = PairingPhase.NONE
+                        delay(300)
+                        startAdbSteps()
+                    } else {
+                        // 没有检测到端口，重新开始
+                        _outputLines.value = emptyList()
+                        _errorMessage.value = null
+                        pairingPhase = PairingPhase.NONE
+                        initializeSteps()
+                        delay(300)
+                        startProcess()
+                    }
+                }
+                PairingPhase.NONE -> {
+                    // 默认行为：重新开始
+                    _outputLines.value = emptyList()
+                    _errorMessage.value = null
+                    initializeSteps()
+                    delay(300)
+                    startProcess()
+                }
+            }
         }
     }
 
     fun retry() {
         viewModelScope.launch {
-            _state.value = StarterState.Loading(
-                command = if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}"
-            )
             _outputLines.value = emptyList()
+            _errorMessage.value = null
+            _isCompleted.value = false
+            initializeSteps()
             delay(500)
-            startService()
+            startProcess()
         }
     }
 
-    private fun startService() {
-        if (isRoot) startRoot() else startAdb(host!!, port)
+    private fun startProcess() {
+        if (isRoot) {
+            startRoot()
+        } else {
+            startDetection()
+        }
     }
+
+    private fun setSuccess() {
+        viewModelScope.launch {
+            val steps = _steps.value
+            val lastIndex = steps.lastIndex
+            // 先将所有未完成的步骤标记为完成
+            steps.forEachIndexed { index, step ->
+                if (step.status != StepStatus.COMPLETED && step.status != StepStatus.WARNING) {
+                    updateStep(index, StepStatus.COMPLETED, if (index == lastIndex) "服务已成功启动" else "已完成")
+                }
+            }
+            _isCompleted.value = true
+            launch(Dispatchers.IO) { CommandExecutor.executeFollowServiceCommands() }
+
+            // 非 Root 模式下，检查是否需要切换到用户设置的端口
+            if (!isRoot && detectedPort > 0) {
+                val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(detectedPort)
+                if (shouldChange && newPort > 0) {
+                    addOutputLine("\n正在切换到用户设置的端口 $newPort...")
+                    adbWirelessHelper.changeTcpipPortAfterStart(
+                        host = host ?: "127.0.0.1",
+                        port = detectedPort,
+                        newPort = newPort,
+                        coroutineScope = viewModelScope,
+                        onOutput = { output -> addOutputLine(output) },
+                        onError = { error ->
+                            val errorMsg = error.message ?: "未知错误"
+                            addOutputLine("端口切换失败: $errorMsg")
+                            Log.w(AppConstants.TAG, "端口切换失败", error)
+                        },
+                        onSuccess = {
+                            addOutputLine("端口已切换到 $newPort")
+                            Log.i(AppConstants.TAG, "端口已切换到 $newPort")
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun setError(error: Throwable, stepIndex: Int) {
+        viewModelScope.launch {
+            updateStep(stepIndex, StepStatus.ERROR, error.message ?: "执行失败")
+            _errorMessage.value = error.message ?: "未知错误"
+        }
+    }
+
+    // ========== ADB 检测流程 ==========
+
+    private fun startDetection() {
+        viewModelScope.launch(Dispatchers.IO) {
+            launch(Dispatchers.Main) {
+                updateStep(0, StepStatus.RUNNING, "正在检测可用的 ADB 端口...")
+            }
+
+            val preferences = StellarSettings.getPreferences()
+            val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
+            val customPort = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
+            val hasValidCustomPort = tcpipPortEnabled && customPort != null && customPort in 1..65535
+            val systemPort = EnvironmentUtils.getAdbTcpPort()
+
+            if (hasValidCustomPort) {
+                val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", customPort!!)
+                if (canConnect) {
+                    detectedPort = customPort
+                    launch(Dispatchers.Main) {
+                        updateStep(0, StepStatus.COMPLETED, "端口 $customPort 可用")
+                        updateStep(1, StepStatus.COMPLETED, "已配对")
+                        delay(300)
+                        startAdbSteps()
+                    }
+                    return@launch
+                }
+            }
+
+            if (systemPort in 1..65535) {
+                val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", systemPort)
+                if (canConnect) {
+                    detectedPort = systemPort
+                    launch(Dispatchers.Main) {
+                        updateStep(0, StepStatus.COMPLETED, "端口 $systemPort 可用")
+                        updateStep(1, StepStatus.COMPLETED, "已配对")
+                        delay(300)
+                        startAdbSteps()
+                    }
+                    return@launch
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                launch(Dispatchers.Main) {
+                    startMdnsDetection(hasValidCustomPort, customPort ?: -1)
+                }
+            } else {
+                launch(Dispatchers.Main) {
+                    updateStep(0, StepStatus.WARNING, "未检测到可用端口")
+                    showEnableWirelessAdbStep()
+                }
+            }
+        }
+    }
+
+    private fun startMdnsDetection(hasValidCustomPort: Boolean, customPort: Int) {
+        var handled = false
+        val portObserver = Observer<Int> { discoveredPort ->
+            if (discoveredPort in 1..65535 && !handled) {
+                handled = true
+                adbMdns?.stop()
+                adbMdns = null
+
+                viewModelScope.launch(Dispatchers.IO) {
+                    val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", discoveredPort)
+                    launch(Dispatchers.Main) {
+                        updateStep(0, StepStatus.COMPLETED, "端口 $discoveredPort 可用")
+
+                        if (canConnect) {
+                            detectedPort = discoveredPort
+                            updateStep(1, StepStatus.COMPLETED, "已配对")
+                            delay(300)
+                            startAdbSteps()
+                        } else {
+                            detectedPort = discoveredPort
+                            updateStep(1, StepStatus.WARNING, "需要配对")
+                            delay(300)
+                            showPairingSteps()
+                        }
+                    }
+                }
+            }
+        }
+
+        adbMdns = AdbMdns(
+            context = context,
+            serviceType = AdbMdns.TLS_CONNECT,
+            observer = portObserver,
+            onMaxRefresh = {
+                if (!handled) {
+                    handled = true
+                    updateStep(0, StepStatus.WARNING, "未检测到可用端口")
+                    showEnableWirelessAdbStep()
+                }
+            },
+            maxRefreshCount = 3
+        ).apply { start() }
+    }
+
+    private fun showEnableWirelessAdbStep() {
+        pairingPhase = PairingPhase.ENABLE_WIRELESS
+        insertStep(0, StepData(
+            title = "开启无线调试",
+            icon = Icons.Filled.WifiOff,
+            status = StepStatus.RUNNING,
+            description = "请在开发者选项中开启无线调试功能",
+            needsUserAction = true
+        ))
+        _currentStepIndex.value = 1
+    }
+
+    private fun showPairingSteps() {
+        pairingPhase = PairingPhase.PAIRING
+        val hasPermission = _hasNotificationPermission.value
+
+        insertStep(1, StepData(
+            title = "授权通知权限",
+            icon = Icons.Filled.Notifications,
+            status = if (hasPermission) StepStatus.COMPLETED else StepStatus.RUNNING,
+            description = if (hasPermission) "通知权限已授予" else "必须授予通知权限才能进行配对",
+            needsUserAction = !hasPermission
+        ))
+
+        insertStep(2, StepData(
+            title = "无线调试配对",
+            icon = Icons.Filled.QrCode,
+            status = if (hasPermission) StepStatus.RUNNING else StepStatus.PENDING,
+            description = "在无线调试页面点击「使用配对码配对设备」，然后在通知中心输入配对码",
+            needsUserAction = hasPermission
+        ))
+
+        _currentStepIndex.value = if (hasPermission) 2 else 1
+
+        if (hasPermission) {
+            startPairingService()
+        }
+    }
+
+    private fun startAdbSteps() {
+        val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
+        if (connectIndex >= 0) {
+            updateStep(connectIndex, StepStatus.RUNNING, "正在连接...")
+        }
+        startAdbConnection(host ?: "127.0.0.1", detectedPort)
+    }
+
+    private fun startAdbConnection(host: String, port: Int) {
+        addOutputLine("Connecting to $host:$port...")
+        adbWirelessHelper.startStellarViaAdb(
+            host = host, port = port, coroutineScope = viewModelScope,
+            onOutput = { output ->
+                addOutputLine(output)
+                viewModelScope.launch(Dispatchers.Main) {
+                    val steps = _steps.value
+                    val connectIndex = steps.indexOfFirst { it.title == "连接 ADB 服务" }
+                    val verifyIndex = steps.indexOfFirst { it.title == "验证连接状态" }
+                    val checkIndex = steps.indexOfFirst { it.title == "检查现有服务" }
+                    val startIndex = steps.indexOfFirst { it.title == "启动服务进程" }
+                    val binderIndex = steps.indexOfFirst { it.title == "等待 Binder 响应" }
+
+                    when {
+                        output.contains("connected") -> {
+                            if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
+                            if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
+                        }
+                        output.contains("检查现有服务") || output.contains("终止现有服务") -> {
+                            if (connectIndex >= 0 && steps[connectIndex].status != StepStatus.COMPLETED) {
+                                updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
+                            }
+                            if (verifyIndex >= 0 && steps[verifyIndex].status != StepStatus.COMPLETED) {
+                                updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
+                            }
+                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.RUNNING, "正在检查...")
+                        }
+                        output.contains("启动服务进程") -> {
+                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, "已完成")
+                            if (startIndex >= 0) updateStep(startIndex, StepStatus.RUNNING, "正在启动...")
+                            // 启动超时检查，2秒后如果还没开始等待 Binder，就自动开始
+                            launch {
+                                delay(2000)
+                                val currentSteps = _steps.value
+                                val currentBinderIndex = currentSteps.indexOfFirst { it.title == "等待 Binder 响应" }
+                                if (currentBinderIndex >= 0 &&
+                                    currentSteps[currentBinderIndex].status != StepStatus.RUNNING &&
+                                    currentSteps[currentBinderIndex].status != StepStatus.COMPLETED) {
+                                    val currentStartIndex = currentSteps.indexOfFirst { it.title == "启动服务进程" }
+                                    if (currentStartIndex >= 0) updateStep(currentStartIndex, StepStatus.COMPLETED, "已完成")
+                                    updateStep(currentBinderIndex, StepStatus.RUNNING, "等待响应...")
+                                    waitForService()
+                                }
+                            }
+                        }
+                        // 服务进程已 fork，开始等待 Binder
+                        output.contains("stellar_server 进程号为") || output.contains("stellar_starter 正常退出") -> {
+                            if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, "已完成")
+                            if (binderIndex >= 0 && steps[binderIndex].status != StepStatus.RUNNING &&
+                                steps[binderIndex].status != StepStatus.COMPLETED) {
+                                updateStep(binderIndex, StepStatus.RUNNING, "等待响应...")
+                                waitForService()
+                            }
+                        }
+                    }
+
+                    output.lines().forEach { line ->
+                        val trimmedLine = line.trim()
+                        if (trimmedLine.startsWith("错误：")) {
+                            setError(Exception(trimmedLine.substringAfter("错误：").trim()), _currentStepIndex.value)
+                        }
+                    }
+                }
+            },
+            onError = { error ->
+                addOutputLine("错误：${error.message}")
+                viewModelScope.launch(Dispatchers.Main) {
+                    val needsPairing = error is SSLException || error is ConnectException
+                    if (needsPairing) {
+                        // 配对失败，回到配对步骤
+                        val pairingStepIndex = _steps.value.indexOfFirst { it.title == "无线调试配对" }
+                        if (pairingStepIndex >= 0) {
+                            pairingPhase = PairingPhase.PAIRING
+                            updateStep(pairingStepIndex, StepStatus.ERROR, "配对未成功，请重新配对", needsUserAction = true)
+                            _errorMessage.value = null // 不显示错误卡片，让用户重试配对
+                        } else {
+                            val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
+                            setError(Exception("需要配对才能连接"), if (connectIndex >= 0) connectIndex else _currentStepIndex.value)
+                        }
+                    } else {
+                        val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
+                        setError(error, if (connectIndex >= 0) connectIndex else _currentStepIndex.value)
+                    }
+                }
+            },
+            onSuccess = {
+                // 命令执行完成，确保等待服务
+                viewModelScope.launch(Dispatchers.Main) {
+                    val steps = _steps.value
+                    val binderIndex = steps.indexOfFirst { it.title == "等待 Binder 响应" }
+
+                    // 如果还没有开始等待 Binder，现在开始
+                    if (binderIndex >= 0 && steps[binderIndex].status != StepStatus.RUNNING &&
+                        steps[binderIndex].status != StepStatus.COMPLETED) {
+                        // 先完成之前的步骤
+                        val connectIndex = steps.indexOfFirst { it.title == "连接 ADB 服务" }
+                        val verifyIndex = steps.indexOfFirst { it.title == "验证连接状态" }
+                        val checkIndex = steps.indexOfFirst { it.title == "检查现有服务" }
+                        val startIndex = steps.indexOfFirst { it.title == "启动服务进程" }
+
+                        if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
+                        if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
+                        if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, "已完成")
+                        if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, "已完成")
+                        updateStep(binderIndex, StepStatus.RUNNING, "等待响应...")
+                        waitForService()
+                    }
+                }
+            }
+        )
+    }
+
+    // ========== Root 启动流程 ==========
 
     private fun startRoot() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                launch(Dispatchers.Main) {
+                    updateStep(0, StepStatus.RUNNING, "正在检查 Root 权限...")
+                }
+
                 if (!Shell.getShell().isRoot) {
                     Shell.getCachedShell()?.close()
                     if (!Shell.getShell().isRoot) {
-                        setError(NotRootedException(), 0)
+                        launch(Dispatchers.Main) {
+                            setError(NotRootedException(), 0)
+                        }
                         return@launch
                     }
                 }
+
+                launch(Dispatchers.Main) {
+                    updateStep(0, StepStatus.COMPLETED, "Root 权限已获取")
+                    updateStep(1, StepStatus.RUNNING, "正在检查...")
+                }
+
                 addOutputLine("$ ${Starter.internalCommand}")
                 Shell.cmd(Starter.internalCommand).to(object : CallbackList<String?>() {
                     override fun onAddElement(line: String?) {
                         line?.let {
                             addOutputLine(it)
-                            if (it.contains("stellar_starter 正常退出")) waitForService()
+                            viewModelScope.launch(Dispatchers.Main) {
+                                when {
+                                    it.contains("检查现有服务") || it.contains("终止现有服务") -> {
+                                        updateStep(1, StepStatus.RUNNING, "正在检查...")
+                                    }
+                                    it.contains("启动服务进程") -> {
+                                        updateStep(1, StepStatus.COMPLETED, "已完成")
+                                        updateStep(2, StepStatus.RUNNING, "正在启动...")
+                                    }
+                                    it.contains("stellar_starter 正常退出") -> {
+                                        updateStep(2, StepStatus.COMPLETED, "已完成")
+                                        updateStep(3, StepStatus.RUNNING, "等待响应...")
+                                        waitForService()
+                                    }
+                                }
+                            }
                         }
                     }
                 }).submit { result ->
                     if (result.code != 0) {
                         val errorMsg = getErrorMessage(result.code)
                         addOutputLine("错误：$errorMsg")
-                        setError(Exception(errorMsg), 2)
+                        viewModelScope.launch(Dispatchers.Main) {
+                            setError(Exception(errorMsg), 2)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 addOutputLine("Error: ${e.message}")
-                setError(e, 2)
+                launch(Dispatchers.Main) {
+                    setError(e, 0)
+                }
             }
         }
     }
@@ -1067,133 +1374,6 @@ internal class StarterViewModel(
         7 -> "无法获取应用路径"
         10 -> "SELinux 阻止了应用通过 binder 连接"
         else -> "启动失败，退出码: $code"
-    }
-
-    private fun startAdb(host: String, port: Int) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val preferences = StellarSettings.getPreferences()
-            val tcpipPortEnabled = preferences.getBoolean(StellarSettings.TCPIP_PORT_ENABLED, true)
-            val customPort = preferences.getString(StellarSettings.TCPIP_PORT, "")?.toIntOrNull()
-            val hasValidCustomPort = tcpipPortEnabled && customPort != null && customPort in 1..65535
-
-            if (hasValidCustomPort) {
-                addOutputLine("尝试连接自定义端口: $customPort")
-                val canConnect = adbWirelessHelper.hasAdbPermission(host, customPort!!)
-                if (canConnect) {
-                    addOutputLine("自定义端口可用")
-                    _useMdnsDiscovery.value = false
-                    launch(Dispatchers.Main) {
-                        startAdbConnection(host, customPort)
-                    }
-                    return@launch
-                }
-                addOutputLine("自定义端口不可用，切换到 mDNS 扫描")
-            }
-
-            if (hasSecureSettings && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                addOutputLine("正在扫描 ADB 端口...")
-                launch(Dispatchers.Main) {
-                    startWithMdnsDiscovery(host, port, hasValidCustomPort, customPort ?: -1)
-                }
-            } else {
-                _useMdnsDiscovery.value = false
-                launch(Dispatchers.Main) {
-                    startAdbConnection(host, port)
-                }
-            }
-        }
-    }
-
-    private fun startWithMdnsDiscovery(
-        host: String,
-        fallbackPort: Int,
-        shouldSwitchToCustomPort: Boolean = false,
-        customPort: Int = -1
-    ) {
-        val portObserver = Observer<Int> { discoveredPort ->
-            if (discoveredPort in 1..65535) {
-                addOutputLine("发现 ADB 端口: $discoveredPort")
-                adbMdns?.stop()
-                adbMdns = null
-
-                if (shouldSwitchToCustomPort && customPort in 1..65535) {
-                    _useMdnsDiscovery.value = false
-                    switchPortThenStart(host, discoveredPort, customPort)
-                } else {
-                    _useMdnsDiscovery.value = true
-                    startAdbConnection(host, discoveredPort)
-                }
-            }
-        }
-
-        adbMdns = AdbMdns(
-            context = context,
-            serviceType = AdbMdns.TLS_CONNECT,
-            observer = portObserver,
-            onMaxRefresh = {
-                addOutputLine("mDNS 扫描次数已达上限，尝试使用系统端口")
-                val systemPort = EnvironmentUtils.getAdbTcpPort()
-                val finalPort = if (systemPort in 1..65535) systemPort else fallbackPort
-                addOutputLine("使用端口: $finalPort")
-
-                if (shouldSwitchToCustomPort && customPort in 1..65535) {
-                    _useMdnsDiscovery.value = false
-                    switchPortThenStart(host, finalPort, customPort)
-                } else {
-                    _useMdnsDiscovery.value = true
-                    startAdbConnection(host, finalPort)
-                }
-            }
-        ).apply { start() }
-    }
-
-    private fun switchPortThenStart(host: String, currentPort: Int, newPort: Int) {
-        addOutputLine("切换端口: $currentPort -> $newPort")
-        adbWirelessHelper.changeTcpipPortAfterStart(
-            host = host,
-            port = currentPort,
-            newPort = newPort,
-            coroutineScope = viewModelScope,
-            onOutput = { addOutputLine(it) },
-            onError = { error ->
-                addOutputLine("端口切换失败: ${error.message}，使用当前端口启动")
-                startAdbConnection(host, currentPort)
-            },
-            onSuccess = {
-                addOutputLine("端口已切换到 $newPort")
-                viewModelScope.launch {
-                    delay(1000)
-                    startAdbConnection(host, newPort)
-                }
-            }
-        )
-    }
-
-    private fun startAdbConnection(host: String, port: Int) {
-        addOutputLine("Connecting to $host:$port...")
-        adbWirelessHelper.startStellarViaAdb(
-            host = host, port = port, coroutineScope = viewModelScope,
-            onOutput = { output ->
-                addOutputLine(output)
-                output.lines().forEach { line ->
-                    val trimmedLine = line.trim()
-                    if (trimmedLine.startsWith("错误：")) {
-                        setError(Exception(trimmedLine.substringAfter("错误：").trim()), 4)
-                    }
-                }
-                if (output.contains("stellar_starter 正常退出")) waitForService()
-            },
-            onError = { error ->
-                addOutputLine("错误：${error.message}")
-                val needsPairing = error is SSLException || error is ConnectException
-                setError(error, if (needsPairing) 1 else 2)
-            }
-        )
-    }
-
-    private fun hasErrorInOutput(): Boolean = _outputLines.value.any {
-        it.contains("错误：") || it.contains("Error:") ||
-        it.contains("Exception") || it.contains("FATAL")
     }
 
     private fun waitForService() {
@@ -1234,16 +1414,21 @@ internal class StarterViewModel(
 
                 if (hasErrorInOutput()) {
                     Stellar.removeBinderReceivedListener(listener)
-                    setError(Exception(getLastErrorMessage()), 3)
+                    setError(Exception(getLastErrorMessage()), if (isRoot) 3 else 6)
                     return@launch
                 }
             }
 
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), 3)
+                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 6)
             }
         }
+    }
+
+    private fun hasErrorInOutput(): Boolean = _outputLines.value.any {
+        it.contains("错误：") || it.contains("Error:") ||
+        it.contains("Exception") || it.contains("FATAL")
     }
 
     private fun getLastErrorMessage(): String {
@@ -1268,3 +1453,4 @@ internal class StarterViewModelFactory(
         return StarterViewModel(context, isRoot, host, port, hasSecureSettings) as T
     }
 }
+
