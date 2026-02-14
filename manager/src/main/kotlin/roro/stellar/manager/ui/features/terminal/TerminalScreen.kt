@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,11 +16,13 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import roro.stellar.manager.compat.ClipboardUtils
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.json.JSONArray
 import org.json.JSONObject
@@ -69,7 +73,7 @@ private fun loadCommands(): List<CommandItem> {
                 mode = CommandMode.valueOf(obj.getString("mode"))
             )
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         emptyList()
     }
 }
@@ -84,8 +88,9 @@ private fun saveCommands(commands: List<CommandItem>) {
             put("mode", cmd.mode.name)
         })
     }
-    StellarSettings.getPreferences().edit()
-        .putString(COMMANDS_KEY, array.toString()).apply()
+    StellarSettings.getPreferences().edit {
+        putString(COMMANDS_KEY, array.toString())
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -624,6 +629,7 @@ private fun ExecutionResultDialog(
     onDismiss: () -> Unit
 ) {
     val result = state.result
+    val context = LocalContext.current
 
     BasicAlertDialog(
         onDismissRequest = { if (!state.isRunning) onDismiss() }
@@ -631,76 +637,114 @@ private fun ExecutionResultDialog(
         Surface(
             shape = AppShape.shapes.dialog,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp
+            tonalElevation = 6.dp,
+            modifier = Modifier.fillMaxWidth(1f)
         ) {
             Column(
                 modifier = Modifier.padding(AppSpacing.dialogPadding)
             ) {
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = if (state.isRunning) "执行中" else "执行结果",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (state.isRunning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (state.isRunning) "执行中" else "执行结果",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
                         )
+                        if (state.isRunning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                    
+                    if (result != null && !state.isRunning) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            InfoText(
+                                label = "返回值",
+                                value = result.exitCode.toString(),
+                                isError = result.isError
+                            )
+                            VerticalDivider(
+                                modifier = Modifier.height(16.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            )
+                            InfoText(
+                                label = "耗时",
+                                value = "${result.executionTimeMs}ms",
+                                isError = false
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.dialogContentSpacing)
-                ) {
-                    if (result != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            InfoChip(label = "返回值", value = result.exitCode.toString(), isError = result.isError)
-                            InfoChip(label = "耗时", value = "${result.executionTimeMs}ms", isError = result.isError)
-                        }
-                    }
+                val output = if (state.isRunning) {
+                    state.currentOutput.ifEmpty { "执行中..." }
+                } else {
+                    result?.output ?: ""
+                }
 
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = AppShape.shapes.dialogContent
-                    ) {
-                        val scrollState = rememberScrollState()
-                        val output = if (state.isRunning) {
-                            state.currentOutput.ifEmpty { "执行中..." }
-                        } else {
-                            result?.output ?: ""
-                        }
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 200.dp, max = 400.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = AppShape.shapes.dialogContent
+                ) {
+                    val scrollState = rememberScrollState()
+                    SelectionContainer {
                         Text(
                             text = output,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(scrollState)
-                                .padding(12.dp),
+                                .padding(horizontal = 12.dp, vertical = 16.dp),
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        enabled = !state.isRunning
-                    ) {
-                        Text(if (state.isRunning) "执行中..." else "关闭")
+                    if (!state.isRunning && result != null) {
+                        OutlinedButton(
+                            onClick = {
+                                val textToCopy = result.output
+                                if (ClipboardUtils.put(context, textToCopy)) {
+                                    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "复制失败", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("复制全部")
+                        }
+                    }
+                    if (!state.isRunning) {
+                        TextButton(
+                            onClick = onDismiss
+                        ) {
+                            Text("关闭")
+                        }
                     }
                 }
             }
@@ -709,34 +753,27 @@ private fun ExecutionResultDialog(
 }
 
 @Composable
-private fun InfoChip(label: String, value: String, isError: Boolean = false) {
-    val backgroundColor = if (isError) {
-        MaterialTheme.colorScheme.errorContainer
+private fun InfoText(label: String, value: String, isError: Boolean = false) {
+    val valueColor = if (isError) {
+        MaterialTheme.colorScheme.error
     } else {
-        MaterialTheme.colorScheme.primaryContainer
-    }
-    val contentColor = if (isError) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        MaterialTheme.colorScheme.onSurface
     }
 
-    Surface(
-        shape = AppShape.shapes.iconSmall,
-        color = backgroundColor
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-            Text(
-                text = "$label: ",
-                style = MaterialTheme.typography.labelMedium,
-                color = contentColor
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = contentColor
-            )
-        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = valueColor
+        )
     }
 }
