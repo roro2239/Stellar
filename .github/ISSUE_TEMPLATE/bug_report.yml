@@ -1,0 +1,89 @@
+name: Bug 报告
+description: 报告一个问题或异常
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你提交 Bug 报告！请尽可能详细地填写以下信息。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述遇到的问题
+      placeholder: 描述你遇到的问题...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 如何复现这个问题？
+      placeholder: |
+        1. 打开 Stellar
+        2. 点击 '...'
+        3. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你期望发生什么？
+    validations:
+      required: false
+
+  - type: dropdown
+    id: start-mode
+    attributes:
+      label: 启动方式
+      options:
+        - Root
+        - ADB 无线调试
+        - ADB (USB)
+    validations:
+      required: true
+
+  - type: input
+    id: stellar-version
+    attributes:
+      label: Stellar 版本
+      placeholder: "例如: 1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android 版本
+      placeholder: "例如: Android 14"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备型号
+      placeholder: "例如: OPPO A5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志信息
+      description: 如有相关日志或错误堆栈，请粘贴在此
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息
+      description: 其他可能有帮助的信息（截图、相关应用等）
+    validations:
+      required: false
