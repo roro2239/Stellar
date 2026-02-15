@@ -33,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import roro.stellar.manager.R
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.domain.apps.appsViewModel
 import roro.stellar.manager.ui.features.apps.AppsScreen
@@ -144,7 +145,7 @@ private fun MainScreenContent(
                 (context as? ComponentActivity)?.finish()
             } else {
                 lastBackPressTime = currentTime
-                Toast.makeText(context, "再按一次退出应用", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.press_again_to_exit), Toast.LENGTH_SHORT).show()
             }
         } else {
             navController.safePopBackStack()

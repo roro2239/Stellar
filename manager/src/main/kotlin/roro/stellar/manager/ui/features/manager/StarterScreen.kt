@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
+import roro.stellar.manager.R
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.adb.AdbWirelessHelper
@@ -128,10 +130,10 @@ internal fun StarterScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             FixedTopAppBar(
-                title = if (isRoot) "Root 启动" else "无线调试启动",
+                title = if (isRoot) stringResource(R.string.root_start_title) else stringResource(R.string.wireless_debugging_start),
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -206,7 +208,7 @@ internal fun StarterScreen(
                         if (outputLines.isNotEmpty()) {
                             TimelineLogCard(
                                 isLast = false,
-                                title = "错误报告",
+                                title = stringResource(R.string.error_report),
                                 icon = Icons.Filled.Description,
                                 command = command,
                                 outputLines = outputLines,
@@ -218,14 +220,14 @@ internal fun StarterScreen(
 
                         TimelineActionStep(
                             isLast = false,
-                            title = "重试",
+                            title = stringResource(R.string.retry),
                             icon = Icons.Filled.Refresh,
                             onClick = { viewModel.retry() }
                         )
 
                         TimelineActionStep(
                             isLast = true,
-                            title = "返回",
+                            title = stringResource(R.string.back),
                             icon = Icons.AutoMirrored.Filled.ArrowBack,
                             onClick = onClose
                         )
@@ -251,7 +253,7 @@ internal fun StarterScreen(
                 ) {
                     TimelineLogCard(
                         isLast = true,
-                        title = "启动日志",
+                        title = stringResource(R.string.startup_log),
                         icon = Icons.Filled.Description,
                         command = command,
                         outputLines = outputLines,
@@ -278,7 +280,7 @@ private fun StepActionContent(
     ) { isGranted ->
         viewModel.setNotificationPermission(isGranted)
         if (!isGranted) {
-            Toast.makeText(context, "需要通知权限才能继续配对", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.need_notification_permission), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -286,7 +288,7 @@ private fun StepActionContent(
         Spacer(Modifier.height(12.dp))
 
         when (step.title) {
-            "开启无线调试" -> {
+            stringResource(R.string.enable_wireless_debugging) -> {
                 Button(
                     onClick = {
                         try {
@@ -297,7 +299,7 @@ private fun StepActionContent(
                                 }
                             )
                         } catch (_: ActivityNotFoundException) {
-                            Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -305,7 +307,7 @@ private fun StepActionContent(
                 ) {
                     Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("打开开发者选项", Modifier.padding(vertical = 4.dp))
+                    Text(stringResource(R.string.open_dev_options), Modifier.padding(vertical = 4.dp))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -315,11 +317,11 @@ private fun StepActionContent(
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShape.shapes.cardMedium
                 ) {
-                    Text("已开启，继续", Modifier.padding(vertical = 4.dp))
+                    Text(stringResource(R.string.already_enabled_continue), Modifier.padding(vertical = 4.dp))
                 }
             }
 
-            "授权通知权限" -> {
+            stringResource(R.string.grant_notification_permission) -> {
                 if (!hasNotificationPermission) {
                     Button(
                         onClick = {
@@ -332,19 +334,19 @@ private fun StepActionContent(
                                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                                     )
                                 } catch (_: ActivityNotFoundException) {
-                                    Toast.makeText(context, "无法打开通知设置", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.cannot_open_notification_settings), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = AppShape.shapes.cardMedium
                     ) {
-                        Text("授予权限", Modifier.padding(vertical = 4.dp))
+                        Text(stringResource(R.string.grant_permission), Modifier.padding(vertical = 4.dp))
                     }
                 }
             }
 
-            "无线调试配对" -> {
+            stringResource(R.string.wireless_debugging_pairing) -> {
                 Button(
                     onClick = {
                         try {
@@ -355,13 +357,13 @@ private fun StepActionContent(
                                 }
                             )
                         } catch (_: ActivityNotFoundException) {
-                            Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShape.shapes.cardMedium
                 ) {
-                    Text("打开无线调试设置", Modifier.padding(vertical = 4.dp))
+                    Text(stringResource(R.string.open_wireless_debugging_settings), Modifier.padding(vertical = 4.dp))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -371,7 +373,7 @@ private fun StepActionContent(
                     modifier = Modifier.fillMaxWidth(),
                     shape = AppShape.shapes.cardMedium
                 ) {
-                    Text("配对完成，继续", Modifier.padding(vertical = 4.dp))
+                    Text(stringResource(R.string.pairing_done_continue), Modifier.padding(vertical = 4.dp))
                 }
             }
         }
@@ -656,38 +658,39 @@ private fun TimelineLogCard(
                             val packageInfo = try {
                                 context.packageManager.getPackageInfo(context.packageName, 0)
                             } catch (_: Exception) { null }
-                            val versionName = packageInfo?.versionName ?: "未知"
+                            val unknownStr = context.getString(R.string.unknown)
+                            val versionName = packageInfo?.versionName ?: unknownStr
                             val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                packageInfo?.longVersionCode?.toString() ?: "未知"
+                                packageInfo?.longVersionCode?.toString() ?: unknownStr
                             } else {
                                 @Suppress("DEPRECATION")
-                                packageInfo?.versionCode?.toString() ?: "未知"
+                                packageInfo?.versionCode?.toString() ?: unknownStr
                             }
                             val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
                             val currentTime = dateFormat.format(java.util.Date())
 
                             val logText = buildString {
-                                appendLine("=== Stellar ${if (isSuccess) "启动日志" else "错误报告"} ===")
+                                appendLine("=== Stellar ${if (isSuccess) context.getString(R.string.startup_log) else context.getString(R.string.error_report)} ===")
                                 appendLine()
-                                appendLine("设备信息:")
-                                appendLine("  机型: ${Build.MANUFACTURER} ${Build.MODEL}")
-                                appendLine("  Android 版本: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-                                appendLine("  应用版本: $versionName ($versionCode)")
-                                appendLine("  时间: $currentTime")
+                                appendLine(context.getString(R.string.device_info))
+                                appendLine(context.getString(R.string.device_model, "${Build.MANUFACTURER} ${Build.MODEL}"))
+                                appendLine(context.getString(R.string.android_version, "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"))
+                                appendLine(context.getString(R.string.app_version, "$versionName ($versionCode)"))
+                                appendLine(context.getString(R.string.time_label, currentTime))
                                 appendLine()
-                                appendLine("执行命令:")
+                                appendLine(context.getString(R.string.executed_command))
                                 appendLine(command)
                                 appendLine()
-                                appendLine("命令输出:")
+                                appendLine(context.getString(R.string.command_output))
                                 outputLines.forEach { appendLine(it) }
                                 if (!isSuccess && !errorMessage.isNullOrBlank()) {
                                     appendLine()
-                                    appendLine("错误信息:")
+                                    appendLine(context.getString(R.string.error_info))
                                     appendLine(errorMessage)
                                 }
                             }
-                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 日志", logText))
-                            Toast.makeText(context, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar Log", logText))
+                            Toast.makeText(context, context.getString(R.string.log_copied), Toast.LENGTH_SHORT).show()
                         },
                         shape = AppShape.shapes.buttonSmall14
                     ) {
@@ -697,7 +700,7 @@ private fun TimelineLogCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("复制", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.copy), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -853,22 +856,22 @@ internal class StarterViewModel(
     private fun initializeSteps() {
         _steps.value = if (isRoot) {
             listOf(
-                StepData("检查 Root 权限", Icons.Filled.Security, StepStatus.PENDING, "等待检查"),
-                StepData("检查现有服务", Icons.Filled.Search, StepStatus.PENDING, "等待执行"),
-                StepData("启动服务进程", Icons.Filled.RocketLaunch, StepStatus.PENDING, "等待执行"),
-                StepData("等待 Binder 响应", Icons.Filled.Sync, StepStatus.PENDING, "等待执行"),
-                StepData("启动完成", Icons.Filled.CheckCircle, StepStatus.PENDING, "等待完成")
+                StepData(context.getString(R.string.check_root_permission), Icons.Filled.Security, StepStatus.PENDING, context.getString(R.string.waiting_check)),
+                StepData(context.getString(R.string.check_existing_service), Icons.Filled.Search, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.start_service_process), Icons.Filled.RocketLaunch, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.wait_binder_response), Icons.Filled.Sync, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.start_complete), Icons.Filled.CheckCircle, StepStatus.PENDING, context.getString(R.string.waiting_complete))
             )
         } else {
             listOf(
-                StepData("检测 ADB 端口", Icons.Filled.Wifi, StepStatus.PENDING, "等待检测"),
-                StepData("检测配对状态", Icons.Filled.VpnKey, StepStatus.PENDING, "等待检测"),
-                StepData("连接 ADB 服务", Icons.Filled.Cable, StepStatus.PENDING, "等待连接"),
-                StepData("验证连接状态", Icons.Filled.VerifiedUser, StepStatus.PENDING, "等待验证"),
-                StepData("检查现有服务", Icons.Filled.Search, StepStatus.PENDING, "等待执行"),
-                StepData("启动服务进程", Icons.Filled.RocketLaunch, StepStatus.PENDING, "等待执行"),
-                StepData("等待 Binder 响应", Icons.Filled.Sync, StepStatus.PENDING, "等待执行"),
-                StepData("启动完成", Icons.Filled.CheckCircle, StepStatus.PENDING, "等待完成")
+                StepData(context.getString(R.string.detect_adb_port), Icons.Filled.Wifi, StepStatus.PENDING, context.getString(R.string.waiting_detect)),
+                StepData(context.getString(R.string.detect_pairing_status), Icons.Filled.VpnKey, StepStatus.PENDING, context.getString(R.string.waiting_detect)),
+                StepData(context.getString(R.string.connect_adb_service), Icons.Filled.Cable, StepStatus.PENDING, context.getString(R.string.waiting_connect)),
+                StepData(context.getString(R.string.verify_connection), Icons.Filled.VerifiedUser, StepStatus.PENDING, context.getString(R.string.waiting_verify)),
+                StepData(context.getString(R.string.check_existing_service), Icons.Filled.Search, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.start_service_process), Icons.Filled.RocketLaunch, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.wait_binder_response), Icons.Filled.Sync, StepStatus.PENDING, context.getString(R.string.waiting_execute)),
+                StepData(context.getString(R.string.start_complete), Icons.Filled.CheckCircle, StepStatus.PENDING, context.getString(R.string.waiting_complete))
             )
         }
     }
@@ -910,9 +913,9 @@ internal class StarterViewModel(
         _hasNotificationPermission.value = granted
         if (granted) {
             val currentSteps = _steps.value
-            val notificationStepIndex = currentSteps.indexOfFirst { it.title == "授权通知权限" }
+            val notificationStepIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.grant_notification_permission) }
             if (notificationStepIndex >= 0) {
-                updateStep(notificationStepIndex, StepStatus.COMPLETED, "通知权限已授予")
+                updateStep(notificationStepIndex, StepStatus.COMPLETED, context.getString(R.string.notification_permission_granted))
                 val nextIndex = notificationStepIndex + 1
                 if (nextIndex < currentSteps.size) {
                     updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
@@ -952,9 +955,9 @@ internal class StarterViewModel(
 
                         // 更新配对步骤为完成
                         val currentSteps = _steps.value
-                        val pairingStepIndex = currentSteps.indexOfFirst { it.title == "无线调试配对" }
+                        val pairingStepIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.wireless_debugging_pairing) }
                         if (pairingStepIndex >= 0) {
-                            updateStep(pairingStepIndex, StepStatus.COMPLETED, "配对完成")
+                            updateStep(pairingStepIndex, StepStatus.COMPLETED, context.getString(R.string.pairing_complete))
                         }
 
                         pairingPhase = PairingPhase.NONE
@@ -1008,7 +1011,7 @@ internal class StarterViewModel(
             // 先将所有未完成的步骤标记为完成
             steps.forEachIndexed { index, step ->
                 if (step.status != StepStatus.COMPLETED && step.status != StepStatus.WARNING) {
-                    updateStep(index, StepStatus.COMPLETED, if (index == lastIndex) "服务已成功启动" else "已完成")
+                    updateStep(index, StepStatus.COMPLETED, if (index == lastIndex) context.getString(R.string.service_started_successfully) else context.getString(R.string.completed))
                 }
             }
             _isCompleted.value = true
@@ -1018,7 +1021,7 @@ internal class StarterViewModel(
             if (!isRoot && detectedPort > 0) {
                 val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(detectedPort)
                 if (shouldChange && newPort > 0) {
-                    addOutputLine("\n正在切换到用户设置的端口 $newPort...")
+                    addOutputLine("\n${context.getString(R.string.switching_port, newPort)}")
                     adbWirelessHelper.changeTcpipPortAfterStart(
                         host = host ?: "127.0.0.1",
                         port = detectedPort,
@@ -1026,12 +1029,12 @@ internal class StarterViewModel(
                         coroutineScope = viewModelScope,
                         onOutput = { output -> addOutputLine(output) },
                         onError = { error ->
-                            val errorMsg = error.message ?: "未知错误"
-                            addOutputLine("端口切换失败: $errorMsg")
+                            val errorMsg = error.message ?: context.getString(R.string.unknown_error)
+                            addOutputLine(context.getString(R.string.port_switch_failed, errorMsg))
                             Log.w(AppConstants.TAG, "端口切换失败", error)
                         },
                         onSuccess = {
-                            addOutputLine("端口已切换到 $newPort")
+                            addOutputLine(context.getString(R.string.port_switched_to, newPort))
                             Log.i(AppConstants.TAG, "端口已切换到 $newPort")
                         }
                     )
@@ -1042,8 +1045,8 @@ internal class StarterViewModel(
 
     private fun setError(error: Throwable, stepIndex: Int) {
         viewModelScope.launch {
-            updateStep(stepIndex, StepStatus.ERROR, error.message ?: "执行失败")
-            _errorMessage.value = error.message ?: "未知错误"
+            updateStep(stepIndex, StepStatus.ERROR, error.message ?: context.getString(R.string.execution_failed))
+            _errorMessage.value = error.message ?: context.getString(R.string.unknown_error)
         }
     }
 
@@ -1052,7 +1055,7 @@ internal class StarterViewModel(
     private fun startDetection() {
         viewModelScope.launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
-                updateStep(0, StepStatus.RUNNING, "正在检测可用的 ADB 端口...")
+                updateStep(0, StepStatus.RUNNING, context.getString(R.string.detecting_adb_port))
             }
 
             val preferences = StellarSettings.getPreferences()
@@ -1066,8 +1069,8 @@ internal class StarterViewModel(
                 if (canConnect) {
                     detectedPort = customPort
                     launch(Dispatchers.Main) {
-                        updateStep(0, StepStatus.COMPLETED, "端口 $customPort 可用")
-                        updateStep(1, StepStatus.COMPLETED, "已配对")
+                        updateStep(0, StepStatus.COMPLETED, context.getString(R.string.port_available, customPort))
+                        updateStep(1, StepStatus.COMPLETED, context.getString(R.string.already_paired))
                         delay(300)
                         startAdbSteps()
                     }
@@ -1080,8 +1083,8 @@ internal class StarterViewModel(
                 if (canConnect) {
                     detectedPort = systemPort
                     launch(Dispatchers.Main) {
-                        updateStep(0, StepStatus.COMPLETED, "端口 $systemPort 可用")
-                        updateStep(1, StepStatus.COMPLETED, "已配对")
+                        updateStep(0, StepStatus.COMPLETED, context.getString(R.string.port_available, systemPort))
+                        updateStep(1, StepStatus.COMPLETED, context.getString(R.string.already_paired))
                         delay(300)
                         startAdbSteps()
                     }
@@ -1095,7 +1098,7 @@ internal class StarterViewModel(
                 }
             } else {
                 launch(Dispatchers.Main) {
-                    updateStep(0, StepStatus.WARNING, "未检测到可用端口")
+                    updateStep(0, StepStatus.WARNING, context.getString(R.string.no_port_detected))
                     showEnableWirelessAdbStep()
                 }
             }
@@ -1114,16 +1117,16 @@ internal class StarterViewModel(
                 viewModelScope.launch(Dispatchers.IO) {
                     val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", discoveredPort)
                     launch(Dispatchers.Main) {
-                        updateStep(0, StepStatus.COMPLETED, "端口 $discoveredPort 可用")
+                        updateStep(0, StepStatus.COMPLETED, context.getString(R.string.port_available, discoveredPort))
 
                         if (canConnect) {
                             detectedPort = discoveredPort
-                            updateStep(1, StepStatus.COMPLETED, "已配对")
+                            updateStep(1, StepStatus.COMPLETED, context.getString(R.string.already_paired))
                             delay(300)
                             startAdbSteps()
                         } else {
                             detectedPort = discoveredPort
-                            updateStep(1, StepStatus.WARNING, "需要配对")
+                            updateStep(1, StepStatus.WARNING, context.getString(R.string.need_pairing))
                             delay(300)
                             showPairingSteps()
                         }
@@ -1139,7 +1142,7 @@ internal class StarterViewModel(
             onMaxRefresh = {
                 if (!handled) {
                     handled = true
-                    updateStep(0, StepStatus.WARNING, "未检测到可用端口")
+                    updateStep(0, StepStatus.WARNING, context.getString(R.string.no_port_detected))
                     showEnableWirelessAdbStep()
                 }
             },
@@ -1150,10 +1153,10 @@ internal class StarterViewModel(
     private fun showEnableWirelessAdbStep() {
         pairingPhase = PairingPhase.ENABLE_WIRELESS
         insertStep(0, StepData(
-            title = "开启无线调试",
+            title = context.getString(R.string.enable_wireless_debugging),
             icon = Icons.Filled.WifiOff,
             status = StepStatus.RUNNING,
-            description = "请在开发者选项中开启无线调试功能",
+            description = context.getString(R.string.enable_wireless_debugging_hint),
             needsUserAction = true
         ))
         _currentStepIndex.value = 1
@@ -1164,18 +1167,18 @@ internal class StarterViewModel(
         val hasPermission = _hasNotificationPermission.value
 
         insertStep(1, StepData(
-            title = "授权通知权限",
+            title = context.getString(R.string.grant_notification_permission),
             icon = Icons.Filled.Notifications,
             status = if (hasPermission) StepStatus.COMPLETED else StepStatus.RUNNING,
-            description = if (hasPermission) "通知权限已授予" else "必须授予通知权限才能进行配对",
+            description = if (hasPermission) context.getString(R.string.notification_permission_granted) else context.getString(R.string.notification_permission_required),
             needsUserAction = !hasPermission
         ))
 
         insertStep(2, StepData(
-            title = "无线调试配对",
+            title = context.getString(R.string.wireless_debugging_pairing),
             icon = Icons.Filled.QrCode,
             status = if (hasPermission) StepStatus.RUNNING else StepStatus.PENDING,
-            description = "在无线调试页面点击「使用配对码配对设备」，然后在通知中心输入配对码",
+            description = context.getString(R.string.pairing_instruction),
             needsUserAction = hasPermission
         ))
 
@@ -1187,9 +1190,9 @@ internal class StarterViewModel(
     }
 
     private fun startAdbSteps() {
-        val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
+        val connectIndex = _steps.value.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
         if (connectIndex >= 0) {
-            updateStep(connectIndex, StepStatus.RUNNING, "正在连接...")
+            updateStep(connectIndex, StepStatus.RUNNING, context.getString(R.string.connecting_ellipsis))
         }
         startAdbConnection(host ?: "127.0.0.1", detectedPort)
     }
@@ -1202,50 +1205,50 @@ internal class StarterViewModel(
                 addOutputLine(output)
                 viewModelScope.launch(Dispatchers.Main) {
                     val steps = _steps.value
-                    val connectIndex = steps.indexOfFirst { it.title == "连接 ADB 服务" }
-                    val verifyIndex = steps.indexOfFirst { it.title == "验证连接状态" }
-                    val checkIndex = steps.indexOfFirst { it.title == "检查现有服务" }
-                    val startIndex = steps.indexOfFirst { it.title == "启动服务进程" }
-                    val binderIndex = steps.indexOfFirst { it.title == "等待 Binder 响应" }
+                    val connectIndex = steps.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
+                    val verifyIndex = steps.indexOfFirst { it.title == context.getString(R.string.verify_connection) }
+                    val checkIndex = steps.indexOfFirst { it.title == context.getString(R.string.check_existing_service) }
+                    val startIndex = steps.indexOfFirst { it.title == context.getString(R.string.start_service_process) }
+                    val binderIndex = steps.indexOfFirst { it.title == context.getString(R.string.wait_binder_response) }
 
                     when {
                         output.contains("connected") -> {
-                            if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
-                            if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
+                            if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, context.getString(R.string.connection_success))
+                            if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, context.getString(R.string.verification_passed))
                         }
                         output.contains("检查现有服务") || output.contains("终止现有服务") -> {
                             if (connectIndex >= 0 && steps[connectIndex].status != StepStatus.COMPLETED) {
-                                updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
+                                updateStep(connectIndex, StepStatus.COMPLETED, context.getString(R.string.connection_success))
                             }
                             if (verifyIndex >= 0 && steps[verifyIndex].status != StepStatus.COMPLETED) {
-                                updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
+                                updateStep(verifyIndex, StepStatus.COMPLETED, context.getString(R.string.verification_passed))
                             }
-                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.RUNNING, "正在检查...")
+                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.RUNNING, context.getString(R.string.checking_ellipsis))
                         }
                         output.contains("启动服务进程") -> {
-                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, "已完成")
-                            if (startIndex >= 0) updateStep(startIndex, StepStatus.RUNNING, "正在启动...")
+                            if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, context.getString(R.string.completed))
+                            if (startIndex >= 0) updateStep(startIndex, StepStatus.RUNNING, context.getString(R.string.starting_ellipsis))
                             // 启动超时检查，2秒后如果还没开始等待 Binder，就自动开始
                             launch {
                                 delay(2000)
                                 val currentSteps = _steps.value
-                                val currentBinderIndex = currentSteps.indexOfFirst { it.title == "等待 Binder 响应" }
+                                val currentBinderIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.wait_binder_response) }
                                 if (currentBinderIndex >= 0 &&
                                     currentSteps[currentBinderIndex].status != StepStatus.RUNNING &&
                                     currentSteps[currentBinderIndex].status != StepStatus.COMPLETED) {
-                                    val currentStartIndex = currentSteps.indexOfFirst { it.title == "启动服务进程" }
-                                    if (currentStartIndex >= 0) updateStep(currentStartIndex, StepStatus.COMPLETED, "已完成")
-                                    updateStep(currentBinderIndex, StepStatus.RUNNING, "等待响应...")
+                                    val currentStartIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.start_service_process) }
+                                    if (currentStartIndex >= 0) updateStep(currentStartIndex, StepStatus.COMPLETED, context.getString(R.string.completed))
+                                    updateStep(currentBinderIndex, StepStatus.RUNNING, context.getString(R.string.waiting_response))
                                     waitForService()
                                 }
                             }
                         }
                         // 服务进程已 fork，开始等待 Binder
                         output.contains("stellar_server 进程号为") || output.contains("stellar_starter 正常退出") -> {
-                            if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, "已完成")
+                            if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, context.getString(R.string.completed))
                             if (binderIndex >= 0 && steps[binderIndex].status != StepStatus.RUNNING &&
                                 steps[binderIndex].status != StepStatus.COMPLETED) {
-                                updateStep(binderIndex, StepStatus.RUNNING, "等待响应...")
+                                updateStep(binderIndex, StepStatus.RUNNING, context.getString(R.string.waiting_response))
                                 waitForService()
                             }
                         }
@@ -1265,17 +1268,17 @@ internal class StarterViewModel(
                     val needsPairing = error is SSLException || error is ConnectException
                     if (needsPairing) {
                         // 配对失败，回到配对步骤
-                        val pairingStepIndex = _steps.value.indexOfFirst { it.title == "无线调试配对" }
+                        val pairingStepIndex = _steps.value.indexOfFirst { it.title == context.getString(R.string.wireless_debugging_pairing) }
                         if (pairingStepIndex >= 0) {
                             pairingPhase = PairingPhase.PAIRING
-                            updateStep(pairingStepIndex, StepStatus.ERROR, "配对未成功，请重新配对", needsUserAction = true)
+                            updateStep(pairingStepIndex, StepStatus.ERROR, context.getString(R.string.pairing_failed_retry), needsUserAction = true)
                             _errorMessage.value = null // 不显示错误卡片，让用户重试配对
                         } else {
-                            val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
-                            setError(Exception("需要配对才能连接"), if (connectIndex >= 0) connectIndex else _currentStepIndex.value)
+                            val connectIndex = _steps.value.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
+                            setError(Exception(context.getString(R.string.need_pairing_to_connect)), if (connectIndex >= 0) connectIndex else _currentStepIndex.value)
                         }
                     } else {
-                        val connectIndex = _steps.value.indexOfFirst { it.title == "连接 ADB 服务" }
+                        val connectIndex = _steps.value.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
                         setError(error, if (connectIndex >= 0) connectIndex else _currentStepIndex.value)
                     }
                 }
@@ -1284,22 +1287,22 @@ internal class StarterViewModel(
                 // 命令执行完成，确保等待服务
                 viewModelScope.launch(Dispatchers.Main) {
                     val steps = _steps.value
-                    val binderIndex = steps.indexOfFirst { it.title == "等待 Binder 响应" }
+                    val binderIndex = steps.indexOfFirst { it.title == context.getString(R.string.wait_binder_response) }
 
                     // 如果还没有开始等待 Binder，现在开始
                     if (binderIndex >= 0 && steps[binderIndex].status != StepStatus.RUNNING &&
                         steps[binderIndex].status != StepStatus.COMPLETED) {
                         // 先完成之前的步骤
-                        val connectIndex = steps.indexOfFirst { it.title == "连接 ADB 服务" }
-                        val verifyIndex = steps.indexOfFirst { it.title == "验证连接状态" }
-                        val checkIndex = steps.indexOfFirst { it.title == "检查现有服务" }
-                        val startIndex = steps.indexOfFirst { it.title == "启动服务进程" }
+                        val connectIndex = steps.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
+                        val verifyIndex = steps.indexOfFirst { it.title == context.getString(R.string.verify_connection) }
+                        val checkIndex = steps.indexOfFirst { it.title == context.getString(R.string.check_existing_service) }
+                        val startIndex = steps.indexOfFirst { it.title == context.getString(R.string.start_service_process) }
 
-                        if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, "连接成功")
-                        if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, "验证通过")
-                        if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, "已完成")
-                        if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, "已完成")
-                        updateStep(binderIndex, StepStatus.RUNNING, "等待响应...")
+                        if (connectIndex >= 0) updateStep(connectIndex, StepStatus.COMPLETED, context.getString(R.string.connection_success))
+                        if (verifyIndex >= 0) updateStep(verifyIndex, StepStatus.COMPLETED, context.getString(R.string.verification_passed))
+                        if (checkIndex >= 0) updateStep(checkIndex, StepStatus.COMPLETED, context.getString(R.string.completed))
+                        if (startIndex >= 0) updateStep(startIndex, StepStatus.COMPLETED, context.getString(R.string.completed))
+                        updateStep(binderIndex, StepStatus.RUNNING, context.getString(R.string.waiting_response))
                         waitForService()
                     }
                 }
@@ -1313,7 +1316,7 @@ internal class StarterViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 launch(Dispatchers.Main) {
-                    updateStep(0, StepStatus.RUNNING, "正在检查 Root 权限...")
+                    updateStep(0, StepStatus.RUNNING, context.getString(R.string.checking_root_permission))
                 }
 
                 if (!Shell.getShell().isRoot) {
@@ -1327,8 +1330,8 @@ internal class StarterViewModel(
                 }
 
                 launch(Dispatchers.Main) {
-                    updateStep(0, StepStatus.COMPLETED, "Root 权限已获取")
-                    updateStep(1, StepStatus.RUNNING, "正在检查...")
+                    updateStep(0, StepStatus.COMPLETED, context.getString(R.string.root_permission_acquired))
+                    updateStep(1, StepStatus.RUNNING, context.getString(R.string.checking_ellipsis))
                 }
 
                 addOutputLine("$ ${Starter.internalCommand}")
@@ -1339,15 +1342,15 @@ internal class StarterViewModel(
                             viewModelScope.launch(Dispatchers.Main) {
                                 when {
                                     it.contains("检查现有服务") || it.contains("终止现有服务") -> {
-                                        updateStep(1, StepStatus.RUNNING, "正在检查...")
+                                        updateStep(1, StepStatus.RUNNING, context.getString(R.string.checking_ellipsis))
                                     }
                                     it.contains("启动服务进程") -> {
-                                        updateStep(1, StepStatus.COMPLETED, "已完成")
-                                        updateStep(2, StepStatus.RUNNING, "正在启动...")
+                                        updateStep(1, StepStatus.COMPLETED, context.getString(R.string.completed))
+                                        updateStep(2, StepStatus.RUNNING, context.getString(R.string.starting_ellipsis))
                                     }
                                     it.contains("stellar_starter 正常退出") -> {
-                                        updateStep(2, StepStatus.COMPLETED, "已完成")
-                                        updateStep(3, StepStatus.RUNNING, "等待响应...")
+                                        updateStep(2, StepStatus.COMPLETED, context.getString(R.string.completed))
+                                        updateStep(3, StepStatus.RUNNING, context.getString(R.string.waiting_response))
                                         waitForService()
                                     }
                                 }
@@ -1373,14 +1376,14 @@ internal class StarterViewModel(
     }
 
     private fun getErrorMessage(code: Int): String = when (code) {
-        9 -> "无法终止进程，请先从应用中停止现有服务"
-        3 -> "无法设置 CLASSPATH"
-        4 -> "无法创建进程"
-        5 -> "app_process 执行失败"
-        6 -> "权限不足，需要 root 或 adb 权限"
-        7 -> "无法获取应用路径"
-        10 -> "SELinux 阻止了应用通过 binder 连接"
-        else -> "启动失败，退出码: $code"
+        9 -> context.getString(R.string.error_cannot_kill_process)
+        3 -> context.getString(R.string.error_cannot_set_classpath)
+        4 -> context.getString(R.string.error_cannot_create_process)
+        5 -> context.getString(R.string.error_app_process_failed)
+        6 -> context.getString(R.string.error_permission_insufficient)
+        7 -> context.getString(R.string.error_cannot_get_app_path)
+        10 -> context.getString(R.string.error_selinux_blocked)
+        else -> context.getString(R.string.error_start_failed_exit_code, code)
     }
 
     private fun waitForService() {
@@ -1428,7 +1431,7 @@ internal class StarterViewModel(
 
             if (!binderReceived) {
                 Stellar.removeBinderReceivedListener(listener)
-                setError(Exception("等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志"), if (isRoot) 3 else 6)
+                setError(Exception(context.getString(R.string.error_wait_service_timeout)), if (isRoot) 3 else 6)
             }
         }
     }
@@ -1444,7 +1447,7 @@ internal class StarterViewModel(
         }
         return if (errorLines.isNotEmpty()) {
             errorLines.last().substringAfter("错误：").substringAfter("Error:").trim()
-        } else "服务启动失败，请查看日志了解详情"
+        } else context.getString(R.string.error_start_failed_check_logs)
     }
 }
 

@@ -53,10 +53,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import roro.stellar.manager.R
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
@@ -96,52 +98,56 @@ internal fun LogsScreen(
         }
     }
 
-    fun loadLogs() {
+    val loadLogs: () -> Unit = {
         if (!Stellar.pingBinder()) {
-            Toast.makeText(context, "服务未运行", Toast.LENGTH_SHORT).show()
-            return
-        }
-        scope.launch {
-            isLoading = true
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    Stellar.getLogs()
+            Toast.makeText(context, context.getString(R.string.service_not_running_toast), Toast.LENGTH_SHORT).show()
+        } else {
+            scope.launch {
+                isLoading = true
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        Stellar.getLogs()
+                    }
+                    logs = result.reversed()
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        val errorMessage = context.getString(R.string.load_logs_failed, e.message ?: "")
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    isLoading = false
                 }
-                logs = result.reversed()
-            } catch (e: Exception) {
-                Toast.makeText(context, "加载日志失败: ${e.message}", Toast.LENGTH_SHORT).show()
-            } finally {
-                isLoading = false
             }
         }
     }
 
-    fun clearLogs() {
+    val clearLogs: () -> Unit = {
         if (!Stellar.pingBinder()) {
-            Toast.makeText(context, "服务未运行", Toast.LENGTH_SHORT).show()
-            return
-        }
-        scope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    Stellar.clearLogs()
+            Toast.makeText(context, context.getString(R.string.service_not_running_toast), Toast.LENGTH_SHORT).show()
+        } else {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        Stellar.clearLogs()
+                    }
+                    logs = emptyList()
+                    Toast.makeText(context, context.getString(R.string.logs_cleared), Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    val errorMessage = context.getString(R.string.clear_logs_failed, e.message ?: "")
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
                 }
-                logs = emptyList()
-                Toast.makeText(context, "日志已清除", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, "清除日志失败: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    fun copyLogs() {
+    val copyLogs: () -> Unit = {
         if (logs.isEmpty()) {
-            Toast.makeText(context, "没有日志可复制", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val logsText = logs.reversed().joinToString("\n")
-        if (ClipboardUtils.put(context, logsText)) {
-            Toast.makeText(context, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.no_logs_to_copy), Toast.LENGTH_SHORT).show()
+        } else {
+            val logsText = logs.reversed().joinToString("\n")
+            if (ClipboardUtils.put(context, logsText)) {
+                Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -228,12 +234,12 @@ private fun LogsTopBar(
     onRefresh: () -> Unit
 ) {
     FixedTopAppBar(
-        title = "服务日志",
+        title = stringResource(R.string.service_logs),
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "返回"
+                    contentDescription = stringResource(R.string.back)
                 )
             }
         },
@@ -257,7 +263,7 @@ private fun LogsTopBarActions(
         ) {
             Icon(
                 imageVector = Icons.Default.ContentCopy,
-                contentDescription = "复制日志",
+                contentDescription = stringResource(R.string.copy_logs),
                 modifier = Modifier.padding(8.dp).size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -270,7 +276,7 @@ private fun LogsTopBarActions(
         ) {
             Icon(
                 imageVector = Icons.Default.DeleteOutline,
-                contentDescription = "清除日志",
+                contentDescription = stringResource(R.string.clear_logs),
                 modifier = Modifier.padding(8.dp).size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -283,7 +289,7 @@ private fun LogsTopBarActions(
         ) {
             Icon(
                 imageVector = Icons.Default.Refresh,
-                contentDescription = "刷新",
+                contentDescription = stringResource(R.string.refresh),
                 modifier = Modifier.padding(8.dp).size(20.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -347,7 +353,7 @@ private fun SearchBar(searchQuery: String, onSearchQueryChange: (String) -> Unit
             Box(modifier = Modifier.weight(1f)) {
                 if (searchQuery.isEmpty()) {
                     Text(
-                        text = "搜索日志...",
+                        text = stringResource(R.string.search_logs),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -366,7 +372,7 @@ private fun SearchBar(searchQuery: String, onSearchQueryChange: (String) -> Unit
                 IconButton(onClick = { onSearchQueryChange("") }, modifier = Modifier.size(24.dp)) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "清除",
+                        contentDescription = stringResource(R.string.clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
@@ -400,13 +406,13 @@ private fun EmptyLogsView() {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "暂无日志",
+                    text = stringResource(R.string.no_logs),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "日志将在服务运行时显示",
+                    text = stringResource(R.string.logs_will_show),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

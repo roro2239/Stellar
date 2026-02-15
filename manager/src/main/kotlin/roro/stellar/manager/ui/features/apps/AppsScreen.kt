@@ -52,12 +52,14 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import roro.stellar.Stellar
+import roro.stellar.manager.R
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.common.state.Status
 import roro.stellar.manager.domain.apps.AppInfo
@@ -103,7 +105,7 @@ fun AppsScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StandardLargeTopAppBar(
-                title = "授权应用",
+                title = stringResource(R.string.authorized_apps),
                 scrollBehavior = scrollBehavior
             )
         }
@@ -126,14 +128,14 @@ fun AppsScreen(
                     ) {
 
                         Text(
-                            text = "服务未运行",
+                            text = stringResource(R.string.service_not_running_title),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
-                            text = "请先启动 Stellar 服务\n服务运行后可管理授权应用",
+                            text = stringResource(R.string.service_not_running_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -172,14 +174,14 @@ fun AppsScreen(
                         ) {
 
                             Text(
-                                text = "加载失败",
+                                text = stringResource(R.string.load_failed),
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.error
                             )
 
                             Text(
-                                text = stellarAppsResource?.error?.message ?: "未知错误",
+                                text = stellarAppsResource?.error?.message ?: stringResource(R.string.unknown_error),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -211,14 +213,14 @@ fun AppsScreen(
                                 verticalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
                                 Text(
-                                    text = "暂无授权应用",
+                                    text = stringResource(R.string.no_authorized_apps),
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 Text(
-                                    text = "当前没有应用请求 Stellar 权限\n应用请求权限后会在这里显示",
+                                    text = stringResource(R.string.no_authorized_apps_hint),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -244,7 +246,7 @@ fun AppsScreen(
                         if (stellarApps.isNotEmpty()) {
                             item(span = { GridItemSpan(gridColumns) }) {
                                 Text(
-                                    text = "Stellar 应用",
+                                    text = stringResource(R.string.stellar_apps),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -269,7 +271,7 @@ fun AppsScreen(
                         if (shizukuApps.isNotEmpty()) {
                             item(span = { GridItemSpan(gridColumns) }) {
                                 Text(
-                                    text = "Shizuku 兼容应用",
+                                    text = stringResource(R.string.shizuku_compat_apps),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.secondary,
@@ -300,8 +302,8 @@ fun AppsScreen(
     if (showPermissionError) {
         StellarInfoDialog(
             onDismissRequest = { showPermissionError = false },
-            title = "ADB 权限受限",
-            message = "您的设备制造商很可能限制了 ADB 的权限。\n\n请在开发者选项中调整相关设置，或尝试使用 Root 模式运行。",
+            title = stringResource(R.string.adb_permission_restricted),
+            message = stringResource(R.string.adb_permission_restricted_message),
             onConfirm = { showPermissionError = false }
         )
     }
@@ -444,10 +446,10 @@ fun AppListItem(
 
             Text(
                 text = when (stellarFlag) {
-                    AuthorizationManager.FLAG_ASK -> "询问"
-                    AuthorizationManager.FLAG_GRANTED -> "允许"
-                    AuthorizationManager.FLAG_DENIED -> "拒绝"
-                    else -> "未知"
+                    AuthorizationManager.FLAG_ASK -> stringResource(R.string.permission_ask)
+                    AuthorizationManager.FLAG_GRANTED -> stringResource(R.string.permission_allow)
+                    AuthorizationManager.FLAG_DENIED -> stringResource(R.string.permission_deny)
+                    else -> stringResource(R.string.unknown)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
@@ -471,8 +473,8 @@ fun AppListItem(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 PermissionItem(
-                    title = if (isShizukuApp) "Shizuku 权限" else "基础权限",
-                    subtitle = if (isShizukuApp) "使用 Shizuku 功能" else "使用 Stellar 功能",
+                    title = if (isShizukuApp) stringResource(R.string.shizuku_permission) else stringResource(R.string.basic_permission),
+                    subtitle = if (isShizukuApp) stringResource(R.string.shizuku_permission_subtitle) else stringResource(R.string.basic_permission_subtitle),
                     currentFlag = stellarFlag,
                     onFlagChange = { newFlag ->
                         try {
@@ -488,8 +490,8 @@ fun AppListItem(
 
                 if (!isShizukuApp) {
                     PermissionItem(
-                        title = "跟随启动",
-                        subtitle = "随 Stellar 一起启动",
+                        title = stringResource(R.string.follow_startup),
+                        subtitle = stringResource(R.string.follow_startup_subtitle),
                         currentFlag = followStartupFlag,
                         onFlagChange = { newFlag ->
                             try {
@@ -552,9 +554,9 @@ private fun PermissionSegmentSelector(
         AuthorizationManager.FLAG_DENIED
     )
     val labels = mapOf(
-        AuthorizationManager.FLAG_ASK to "询问",
-        AuthorizationManager.FLAG_GRANTED to "允许",
-        AuthorizationManager.FLAG_DENIED to "拒绝"
+        AuthorizationManager.FLAG_ASK to stringResource(R.string.permission_ask),
+        AuthorizationManager.FLAG_GRANTED to stringResource(R.string.permission_allow),
+        AuthorizationManager.FLAG_DENIED to stringResource(R.string.permission_deny)
     )
 
     StellarSegmentedSelector(

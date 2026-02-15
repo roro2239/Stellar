@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -179,14 +180,19 @@ fun PermissionRequestDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "授权请求",
+                        text = stringResource(R.string.permission_request),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
 
+                    val permissionSuffix = when (permission) {
+                        "stellar" -> stringResource(R.string.permission_use_stellar)
+                        "follow_stellar_startup" -> stringResource(R.string.permission_follow_startup)
+                        else -> stringResource(R.string.permission_use_generic, permission)
+                    }
                     val text = buildAnnotatedString {
-                        append("要允许 ")
+                        append(stringResource(R.string.permission_allow_prefix))
                         withStyle(
                             style = SpanStyle(
                                 fontWeight = FontWeight.Bold,
@@ -195,13 +201,7 @@ fun PermissionRequestDialog(
                         ) {
                             append(appName)
                         }
-                        append(
-                            when (permission) {
-                                "stellar" -> " 使用 Stellar 吗？"
-                                "follow_stellar_startup" -> " 每次都跟随 Stellar 一起启动吗？"
-                                else -> " 使用 $permission 吗？"
-                            }
-                        )
+                        append(permissionSuffix)
                     }
                     Text(
                         text = text,
@@ -233,7 +233,7 @@ fun PermissionRequestDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "始终允许",
+                                text = stringResource(R.string.always_allow),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold
@@ -260,7 +260,7 @@ fun PermissionRequestDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "仅此一次",
+                                    text = stringResource(R.string.allow_once),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Bold
@@ -287,7 +287,7 @@ fun PermissionRequestDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (denyOnce) "拒绝" else "拒绝且不再询问",
+                                text = if (denyOnce) stringResource(R.string.deny) else stringResource(R.string.deny_and_dont_ask),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontWeight = FontWeight.Bold

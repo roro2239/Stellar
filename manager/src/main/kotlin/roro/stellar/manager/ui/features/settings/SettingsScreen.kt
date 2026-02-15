@@ -64,12 +64,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import kotlinx.coroutines.launch
 import roro.stellar.manager.BuildConfig
+import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT_WIRELESS
@@ -205,8 +207,8 @@ fun SettingsScreen(
             item(span = { GridItemSpan(gridColumns) }) {
                 SettingsContentCard(
                     icon = Icons.Default.DarkMode,
-                    title = "主题",
-                    subtitle = "选择应用的外观主题"
+                    title = stringResource(R.string.theme),
+                    subtitle = stringResource(R.string.theme_subtitle)
                 ) {
                     ThemeSelectorWithAnimation(
                         currentMode = currentThemeMode,
@@ -221,12 +223,12 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Wifi,
-                    title = "开机启动（无线调试）",
-                    subtitle = "Stellar 可以通过无线调试开机启动",
+                    title = stringResource(R.string.boot_start_wireless),
+                    subtitle = stringResource(R.string.boot_start_wireless_subtitle),
                     checked = startOnBootWireless,
                     onCheckedChange = { newValue ->
                         if (newValue) {
-                            Toast.makeText(context, "将自动开启无障碍服务以实现开机自启", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.auto_enable_accessibility), Toast.LENGTH_SHORT).show()
                             startOnBoot = false
                             savePreference(KEEP_START_ON_BOOT, false)
                         }
@@ -244,13 +246,13 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.PowerSettingsNew,
-                    title = "开机启动（Root）",
-                    subtitle = "Stellar 可以通过Root权限开机启动",
+                    title = stringResource(R.string.boot_start_root),
+                    subtitle = stringResource(R.string.boot_start_root_subtitle),
                     checked = startOnBoot,
                     enabled = hasRootPermission == true,
                     onCheckedChange = { newValue ->
                         if (newValue) {
-                            Toast.makeText(context, "将自动开启无障碍服务以实现开机自启", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.auto_enable_accessibility), Toast.LENGTH_SHORT).show()
                             startOnBootWireless = false
                             savePreference(KEEP_START_ON_BOOT_WIRELESS, false)
                         }
@@ -268,8 +270,8 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Share,
-                    title = "Shizuku 兼容层",
-                    subtitle = "允许 Shizuku 应用通过 Stellar 服务运行",
+                    title = stringResource(R.string.shizuku_compat_layer),
+                    subtitle = stringResource(R.string.shizuku_compat_layer_subtitle),
                     checked = shizukuCompatEnabled,
                     enabled = isServiceConnected,
                     onCheckedChange = { newValue ->
@@ -282,11 +284,11 @@ fun SettingsScreen(
                                 shizukuCompatEnabled = newValue
                                 Toast.makeText(
                                     context,
-                                    if (newValue) "Shizuku 兼容层已启用" else "Shizuku 兼容层已禁用",
+                                    if (newValue) context.getString(R.string.shizuku_compat_enabled) else context.getString(R.string.shizuku_compat_disabled),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } catch (e: Exception) {
-                                Toast.makeText(context, "设置失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.setting_failed, e.message), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -296,8 +298,8 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Security,
-                    title = "降权激活",
-                    subtitle = "Root 启动后降权到 Shell 用户运行",
+                    title = stringResource(R.string.drop_privileges),
+                    subtitle = stringResource(R.string.drop_privileges_subtitle),
                     checked = dropPrivileges,
                     enabled = hasRootPermission == true,
                     onCheckedChange = { newValue ->
@@ -332,13 +334,13 @@ fun SettingsScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "TCP/IP 端口",
+                                    text = stringResource(R.string.tcpip_port),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "通过无线调试启动后，将 adbd 的 TCP/IP 端口切换到指定端口",
+                                    text = stringResource(R.string.tcpip_port_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -354,7 +356,7 @@ fun SettingsScreen(
                                     if (enabled && tcpipPort.isEmpty()) {
                                         val randomPort = PortBlacklistUtils.generateSafeRandomPort(1000, 9999, 100)
                                         if (randomPort == -1) {
-                                            Toast.makeText(context, "无法生成安全端口，请手动设置", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.cannot_generate_safe_port), Toast.LENGTH_SHORT).show()
                                             tcpipPortEnabled = false
                                         } else {
                                             tcpipPort = randomPort.toString()
@@ -362,7 +364,7 @@ fun SettingsScreen(
                                                 putBoolean(TCPIP_PORT_ENABLED, enabled)
                                                 putString(TCPIP_PORT, tcpipPort)
                                             }
-                                            Toast.makeText(context, "已自动生成安全端口 $tcpipPort", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.auto_generated_safe_port, tcpipPort), Toast.LENGTH_SHORT).show()
                                         }
                                     } else {
                                         preferences.edit {
@@ -388,8 +390,8 @@ fun SettingsScreen(
                                             tcpipPort = newValue
                                         }
                                     },
-                                    label = { Text("端口号") },
-                                    placeholder = { Text("例如: 5555") },
+                                    label = { Text(stringResource(R.string.port_number)) },
+                                    placeholder = { Text(stringResource(R.string.port_example)) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
                                     modifier = Modifier.weight(1f),
@@ -401,7 +403,7 @@ fun SettingsScreen(
                                         if (tcpipPort.isEmpty()) {
                                             val randomPort = PortBlacklistUtils.generateSafeRandomPort(1000, 9999, 100)
                                             if (randomPort == -1) {
-                                                Toast.makeText(context, "无法生成安全端口，请手动输入", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.cannot_generate_safe_port_manual), Toast.LENGTH_SHORT).show()
                                                 return@Button
                                             }
                                             tcpipPort = randomPort.toString()
@@ -409,25 +411,25 @@ fun SettingsScreen(
 
                                         val port = tcpipPort.toIntOrNull()
                                         if (port == null || port !in 1..65535) {
-                                            Toast.makeText(context, "端口号无效，请输入 1-65535 之间的数字", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.port_invalid), Toast.LENGTH_SHORT).show()
                                             return@Button
                                         }
 
                                         if (PortBlacklistUtils.isPortBlacklisted(port)) {
-                                            Toast.makeText(context, "警告：端口 $port 可能被恶意扫描，建议使用其他端口", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(context, context.getString(R.string.port_blacklisted_warning, port), Toast.LENGTH_LONG).show()
                                         }
 
                                         preferences.edit {
                                             putString(TCPIP_PORT, tcpipPort)
                                         }
-                                        Toast.makeText(context, "端口已设置为 $tcpipPort", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.port_set_to, tcpipPort), Toast.LENGTH_SHORT).show()
                                     },
                                     modifier = Modifier
                                         .padding(top = 8.dp)
                                         .height(56.dp),
                                     shape = AppShape.shapes.buttonMedium
                                 ) {
-                                    Text("确定")
+                                    Text(stringResource(R.string.confirm))
                                 }
                             }
                         }
@@ -445,8 +447,8 @@ fun SettingsScreen(
                     ) {
                         SettingsClickableCard(
                             icon = Icons.AutoMirrored.Filled.Subject,
-                            title = "服务日志",
-                            subtitle = "查看 Stellar 服务运行日志",
+                            title = stringResource(R.string.service_logs),
+                            subtitle = stringResource(R.string.service_logs_subtitle),
                             onClick = onNavigateToLogs,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
@@ -463,12 +465,12 @@ fun SettingsScreen(
                                         val update = UpdateUtils.checkUpdate()
                                         if (update != null && update.isNewerThan(BuildConfig.VERSION_CODE)) {
                                             updateAvailable = true
-                                            Toast.makeText(context, "发现新版本！", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.new_version_found), Toast.LENGTH_SHORT).show()
                                         } else {
-                                            Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.already_latest_version), Toast.LENGTH_SHORT).show()
                                         }
                                     } catch (_: Exception) {
-                                        Toast.makeText(context, "检查更新失败", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.check_update_failed), Toast.LENGTH_SHORT).show()
                                     } finally {
                                         isCheckingUpdate = false
                                     }
@@ -500,8 +502,8 @@ fun SettingsScreen(
                 } else {
                     SettingsClickableCard(
                         icon = Icons.AutoMirrored.Filled.Subject,
-                        title = "服务日志",
-                        subtitle = "查看 Stellar 服务运行日志",
+                        title = stringResource(R.string.service_logs),
+                        subtitle = stringResource(R.string.service_logs_subtitle),
                         onClick = onNavigateToLogs
                     )
                 }
@@ -521,12 +523,12 @@ fun SettingsScreen(
                                     val update = UpdateUtils.checkUpdate()
                                     if (update != null && update.isNewerThan(BuildConfig.VERSION_CODE)) {
                                         updateAvailable = true
-                                        Toast.makeText(context, "发现新版本！", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.new_version_found), Toast.LENGTH_SHORT).show()
                                     } else {
-                                        Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.already_latest_version), Toast.LENGTH_SHORT).show()
                                     }
                                 } catch (_: Exception) {
-                                    Toast.makeText(context, "检查更新失败", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.check_update_failed), Toast.LENGTH_SHORT).show()
                                 } finally {
                                     isCheckingUpdate = false
                                 }
@@ -592,7 +594,7 @@ fun SettingsScreen(
                          
                          Column(modifier = Modifier.weight(1f)) {
                              Text(
-                                 text = "项目声明",
+                                 text = stringResource(R.string.project_declaration),
                                  style = MaterialTheme.typography.titleMedium,
                                  fontWeight = FontWeight.Bold
                              )
@@ -602,7 +604,7 @@ fun SettingsScreen(
                      Spacer(modifier = Modifier.height(12.dp))
                      
                      Text(
-                         text = "本项目基于 Shizuku 开发。Shizuku 是一个优秀的开源项目，提供了通过 ADB 或 Root 调用系统 API 的能力。",
+                         text = stringResource(R.string.project_declaration_content),
                          style = MaterialTheme.typography.bodyMedium,
                          color = MaterialTheme.colorScheme.onSurfaceVariant
                      )
@@ -615,7 +617,7 @@ fun SettingsScreen(
                              try {
                                  context.startActivity(intent)
                              } catch (_: Exception) {
-                                 Toast.makeText(context, "无法打开浏览器", Toast.LENGTH_SHORT).show()
+                                 Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
                              }
                          },
                          modifier = Modifier.fillMaxWidth(),
@@ -627,7 +629,7 @@ fun SettingsScreen(
                              modifier = Modifier.size(18.dp)
                          )
                          Spacer(modifier = Modifier.width(8.dp))
-                         Text("访问 Shizuku 项目", modifier = Modifier.padding(vertical = 4.dp))
+                         Text(stringResource(R.string.visit_shizuku_project), modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
             }
@@ -641,11 +643,12 @@ private fun ThemeSelectorWithAnimation(
     currentMode: ThemeMode,
     onModeChange: (ThemeMode) -> Unit
 ) {
+    val labels = ThemeMode.entries.associateWith { stringResource(ThemePreferences.getThemeModeDisplayNameRes(it)) }
     StellarSegmentedSelector(
         items = ThemeMode.entries.toList(),
         selectedItem = currentMode,
         onItemSelected = onModeChange,
-        itemLabel = { ThemePreferences.getThemeModeDisplayName(it) }
+        itemLabel = { labels[it] ?: "" }
     )
 }
 
@@ -739,13 +742,13 @@ private fun UpdateCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "检查更新",
+                        text = stringResource(R.string.check_update),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "当前版本: ${BuildConfig.VERSION_NAME}",
+                        text = stringResource(R.string.current_version, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -761,7 +764,7 @@ private fun UpdateCard(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "下载中... $downloadProgress%",
+                    text = stringResource(R.string.downloading_progress, downloadProgress),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -777,7 +780,7 @@ private fun UpdateCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("下载更新", modifier = Modifier.padding(vertical = 4.dp))
+                    Text(stringResource(R.string.download_update), modifier = Modifier.padding(vertical = 4.dp))
                 }
             } else {
                 Button(
@@ -793,7 +796,7 @@ private fun UpdateCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isCheckingUpdate) "检查中..." else "检查更新",
+                        text = if (isCheckingUpdate) stringResource(R.string.checking) else stringResource(R.string.check_update),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }

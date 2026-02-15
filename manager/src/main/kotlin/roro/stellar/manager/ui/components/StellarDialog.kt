@@ -19,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import roro.stellar.manager.R
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
@@ -28,8 +30,8 @@ import roro.stellar.manager.ui.theme.AppSpacing
 fun StellarDialog(
     onDismissRequest: () -> Unit,
     title: String,
-    confirmText: String = "确定",
-    dismissText: String = "取消",
+    confirmText: String = stringResource(R.string.confirm),
+    dismissText: String = stringResource(R.string.cancel),
     onConfirm: () -> Unit,
     onDismiss: () -> Unit = onDismissRequest,
     confirmEnabled: Boolean = true,
@@ -90,8 +92,8 @@ fun StellarConfirmDialog(
     onDismissRequest: () -> Unit,
     title: String,
     message: String,
-    confirmText: String = "确定",
-    dismissText: String = "取消",
+    confirmText: String = stringResource(R.string.confirm),
+    dismissText: String = stringResource(R.string.cancel),
     onConfirm: () -> Unit,
     onDismiss: () -> Unit = onDismissRequest
 ) {
@@ -117,7 +119,7 @@ fun StellarInfoDialog(
     onDismissRequest: () -> Unit,
     title: String,
     message: String,
-    confirmText: String = "确定",
+    confirmText: String = stringResource(R.string.confirm),
     onConfirm: () -> Unit = onDismissRequest
 ) {
     StellarDialog(

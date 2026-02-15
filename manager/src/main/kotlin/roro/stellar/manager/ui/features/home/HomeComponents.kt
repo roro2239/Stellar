@@ -38,9 +38,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import roro.stellar.Stellar
+import roro.stellar.manager.R
 import roro.stellar.StellarApiConstants
 import roro.stellar.manager.ui.components.ModernStatusCard
 import roro.stellar.manager.ui.theme.AppShape
@@ -59,8 +61,8 @@ fun ServerStatusCard(
 
     ModernStatusCard(
         icon = if (isRunning) Icons.Default.CheckCircle else Icons.Default.Error,
-        title = "服务状态",
-        subtitle = if (isRunning) "正在运行" else "未运行",
+        title = stringResource(R.string.service_status),
+        subtitle = if (isRunning) stringResource(R.string.service_running) else stringResource(R.string.service_not_running),
         statusText = "",
         isPositive = isRunning,
         action = if (isRunning) {
@@ -77,7 +79,7 @@ fun ServerStatusCard(
                     shape = AppShape.shapes.buttonSmall14
                 ) {
                     Text(
-                        text = "停止",
+                        text = stringResource(R.string.stop),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -96,8 +98,8 @@ fun ServerStatusCard(
                 HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                InfoRow("版本", "$apiVersion.$patchVersion", contentColor, Icons.Default.Info)
-                InfoRow("运行模式", user, contentColor, if (isRoot) Icons.Default.Security else Icons.Default.Adb)
+                InfoRow(stringResource(R.string.version), "$apiVersion.$patchVersion", contentColor, Icons.Default.Info)
+                InfoRow(stringResource(R.string.run_mode), user, contentColor, if (isRoot) Icons.Default.Security else Icons.Default.Adb)
 
                 if (needsUpdate) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -106,7 +108,7 @@ fun ServerStatusCard(
                         shape = AppShape.shapes.iconSmall
                     ) {
                         Text(
-                            text = "可升级到版本 ${Stellar.latestServiceVersion}.${StellarApiConstants.SERVER_PATCH_VERSION}",
+                            text = stringResource(R.string.upgradable_to_version, Stellar.latestServiceVersion, StellarApiConstants.SERVER_PATCH_VERSION),
                             style = MaterialTheme.typography.bodySmall,
                             color = contentColor,
                             modifier = Modifier.padding(12.dp)
@@ -197,14 +199,14 @@ fun StartRootCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isRestart) "Root 重启" else "Root 启动",
+                    text = if (isRestart) stringResource(R.string.root_restart) else stringResource(R.string.root_start),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "通过 Root 权限启动 Stellar 服务",
+                    text = stringResource(R.string.root_start_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -214,7 +216,7 @@ fun StartRootCard(
                 onClick = onStartClick,
                 shape = AppShape.shapes.buttonMedium
             ) {
-                Text(text = if (isRestart) "重启" else "启动")
+                Text(text = if (isRestart) stringResource(R.string.restart) else stringResource(R.string.start))
             }
         }
     }
@@ -257,14 +259,14 @@ fun StartWirelessAdbCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "无线调试",
+                    text = stringResource(R.string.wireless_debugging),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "通过无限调试启动 Stellar 服务",
+                    text = stringResource(R.string.wireless_debugging_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -274,7 +276,7 @@ fun StartWirelessAdbCard(
                 onClick = onStartClick,
                 shape = AppShape.shapes.buttonMedium
             ) {
-                Text(text = "启动")
+                Text(text = stringResource(R.string.start))
             }
         }
     }
@@ -317,14 +319,14 @@ fun StartWiredAdbCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "有线 ADB",
+                    text = stringResource(R.string.wired_adb),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "通过 ADB 启动 Stellar 服务",
+                    text = stringResource(R.string.wired_adb_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -334,7 +336,7 @@ fun StartWiredAdbCard(
                 onClick = onButtonClick,
                 shape = AppShape.shapes.buttonMedium
             ) {
-                Text(text = "查看")
+                Text(text = stringResource(R.string.view))
             }
         }
     }
