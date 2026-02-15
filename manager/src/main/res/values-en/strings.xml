@@ -102,7 +102,6 @@
     <string name="port_set_to">Port set to %s</string>
     <string name="service_logs">Service Logs</string>
     <string name="service_logs_subtitle">View Stellar service logs</string>
-    <string name="new_version_found">New version available!</string>
     <string name="already_latest_version">Already up to date</string>
     <string name="check_update_failed">Update check failed</string>
     <string name="project_declaration">Acknowledgement</string>
@@ -111,8 +110,6 @@
     <string name="visit_shizuku_project">Visit Shizuku Project</string>
     <string name="check_update">Check for Updates</string>
     <string name="current_version">Current version: %s</string>
-    <string name="downloading_progress">Downloading... %d%%</string>
-    <string name="download_update">Download Update</string>
     <string name="checking">Checking...</string>
 
     <!-- Logs Screen -->
@@ -267,10 +264,7 @@
     <string name="adb_connection_failed">ADB connection failed %1$s:%2$d</string>
 
     <!-- Update -->
-    <string name="start_downloading">Starting download</string>
-    <string name="download_failed_check_network">Download failed, please check your network</string>
-    <string name="update_failed">Update failed: %s</string>
-    <string name="grant_install_permission">Please grant permission to install unknown apps</string>
-    <string name="cannot_open_settings">Cannot open settings</string>
-    <string name="install_failed">Installation failed: %s</string>
+    <string name="new_version_title">New Version v%s</string>
+    <string name="go_to_download">Download</string>
+    <string name="no_download_available">No download available</string>
 </resources>

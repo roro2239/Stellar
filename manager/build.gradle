@@ -155,5 +155,7 @@ dependencies {
     implementation managerLibs.okhttp
 
     implementation managerLibs.capsule
+
+    implementation managerLibs.composeMarkdown
 }
 apply from: rootProject.file('signing.gradle')
