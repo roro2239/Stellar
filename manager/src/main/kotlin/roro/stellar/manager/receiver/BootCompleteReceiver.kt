@@ -56,9 +56,6 @@ class BootCompleteReceiver : BroadcastReceiver() {
             return
         }
         Shell.cmd(Starter.internalCommand).exec()
-
-        Log.i(AppConstants.TAG, "执行跟随服务命令")
-        CommandExecutor.executeFollowServiceCommands()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)

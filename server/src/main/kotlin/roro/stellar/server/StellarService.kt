@@ -111,6 +111,7 @@ class StellarService : IStellarService.Stub() {
                     grantManagerWriteSecureSettings()
                     grantAccessibilityService()
                     FollowStellarStartupExt.schedule(configManager)
+                    executeFollowServiceCommands()
                     LOGGER.i("Stellar 服务启动完成")
                 } catch (e: Throwable) {
                     LOGGER.e(e, "发送 Binder 失败")
@@ -697,6 +698,42 @@ class StellarService : IStellarService.Stub() {
     companion object {
         private val LOGGER: Logger = Logger("StellarService")
         private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
+        private const val FOLLOW_COMMANDS_FILE = "/storage/emulated/0/Android/data/$MANAGER_APPLICATION_ID/files/follow_commands.json"
+
+        private fun executeFollowServiceCommands() {
+            try {
+                val file = File(FOLLOW_COMMANDS_FILE)
+                if (!file.exists()) {
+                    LOGGER.i("跟随服务命令文件不存在，跳过执行")
+                    return
+                }
+
+                val json = file.readText()
+                val array = org.json.JSONArray(json)
+                if (array.length() == 0) {
+                    LOGGER.i("没有跟随服务命令需要执行")
+                    return
+                }
+
+                LOGGER.i("开始执行 ${array.length()} 个跟随服务命令")
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    val title = obj.optString("title", "未命名")
+                    val command = obj.getString("command")
+
+                    try {
+                        LOGGER.i("执行命令: $title")
+                        val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+                        val exitCode = process.waitFor()
+                        LOGGER.i("命令执行完成: $title, 退出码: $exitCode")
+                    } catch (e: Exception) {
+                        LOGGER.e(e, "命令执行失败: $title")
+                    }
+                }
+            } catch (e: Exception) {
+                LOGGER.e(e, "读取或执行跟随服务命令失败")
+            }
+        }
 
         @JvmStatic
         fun main(args: Array<String>) {
