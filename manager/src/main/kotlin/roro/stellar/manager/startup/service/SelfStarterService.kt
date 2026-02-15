@@ -14,14 +14,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.R
+import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
-import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 
@@ -62,6 +63,27 @@ class SelfStarterService : Service(), LifecycleOwner {
             return START_NOT_STICKY
         }
 
+        val (shouldChange, tcpipPort) = adbWirelessHelper.shouldChangePort(-1)
+        if (shouldChange && tcpipPort > 0) {
+            Log.i(AppConstants.TAG, "TCP/IP 端口已配置: $tcpipPort，尝试直接连接")
+            lifecycleScope.launch(Dispatchers.IO) {
+                val canConnect = adbWirelessHelper.hasAdbPermission("127.0.0.1", tcpipPort)
+                if (canConnect) {
+                    Log.i(AppConstants.TAG, "TCP/IP 端口 $tcpipPort 可用，直接启动")
+                    startStellarViaAdb("127.0.0.1", tcpipPort)
+                } else {
+                    Log.w(AppConstants.TAG, "TCP/IP 端口 $tcpipPort 不可用，回退到默认流程")
+                    launch(Dispatchers.Main) { fallbackStart() }
+                }
+            }
+        } else {
+            fallbackStart()
+        }
+
+        return START_NOT_STICKY
+    }
+
+    private fun fallbackStart() {
         val wirelessEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1
         Log.d(AppConstants.TAG, "无线调试启用设置: $wirelessEnabled")
 
@@ -95,7 +117,6 @@ class SelfStarterService : Service(), LifecycleOwner {
                 stopSelf()
             }
         }
-        return START_NOT_STICKY
     }
 
     private fun startStellarViaAdb(host: String, port: Int) {
@@ -133,7 +154,10 @@ class SelfStarterService : Service(), LifecycleOwner {
             },
             onSuccess = {
                 Log.i(AppConstants.TAG, "服务启动成功")
-                lifecycleScope.launch(Dispatchers.Main) { stopSelf() }
+                lifecycleScope.launch(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, getString(R.string.boot_start_success), Toast.LENGTH_LONG).show()
+                    stopSelf()
+                }
             })
     }
 
@@ -150,4 +174,3 @@ class SelfStarterService : Service(), LifecycleOwner {
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
-

@@ -260,6 +260,8 @@ class AdbWirelessHelper {
                             Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
                         }
                     }
+                } catch (e: java.io.EOFException) {
+                    Log.i(AppConstants.TAG, "ADB shell 流已关闭（服务进程已 fork，这是正常的）")
                 } catch (e: Throwable) {
                     Log.e(AppConstants.TAG, "ADB连接/命令执行失败", e)
                     onError(e)

@@ -261,6 +261,9 @@
 
     <!-- Self Starter Service -->
     <string name="starting_stellar_service">正在启动Stellar服务…</string>
+    <string name="boot_start_success">Stellar 服务已在开机时成功启动</string>
+    <string name="boot_start_failed">Stellar 开机启动失败: %s</string>
+    <string name="boot_start_root_no_permission">Root 权限不可用，开机启动失败</string>
     <string name="adb_key_error">ADB密钥错误</string>
     <string name="adb_connection_failed">ADB连接失败 %1$s:%2$d</string>
 

@@ -723,7 +723,6 @@ private fun TimelineActionStep(
             .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 左侧时间线指示器
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(36.dp)
@@ -809,27 +808,21 @@ internal class StarterViewModel(
     private val hasSecureSettings: Boolean = false
 ) : ViewModel() {
 
-    // 步骤列表
     private val _steps = MutableStateFlow<List<StepData>>(emptyList())
     val steps: StateFlow<List<StepData>> = _steps.asStateFlow()
 
-    // 当前步骤索引
     private val _currentStepIndex = MutableStateFlow(0)
     val currentStepIndex: StateFlow<Int> = _currentStepIndex.asStateFlow()
 
-    // 是否完成
     private val _isCompleted = MutableStateFlow(false)
     val isCompleted: StateFlow<Boolean> = _isCompleted.asStateFlow()
 
-    // 错误信息
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // 执行命令
     private val _command = MutableStateFlow(if (isRoot) Starter.internalCommand else "adb shell ${Starter.userCommand}")
     val command: StateFlow<String> = _command.asStateFlow()
 
-    // 通知权限状态
     private val _hasNotificationPermission = MutableStateFlow(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -846,7 +839,6 @@ internal class StarterViewModel(
     private var adbMdns: AdbMdns? = null
     private var detectedPort: Int = 0
 
-    // 配对流程状态
     private enum class PairingPhase { NONE, ENABLE_WIRELESS, PAIRING }
     private var pairingPhase = PairingPhase.NONE
 
@@ -880,7 +872,6 @@ internal class StarterViewModel(
 
     private fun updateStep(index: Int, status: StepStatus, description: String, needsUserAction: Boolean = false) {
         viewModelScope.launch {
-            // 添加延迟，让步骤更新不要太快
             if (status == StepStatus.RUNNING || status == StepStatus.COMPLETED) {
                 delay(300)
             }
@@ -941,7 +932,6 @@ internal class StarterViewModel(
         viewModelScope.launch {
             when (pairingPhase) {
                 PairingPhase.ENABLE_WIRELESS -> {
-                    // 用户已开启无线调试，重新检测端口
                     _outputLines.value = emptyList()
                     _errorMessage.value = null
                     pairingPhase = PairingPhase.NONE
@@ -950,12 +940,9 @@ internal class StarterViewModel(
                     startProcess()
                 }
                 PairingPhase.PAIRING -> {
-                    // 用户已完成配对，直接尝试连接
                     if (detectedPort > 0) {
                         _outputLines.value = emptyList()
                         _errorMessage.value = null
-
-                        // 更新配对步骤为完成
                         val currentSteps = _steps.value
                         val pairingStepIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.wireless_debugging_pairing) }
                         if (pairingStepIndex >= 0) {
@@ -966,7 +953,6 @@ internal class StarterViewModel(
                         delay(300)
                         startAdbSteps()
                     } else {
-                        // 没有检测到端口，重新开始
                         _outputLines.value = emptyList()
                         _errorMessage.value = null
                         pairingPhase = PairingPhase.NONE
@@ -976,7 +962,6 @@ internal class StarterViewModel(
                     }
                 }
                 PairingPhase.NONE -> {
-                    // 默认行为：重新开始
                     _outputLines.value = emptyList()
                     _errorMessage.value = null
                     initializeSteps()
@@ -1011,37 +996,12 @@ internal class StarterViewModel(
         viewModelScope.launch {
             val steps = _steps.value
             val lastIndex = steps.lastIndex
-            // 先将所有未完成的步骤标记为完成
             steps.forEachIndexed { index, step ->
                 if (step.status != StepStatus.COMPLETED && step.status != StepStatus.WARNING) {
                     updateStep(index, StepStatus.COMPLETED, if (index == lastIndex) context.getString(R.string.service_started_successfully) else context.getString(R.string.completed))
                 }
             }
             _isCompleted.value = true
-
-            // 非 Root 模式下，检查是否需要切换到用户设置的端口
-            if (!isRoot && detectedPort > 0) {
-                val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(detectedPort)
-                if (shouldChange && newPort > 0) {
-                    addOutputLine("\n${context.getString(R.string.switching_port, newPort)}")
-                    adbWirelessHelper.changeTcpipPortAfterStart(
-                        host = host ?: "127.0.0.1",
-                        port = detectedPort,
-                        newPort = newPort,
-                        coroutineScope = viewModelScope,
-                        onOutput = { output -> addOutputLine(output) },
-                        onError = { error ->
-                            val errorMsg = error.message ?: context.getString(R.string.unknown_error)
-                            addOutputLine(context.getString(R.string.port_switch_failed, errorMsg))
-                            Log.w(AppConstants.TAG, "端口切换失败", error)
-                        },
-                        onSuccess = {
-                            addOutputLine(context.getString(R.string.port_switched_to, newPort))
-                            Log.i(AppConstants.TAG, "端口已切换到 $newPort")
-                        }
-                    )
-                }
-            }
         }
     }
 
@@ -1051,8 +1011,6 @@ internal class StarterViewModel(
             _errorMessage.value = error.message ?: context.getString(R.string.unknown_error)
         }
     }
-
-    // ========== ADB 检测流程 ==========
 
     @SuppressLint("StringFormatInvalid")
     private fun startDetection() {
@@ -1198,7 +1156,31 @@ internal class StarterViewModel(
         if (connectIndex >= 0) {
             updateStep(connectIndex, StepStatus.RUNNING, context.getString(R.string.connecting_ellipsis))
         }
-        startAdbConnection(host ?: "127.0.0.1", detectedPort)
+
+        val targetHost = host ?: "127.0.0.1"
+        val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(detectedPort)
+        if (!isRoot && shouldChange && newPort > 0) {
+            addOutputLine(context.getString(R.string.switching_port, newPort))
+            adbWirelessHelper.changeTcpipPortAfterStart(
+                host = targetHost,
+                port = detectedPort,
+                newPort = newPort,
+                coroutineScope = viewModelScope,
+                onOutput = { output -> addOutputLine(output) },
+                onError = { error ->
+                    Log.w(AppConstants.TAG, "端口切换失败，使用原端口启动", error)
+                    startAdbConnection(targetHost, detectedPort)
+                },
+                onSuccess = {
+                    addOutputLine(context.getString(R.string.port_switched_to, newPort))
+                    Log.i(AppConstants.TAG, "端口已切换到 $newPort")
+                    detectedPort = newPort
+                    startAdbConnection(targetHost, newPort)
+                }
+            )
+        } else {
+            startAdbConnection(targetHost, detectedPort)
+        }
     }
 
     private fun startAdbConnection(host: String, port: Int) {
@@ -1267,6 +1249,7 @@ internal class StarterViewModel(
                 }
             },
             onError = { error ->
+                if (_isCompleted.value) return@startStellarViaAdb
                 addOutputLine("错误：${error.message}")
                 viewModelScope.launch(Dispatchers.Main) {
                     val needsPairing = error is SSLException || error is ConnectException
@@ -1288,15 +1271,11 @@ internal class StarterViewModel(
                 }
             },
             onSuccess = {
-                // 命令执行完成，确保等待服务
                 viewModelScope.launch(Dispatchers.Main) {
                     val steps = _steps.value
                     val binderIndex = steps.indexOfFirst { it.title == context.getString(R.string.wait_binder_response) }
-
-                    // 如果还没有开始等待 Binder，现在开始
                     if (binderIndex >= 0 && steps[binderIndex].status != StepStatus.RUNNING &&
                         steps[binderIndex].status != StepStatus.COMPLETED) {
-                        // 先完成之前的步骤
                         val connectIndex = steps.indexOfFirst { it.title == context.getString(R.string.connect_adb_service) }
                         val verifyIndex = steps.indexOfFirst { it.title == context.getString(R.string.verify_connection) }
                         val checkIndex = steps.indexOfFirst { it.title == context.getString(R.string.check_existing_service) }
@@ -1313,8 +1292,6 @@ internal class StarterViewModel(
             }
         )
     }
-
-    // ========== Root 启动流程 ==========
 
     private fun startRoot() {
         viewModelScope.launch(Dispatchers.IO) {
