@@ -15,8 +15,6 @@ object StellarSettings {
     const val TCPIP_PORT_ENABLED = "tcpip_port_enabled"
     const val THEME_MODE = "theme_mode"
     const val DROP_PRIVILEGES = "drop_privileges"
-    const val BOOT_COMMAND = "boot_command"
-    const val FOLLOW_STARTUP_COMMAND = "follow_startup_command"
 
     private var preferences: SharedPreferences? = null
 
@@ -28,7 +26,7 @@ object StellarSettings {
             override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
                 return try {
                     super.getSharedPreferences(name, mode)
-                } catch (e: IllegalStateException) {
+                } catch (_: IllegalStateException) {
                     EmptySharedPreferencesImpl()
                 }
             }
