@@ -1,43 +1,35 @@
 package roro.stellar.server
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
-import android.ddm.DdmHandleAppName
-import android.os.Binder
 import android.os.Bundle
-import android.os.FileObserver
 import android.os.IBinder
-import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
-import android.os.ServiceManager
 import com.stellar.server.IRemoteProcess
 import com.stellar.server.IStellarApplication
 import com.stellar.server.IStellarService
 import com.stellar.server.IUserServiceCallback
 import rikka.hidden.compat.PackageManagerApis
-import rikka.hidden.compat.UserManagerApis
-import rikka.parcelablelist.ParcelableListSlice
 import roro.stellar.StellarApiConstants
-import roro.stellar.server.ApkChangedObservers.start
 import roro.stellar.server.BinderSender.register
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
+import roro.stellar.server.binder.BinderDistributor
+import roro.stellar.server.bootstrap.ServerBootstrap
+import roro.stellar.server.command.FollowCommandExecutor
 import roro.stellar.server.communication.CallerContext
 import roro.stellar.server.communication.PermissionEnforcer
 import roro.stellar.server.communication.StellarCommunicationBridge
 import roro.stellar.server.ext.FollowStellarStartupExt
+import roro.stellar.server.grant.ManagerGrantHelper
 import roro.stellar.server.ktx.mainHandler
+import roro.stellar.server.monitor.PackageMonitor
+import roro.stellar.server.query.ApplicationQueryHelper
 import roro.stellar.server.service.StellarServiceCore
+import roro.stellar.server.shizuku.ShizukuApiConstants
+import roro.stellar.server.shizuku.ShizukuCallbackFactory
+import roro.stellar.server.shizuku.ShizukuServiceIntercept
 import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
-import roro.stellar.server.util.UserHandleCompat.getAppId
-import roro.stellar.server.shizuku.ShizukuApiConstants
-import roro.stellar.server.shizuku.ShizukuServiceCallback
-import roro.stellar.server.shizuku.ShizukuServiceIntercept
-import java.io.File
 import kotlin.system.exitProcess
 
 class StellarService : IStellarService.Stub() {
@@ -51,20 +43,20 @@ class StellarService : IStellarService.Stub() {
     internal val permissionEnforcer: PermissionEnforcer
     private val bridge: StellarCommunicationBridge
 
-    private val shizukuServiceIntercept: ShizukuServiceIntercept
+    internal val shizukuServiceIntercept: ShizukuServiceIntercept
 
     init {
         try {
             LOGGER.i("正在启动 Stellar 服务...")
 
             LOGGER.i("等待系统服务...")
-            waitSystemService("package")
-            waitSystemService(Context.ACTIVITY_SERVICE)
-            waitSystemService(Context.USER_SERVICE)
-            waitSystemService(Context.APP_OPS_SERVICE)
+            ServerBootstrap.waitSystemService("package")
+            ServerBootstrap.waitSystemService(Context.ACTIVITY_SERVICE)
+            ServerBootstrap.waitSystemService(Context.USER_SERVICE)
+            ServerBootstrap.waitSystemService(Context.APP_OPS_SERVICE)
 
             LOGGER.i("获取管理器应用信息...")
-            val ai = managerApplicationInfo
+            val ai = ServerBootstrap.managerApplicationInfo
             if (ai == null) {
                 LOGGER.e("无法获取管理器应用信息")
                 exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
@@ -84,12 +76,20 @@ class StellarService : IStellarService.Stub() {
             bridge = StellarCommunicationBridge(serviceCore, permissionEnforcer)
 
             LOGGER.i("初始化 Shizuku 兼容层...")
-            shizukuServiceIntercept = ShizukuServiceIntercept(createShizukuCallback())
+            shizukuServiceIntercept = ShizukuServiceIntercept(
+                ShizukuCallbackFactory.create(
+                    clientManager, configManager, userServiceManager,
+                    managerAppId, serviceCore,
+                    shizukuNotifier = { uid, pid, requestCode, allowed ->
+                        shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, allowed)
+                    }
+                )
+            )
 
             LOGGER.i("启动文件监听...")
-            start(ai.sourceDir) {
+            ApkChangedObservers.start(ai.sourceDir) {
                 LOGGER.w("检测到管理器应用文件变化，检查应用状态...")
-                if (managerApplicationInfo == null) {
+                if (ServerBootstrap.managerApplicationInfo == null) {
                     LOGGER.w("用户 0 中的管理器应用已卸载，正在退出...")
                     exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
                 } else {
@@ -98,7 +98,7 @@ class StellarService : IStellarService.Stub() {
             }
 
             LOGGER.i("注册包移除监听...")
-            registerPackageRemovedReceiver(ai)
+            PackageMonitor.registerPackageRemovedReceiver(ai)
 
             LOGGER.i("注册 Binder...")
             register(this)
@@ -106,12 +106,12 @@ class StellarService : IStellarService.Stub() {
             LOGGER.i("发送 Binder 到客户端...")
             mainHandler.post {
                 try {
-                    sendBinderToClient()
-                    sendBinderToManager()
-                    grantManagerWriteSecureSettings()
-                    grantAccessibilityService()
+                    BinderDistributor.sendBinderToAllClients(this)
+                    BinderDistributor.sendBinderToManager(this)
+                    ManagerGrantHelper.grantWriteSecureSettings(managerAppId)
+                    ManagerGrantHelper.grantAccessibilityService()
                     FollowStellarStartupExt.schedule(configManager)
-                    executeFollowServiceCommands()
+                    FollowCommandExecutor.execute()
                     LOGGER.i("Stellar 服务启动完成")
                 } catch (e: Throwable) {
                     LOGGER.e(e, "发送 Binder 失败")
@@ -122,8 +122,6 @@ class StellarService : IStellarService.Stub() {
             exitProcess(1)
         }
     }
-
-    // ========== AIDL 接口实现 - 服务信息 ==========
 
     override fun getVersion(): Int {
         val caller = CallerContext.fromBinder()
@@ -347,7 +345,7 @@ class StellarService : IStellarService.Stub() {
             try {
                 application.asBinder().linkToDeath({
                     LOGGER.i("管理器进程已死亡，正在授予无障碍服务权限...")
-                    grantAccessibilityService()
+                    ManagerGrantHelper.grantAccessibilityService()
                 }, 0)
             } catch (e: Throwable) {
                 LOGGER.w(e, "监控管理器进程死亡失败")
@@ -391,12 +389,11 @@ class StellarService : IStellarService.Stub() {
         }
     }
 
-
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(StellarApiConstants.BINDER_DESCRIPTOR)
             val userId = data.readInt()
-            val result = getApplications(userId)
+            val result = ApplicationQueryHelper.getApplications(userId, configManager)
             reply?.let {
                 it.writeNoException()
                 result.writeToParcel(it, Parcelable.PARCELABLE_WRITE_RETURN_VALUE)
@@ -455,440 +452,12 @@ class StellarService : IStellarService.Stub() {
         return rikka.hidden.compat.PermissionManagerApis.checkPermission(permission, serviceCore.serviceInfo.getUid())
     }
 
-    private fun getApplications(userId: Int): ParcelableListSlice<PackageInfo?> {
-        val list = ArrayList<PackageInfo?>()
-        val users = ArrayList<Int?>()
-        if (userId == -1) {
-            users.addAll(UserManagerApis.getUserIdsNoThrow())
-        } else {
-            users.add(userId)
-        }
-
-        for (user in users) {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                (PackageManager.GET_META_DATA or PackageManager.GET_PERMISSIONS).toLong(),
-                user!!
-            )) {
-                if (MANAGER_APPLICATION_ID == pi.packageName) continue
-                if (pi.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) continue
-                val applicationInfo = pi.applicationInfo ?: continue
-                val uid = applicationInfo.uid
-                var flag = -1
-
-                configManager.find(uid)?.let {
-                    if (!it.packages.contains(pi.packageName)) continue
-                    it.permissions["stellar"]?.let { configFlag ->
-                        flag = configFlag
-                    }
-                }
-
-                if (flag != -1) {
-                    list.add(pi)
-                } else if (applicationInfo.metaData != null) {
-                    val stellarPermission = applicationInfo.metaData.getString(
-                        StellarApiConstants.PERMISSION_KEY,
-                        ""
-                    )
-                    if (stellarPermission.split(",").contains("stellar")) {
-                        list.add(pi)
-                    } else if (applicationInfo.metaData.getBoolean("moe.shizuku.client.V3_SUPPORT", false)) {
-                        list.add(pi)
-                    }
-                }
-            }
-        }
-        return ParcelableListSlice<PackageInfo?>(list)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun registerPackageRemovedReceiver(ai: ApplicationInfo) {
-        val externalDataDir = File("/storage/emulated/0/Android/data/$MANAGER_APPLICATION_ID")
-
-        if (externalDataDir.exists()) {
-            val dirObserver = object : FileObserver(
-                externalDataDir.absolutePath,
-                FileObserver.ALL_EVENTS
-            ) {
-                override fun onEvent(event: Int, path: String?) {
-                    LOGGER.w("外部存储目录事件: event=${eventToString(event)}, path=$path, exists=${externalDataDir.exists()}")
-                    
-                    if (event and FileObserver.DELETE_SELF != 0 || event and FileObserver.MOVED_FROM != 0) {
-                        if (!externalDataDir.exists()) {
-                            LOGGER.w("管理器应用外部存储目录已被删除，正在退出...")
-                            exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
-                        }
-                    }
-                }
-            }
-            dirObserver.startWatching()
-        } else {
-            LOGGER.w("外部存储目录不存在，将在下次启动时创建")
-        }
-    }
-    
-    private fun eventToString(event: Int): String {
-        val events = mutableListOf<String>()
-        if (event and FileObserver.ACCESS != 0) events.add("ACCESS")
-        if (event and FileObserver.MODIFY != 0) events.add("MODIFY")
-        if (event and FileObserver.ATTRIB != 0) events.add("ATTRIB")
-        if (event and FileObserver.CLOSE_WRITE != 0) events.add("CLOSE_WRITE")
-        if (event and FileObserver.CLOSE_NOWRITE != 0) events.add("CLOSE_NOWRITE")
-        if (event and FileObserver.OPEN != 0) events.add("OPEN")
-        if (event and FileObserver.MOVED_FROM != 0) events.add("MOVED_FROM")
-        if (event and FileObserver.MOVED_TO != 0) events.add("MOVED_TO")
-        if (event and FileObserver.CREATE != 0) events.add("CREATE")
-        if (event and FileObserver.DELETE != 0) events.add("DELETE")
-        if (event and FileObserver.DELETE_SELF != 0) events.add("DELETE_SELF")
-        if (event and FileObserver.MOVE_SELF != 0) events.add("MOVE_SELF")
-        return if (events.isEmpty()) "UNKNOWN($event)" else events.joinToString("|")
-    }
-
-    private fun createShizukuCallback(): ShizukuServiceCallback {
-        val cachedUid = android.system.Os.getuid()
-        val cachedPid = android.os.Process.myPid()
-        val cachedSeContext = try { android.os.SELinux.getContext() } catch (e: Throwable) { null }
-
-        return object : ShizukuServiceCallback {
-            override val serviceUid: Int = cachedUid
-            override val serviceVersion: Int = roro.stellar.StellarApiConstants.SERVER_VERSION
-            override val serviceSeLinuxContext: String? = cachedSeContext
-
-            override val clientManager: ClientManager get() = this@StellarService.clientManager
-            override val configManager: ConfigManager get() = this@StellarService.configManager
-            override val userServiceManager: UserServiceManager get() = this@StellarService.userServiceManager
-            override val managerAppId: Int get() = this@StellarService.managerAppId
-            override val servicePid: Int = cachedPid
-
-            override fun getPackagesForUid(uid: Int): List<String> {
-                return PackageManagerApis.getPackagesForUidNoThrow(uid).toList()
-            }
-
-            override fun getSystemProperty(name: String?, defaultValue: String?): String {
-                return android.os.SystemProperties.get(name, defaultValue)
-            }
-
-            override fun setSystemProperty(name: String?, value: String?) {
-                android.os.SystemProperties.set(name, value)
-            }
-
-            override fun newProcess(uid: Int, pid: Int, cmd: Array<String?>?, env: Array<String?>?, dir: String?): com.stellar.server.IRemoteProcess {
-                return this@StellarService.serviceCore.processManager.newProcess(uid, pid, cmd ?: emptyArray(), env, dir)
-            }
-
-            override fun requestPermission(uid: Int, pid: Int, requestCode: Int) {
-                val userId = uid / 100000
-                val packages = PackageManagerApis.getPackagesForUidNoThrow(uid)
-                val packageName = packages.firstOrNull() ?: return
-
-                LOGGER.i("Shizuku 权限请求: uid=$uid, pid=$pid, pkg=$packageName, code=$requestCode")
-
-                val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId)
-                if (ai == null) {
-                    LOGGER.w("无法获取应用信息: $packageName")
-                    return
-                }
-
-                val currentFlag = configManager.getPermissionFlag(uid, ShizukuApiConstants.PERMISSION_NAME)
-
-                if (currentFlag == ConfigManager.FLAG_DENIED) {
-                    LOGGER.i("Shizuku 权限已被永久拒绝: uid=$uid")
-                    shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, false)
-                    return
-                }
-
-                if (currentFlag == ConfigManager.FLAG_GRANTED) {
-                    LOGGER.i("Shizuku 权限已被永久授权: uid=$uid")
-                    shizukuServiceIntercept.notifyPermissionResult(uid, pid, requestCode, true)
-                    return
-                }
-
-                if (configManager.find(uid) == null) {
-                    configManager.createConfigWithAllPermissions(uid, packageName)
-                }
-
-                val lastDenyTime = clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
-                val denyOnce = (System.currentTimeMillis() - lastDenyTime) > 10000
-
-                val intent = Intent(ServerConstants.REQUEST_PERMISSION_ACTION)
-                    .setPackage(ServerConstants.MANAGER_APPLICATION_ID)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-                    .putExtra("uid", uid)
-                    .putExtra("pid", pid)
-                    .putExtra("requestCode", requestCode)
-                    .putExtra("applicationInfo", ai)
-                    .putExtra("denyOnce", denyOnce)
-                    .putExtra("permission", ShizukuApiConstants.PERMISSION_NAME)
-
-                rikka.hidden.compat.ActivityManagerApis.startActivityNoThrow(intent, null, userId)
-            }
-        }
-    }
-
-    fun sendBinderToClient() {
-        for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendBinderToClient(this, userId)
-        }
-    }
-
-    fun sendBinderToManager() {
-        sendBinderToManger(this)
-    }
-
-    private fun grantManagerWriteSecureSettings() {
-        try {
-            val pm = rikka.hidden.compat.PermissionManagerApis.checkPermission(
-                android.Manifest.permission.WRITE_SECURE_SETTINGS,
-                managerAppId
-            )
-            if (pm == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                LOGGER.i("管理器已拥有 WRITE_SECURE_SETTINGS 权限")
-                return
-            }
-
-            LOGGER.i("正在授予管理器 WRITE_SECURE_SETTINGS 权限...")
-            Runtime.getRuntime().exec(arrayOf(
-                "pm", "grant", MANAGER_APPLICATION_ID,
-                android.Manifest.permission.WRITE_SECURE_SETTINGS
-            )).waitFor()
-            LOGGER.i("WRITE_SECURE_SETTINGS 权限授予完成")
-        } catch (e: Throwable) {
-            LOGGER.e(e, "授予 WRITE_SECURE_SETTINGS 权限失败")
-        }
-    }
-
-    private fun grantAccessibilityService() {
-        try {
-            val serviceName = "$MANAGER_APPLICATION_ID/.service.StellarAccessibilityService"
-
-            val process = Runtime.getRuntime().exec(arrayOf(
-                "settings", "get", "secure",
-                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ))
-            val currentServices = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
-
-            if (currentServices.contains(serviceName)) {
-                LOGGER.i("无障碍服务已启用")
-                return
-            }
-
-            val newServices = if (currentServices.isEmpty() || currentServices == "null") {
-                serviceName
-            } else {
-                "$currentServices:$serviceName"
-            }
-
-            LOGGER.i("正在授予无障碍服务权限...")
-            Runtime.getRuntime().exec(arrayOf(
-                "settings", "put", "secure",
-                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-                newServices
-            )).waitFor()
-            Runtime.getRuntime().exec(arrayOf(
-                "settings", "put", "secure",
-                "accessibility_enabled",
-                "1"
-            )).waitFor()
-            LOGGER.i("无障碍服务权限授予完成")
-        } catch (e: Throwable) {
-            LOGGER.e(e, "授予无障碍服务权限失败")
-        }
-    }
-
     companion object {
-        private val LOGGER: Logger = Logger("StellarService")
-        private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
-        private const val FOLLOW_COMMANDS_FILE = "/storage/emulated/0/Android/data/$MANAGER_APPLICATION_ID/files/follow_commands.json"
-
-        private fun executeFollowServiceCommands() {
-            try {
-                val file = File(FOLLOW_COMMANDS_FILE)
-                if (!file.exists()) {
-                    LOGGER.i("跟随服务命令文件不存在，跳过执行")
-                    return
-                }
-
-                val json = file.readText()
-                val array = org.json.JSONArray(json)
-                if (array.length() == 0) {
-                    LOGGER.i("没有跟随服务命令需要执行")
-                    return
-                }
-
-                LOGGER.i("开始执行 ${array.length()} 个跟随服务命令")
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-                    val title = obj.optString("title", "未命名")
-                    val command = obj.getString("command")
-
-                    try {
-                        LOGGER.i("执行命令: $title")
-                        val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
-                        val exitCode = process.waitFor()
-                        LOGGER.i("命令执行完成: $title, 退出码: $exitCode")
-                    } catch (e: Exception) {
-                        LOGGER.e(e, "命令执行失败: $title")
-                    }
-                }
-            } catch (e: Exception) {
-                LOGGER.e(e, "读取或执行跟随服务命令失败")
-            }
-        }
+        private val LOGGER = Logger("StellarService")
 
         @JvmStatic
         fun main(args: Array<String>) {
-            DdmHandleAppName.setAppName("stellar_server", 0)
-
-            Looper.prepareMainLooper()
-            StellarService()
-            Looper.loop()
-        }
-
-        private fun waitSystemService(name: String?) {
-            while (ServiceManager.getService(name) == null) {
-                try {
-                    LOGGER.i("服务 $name 尚未启动，等待 1 秒。")
-                    Thread.sleep(1000)
-                } catch (e: InterruptedException) {
-                    LOGGER.w(e.message, e)
-                }
-            }
-        }
-
-        val managerApplicationInfo: ApplicationInfo?
-            get() = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
-
-        private fun sendBinderToClient(binder: Binder?, userId: Int) {
-            try {
-                for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                    PackageManager.GET_META_DATA.toLong(),
-                    userId
-                )) {
-                    if (pi == null || pi.applicationInfo == null || pi.applicationInfo!!.metaData == null) continue
-
-                    if (pi.applicationInfo!!.metaData.getString(StellarApiConstants.PERMISSION_KEY, "").split(",")
-                            .contains("stellar")
-                    ) {
-                        sendBinderToUserApp(binder, pi.packageName, userId)
-                    }
-                }
-            } catch (tr: Throwable) {
-                LOGGER.e("调用 getInstalledPackages 时发生异常", tr = tr)
-            }
-        }
-
-        private fun sendBinderToManger(binder: Binder?) {
-            for (userId in UserManagerApis.getUserIdsNoThrow()) {
-                sendBinderToManger(binder, userId)
-            }
-        }
-
-        fun sendBinderToManger(binder: Binder?, userId: Int) {
-            sendBinderToUserApp(binder, MANAGER_APPLICATION_ID, userId)
-        }
-
-        fun sendBinderToUserApp(
-            binder: Binder?,
-            packageName: String?,
-            userId: Int,
-            retry: Boolean = true
-        ) {
-            sendBinderInternal(
-                packageName = packageName,
-                userId = userId,
-                providerSuffix = ".stellar",
-                extraKey = "roro.stellar.manager.intent.extra.BINDER",
-                binderContainer = com.stellar.api.BinderContainer(binder),
-                logPrefix = "",
-                retry = retry,
-                onRetry = { sendBinderToUserApp(binder, packageName, userId, false) }
-            )
-        }
-
-        fun sendShizukuBinderToUserApp(
-            stellarService: StellarService?,
-            packageName: String?,
-            userId: Int
-        ) {
-            if (stellarService == null || packageName == null) return
-
-            sendBinderInternal(
-                packageName = packageName,
-                userId = userId,
-                providerSuffix = ".shizuku",
-                extraKey = ShizukuApiConstants.EXTRA_BINDER,
-                binderContainer = moe.shizuku.api.BinderContainer(stellarService.shizukuServiceIntercept.asBinder()),
-                logPrefix = "Shizuku ",
-                retry = false,
-                onRetry = null
-            )
-        }
-
-        private fun sendBinderInternal(
-            packageName: String?,
-            userId: Int,
-            providerSuffix: String,
-            extraKey: String,
-            binderContainer: android.os.Parcelable,
-            logPrefix: String,
-            retry: Boolean,
-            onRetry: (() -> Unit)?
-        ) {
-            if (packageName == null) return
-
-            try {
-                rikka.hidden.compat.DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
-                    packageName, 30_000L, userId, 316, "shell"
-                )
-                LOGGER.v("将 %d:%s 添加到省电临时白名单 30 秒", userId, packageName)
-            } catch (tr: Throwable) {
-                LOGGER.e(tr, "添加 %d:%s 到省电临时白名单失败", userId, packageName)
-            }
-
-            val name = "$packageName$providerSuffix"
-            var provider: android.content.IContentProvider? = null
-            val token: IBinder? = null
-
-            try {
-                provider = rikka.hidden.compat.ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
-                if (provider == null) {
-                    LOGGER.e("${logPrefix}provider 为 null %s %d", name, userId)
-                    return
-                }
-                if (!provider.asBinder().pingBinder()) {
-                    LOGGER.e("${logPrefix}provider 已失效 %s %d", name, userId)
-                    if (retry && onRetry != null) {
-                        rikka.hidden.compat.ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
-                        LOGGER.e("终止用户 %d 中的 %s 并重试", userId, packageName)
-                        Thread.sleep(1000)
-                        onRetry()
-                    }
-                    return
-                }
-
-                if (retry && onRetry != null) {
-                }
-
-                val extra = Bundle()
-                extra.putParcelable(extraKey, binderContainer)
-
-                val reply = roro.stellar.server.api.IContentProviderUtils.callCompat(provider, null, name, "sendBinder", null, extra)
-                if (reply != null) {
-                    LOGGER.i("已向用户 %d 中的应用 %s 发送 ${logPrefix}binder", userId, packageName)
-                } else {
-                    LOGGER.w("向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
-                }
-            } catch (tr: Throwable) {
-                LOGGER.e(tr, "向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
-            } finally {
-                if (provider != null) {
-                    try {
-                        rikka.hidden.compat.ActivityManagerApis.removeContentProviderExternal(name, token)
-                    } catch (tr: Throwable) {
-                        LOGGER.w(tr, "移除 ContentProvider 失败")
-                    }
-                }
-            }
+            ServerBootstrap.main(args)
         }
     }
 }
