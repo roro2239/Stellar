@@ -12,6 +12,7 @@ import rikka.hidden.compat.adapter.ProcessObserverAdapter
 import rikka.hidden.compat.adapter.UidObserverAdapter
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
+import roro.stellar.server.binder.BinderDistributor
 import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.UserHandleCompat.PER_USER_RANGE
@@ -54,7 +55,7 @@ object BinderSender {
 
             if (pi.packageName == MANAGER_APPLICATION_ID) {
                 LOGGER.i("sendBinder: 发送 Binder 到管理器: %s", packageName)
-                StellarService.sendBinderToManger(stellarService, userId)
+                BinderDistributor.sendBinderToManager(stellarService, userId)
                 return
             }
 
@@ -63,7 +64,7 @@ object BinderSender {
                 val permissions = metaData.getString(PERMISSION_KEY, "")
                 if (permissions.split(",").contains("stellar")) {
                     LOGGER.i("sendBinder: 发送 Binder 到用户应用: %s (通过 metaData)", packageName)
-                    StellarService.sendBinderToUserApp(stellarService, packageName, userId)
+                    BinderDistributor.sendBinderToUserApp(stellarService, packageName, userId)
                     return
                 }
 
@@ -77,7 +78,7 @@ object BinderSender {
                     }
 
                     LOGGER.i("sendBinder: 发送 Shizuku Binder 到应用: %s", packageName)
-                    StellarService.sendShizukuBinderToUserApp(stellarService, packageName, userId)
+                    BinderDistributor.sendShizukuBinderToUserApp(stellarService?.shizukuServiceIntercept, packageName, userId)
                     return
                 }
 

@@ -29,6 +29,10 @@
     public static void main(java.lang.String[]);
 }
 
+-keep class roro.stellar.server.bootstrap.ServerBootstrap {
+    public static void main(java.lang.String[]);
+}
+
 # Keep UserServiceStarter for app_process
 -keep class roro.stellar.server.userservice.UserServiceStarter {
     public static void main(java.lang.String[]);
