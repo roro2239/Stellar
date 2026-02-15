@@ -104,7 +104,6 @@
     <string name="port_set_to">端口已设置为 %s</string>
     <string name="service_logs">服务日志</string>
     <string name="service_logs_subtitle">查看 Stellar 服务运行日志</string>
-    <string name="new_version_found">发现新版本！</string>
     <string name="already_latest_version">已是最新版本</string>
     <string name="check_update_failed">检查更新失败</string>
     <string name="project_declaration">项目声明</string>
@@ -113,8 +112,6 @@
     <string name="visit_shizuku_project">访问 Shizuku 项目</string>
     <string name="check_update">检查更新</string>
     <string name="current_version">当前版本: %s</string>
-    <string name="downloading_progress">下载中... %d%%</string>
-    <string name="download_update">下载更新</string>
     <string name="checking">检查中...</string>
 
     <!-- Logs Screen -->
@@ -269,10 +266,7 @@
     <string name="adb_connection_failed">ADB连接失败 %1$s:%2$d</string>
 
     <!-- Update -->
-    <string name="start_downloading">开始下载更新</string>
-    <string name="download_failed_check_network">下载失败，请检查网络连接</string>
-    <string name="update_failed">更新失败：%s</string>
-    <string name="grant_install_permission">请授予安装未知应用权限</string>
-    <string name="cannot_open_settings">无法打开设置页面</string>
-    <string name="install_failed">安装失败：%s</string>
+    <string name="new_version_title">发现新版本 v%s</string>
+    <string name="go_to_download">前往下载</string>
+    <string name="no_download_available">暂无下载链接</string>
 </resources>

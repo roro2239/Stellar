@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,11 +26,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -40,22 +42,23 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
 import roro.stellar.manager.BuildConfig
 import roro.stellar.manager.R
@@ -87,8 +91,8 @@ import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.components.SettingsContentCard
 import roro.stellar.manager.ui.components.SettingsSwitchCard
 import roro.stellar.manager.ui.components.SettingsClickableCard
-import roro.stellar.manager.ui.features.settings.update.UpdateUtils
-import roro.stellar.manager.ui.features.settings.update.isNewerThan
+import roro.stellar.manager.util.update.AppUpdate
+import roro.stellar.manager.util.update.UpdateUtils
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
 import roro.stellar.manager.ui.theme.AppShape
@@ -103,6 +107,7 @@ import roro.stellar.Stellar
 
 private const val TAG = "SettingsScreen"
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -161,9 +166,8 @@ fun SettingsScreen(
     var currentThemeMode by remember { mutableStateOf(ThemePreferences.themeMode.value) }
 
     var isCheckingUpdate by remember { mutableStateOf(false) }
-    var updateAvailable by remember { mutableStateOf(false) }
-    var isDownloading by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableIntStateOf(0) }
+    var pendingUpdate by remember { mutableStateOf<AppUpdate?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     var shizukuCompatEnabled by remember { mutableStateOf(true) }
     var isServiceConnected by remember { mutableStateOf(false) }
@@ -455,17 +459,14 @@ fun SettingsScreen(
 
                         UpdateCard(
                             isCheckingUpdate = isCheckingUpdate,
-                            updateAvailable = updateAvailable,
-                            isDownloading = isDownloading,
-                            downloadProgress = downloadProgress,
                             onCheckUpdate = {
                                 isCheckingUpdate = true
                                 scope.launch {
                                     try {
                                         val update = UpdateUtils.checkUpdate()
-                                        if (update != null && update.isNewerThan(BuildConfig.VERSION_CODE)) {
-                                            updateAvailable = true
-                                            Toast.makeText(context, context.getString(R.string.new_version_found), Toast.LENGTH_SHORT).show()
+                                        if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
+                                            pendingUpdate = update
+                                            showUpdateDialog = true
                                         } else {
                                             Toast.makeText(context, context.getString(R.string.already_latest_version), Toast.LENGTH_SHORT).show()
                                         }
@@ -474,26 +475,6 @@ fun SettingsScreen(
                                     } finally {
                                         isCheckingUpdate = false
                                     }
-                                }
-                            },
-                            onDownloadUpdate = {
-                                if (!UpdateUtils.hasInstallPermission(context)) {
-                                    UpdateUtils.requestInstallPermission(context)
-                                    return@UpdateCard
-                                }
-
-                                isDownloading = true
-                                scope.launch {
-                                    val update = UpdateUtils.checkUpdate()
-                                    if (update != null) {
-                                        UpdateUtils.downloadAndInstall(
-                                            context,
-                                            update.url
-                                        ) { progress ->
-                                            downloadProgress = progress
-                                        }
-                                    }
-                                    isDownloading = false
                                 }
                             },
                             modifier = Modifier.weight(1f).fillMaxHeight()
@@ -513,17 +494,14 @@ fun SettingsScreen(
                 item {
                     UpdateCard(
                         isCheckingUpdate = isCheckingUpdate,
-                        updateAvailable = updateAvailable,
-                        isDownloading = isDownloading,
-                        downloadProgress = downloadProgress,
                         onCheckUpdate = {
                             isCheckingUpdate = true
                             scope.launch {
                                 try {
                                     val update = UpdateUtils.checkUpdate()
-                                    if (update != null && update.isNewerThan(BuildConfig.VERSION_CODE)) {
-                                        updateAvailable = true
-                                        Toast.makeText(context, context.getString(R.string.new_version_found), Toast.LENGTH_SHORT).show()
+                                    if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
+                                        pendingUpdate = update
+                                        showUpdateDialog = true
                                     } else {
                                         Toast.makeText(context, context.getString(R.string.already_latest_version), Toast.LENGTH_SHORT).show()
                                     }
@@ -532,26 +510,6 @@ fun SettingsScreen(
                                 } finally {
                                     isCheckingUpdate = false
                                 }
-                            }
-                        },
-                        onDownloadUpdate = {
-                            if (!UpdateUtils.hasInstallPermission(context)) {
-                                UpdateUtils.requestInstallPermission(context)
-                                return@UpdateCard
-                            }
-
-                            isDownloading = true
-                            scope.launch {
-                                val update = UpdateUtils.checkUpdate()
-                                if (update != null) {
-                                    UpdateUtils.downloadAndInstall(
-                                        context,
-                                        update.url
-                                    ) { progress ->
-                                        downloadProgress = progress
-                                    }
-                                }
-                                isDownloading = false
                             }
                         }
                     )
@@ -633,9 +591,29 @@ fun SettingsScreen(
                     }
                 }
             }
+            }
         }
     }
-}
+
+    if (showUpdateDialog && pendingUpdate != null) {
+        NewVersionDialog(
+            update = pendingUpdate!!,
+            onDismiss = { showUpdateDialog = false },
+            onDownload = {
+                showUpdateDialog = false
+                val url = pendingUpdate!!.downloadUrl
+                if (url.isNotEmpty()) {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                    } catch (_: Exception) {
+                        Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, context.getString(R.string.no_download_available), Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -684,11 +662,7 @@ private fun toggleBootComponent(
 @Composable
 private fun UpdateCard(
     isCheckingUpdate: Boolean,
-    updateAvailable: Boolean,
-    isDownloading: Boolean,
-    downloadProgress: Int,
     onCheckUpdate: () -> Unit,
-    onDownloadUpdate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -741,48 +715,86 @@ private fun UpdateCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (isDownloading) {
-                LinearProgressIndicator(
-                    progress = { downloadProgress / 100f },
-                    modifier = Modifier.fillMaxWidth()
+            Button(
+                onClick = onCheckUpdate,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isCheckingUpdate,
+                shape = AppShape.shapes.buttonMedium
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringResource(R.string.downloading_progress, downloadProgress),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    text = if (isCheckingUpdate) stringResource(R.string.checking) else stringResource(R.string.check_update),
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
-            } else if (updateAvailable) {
-                Button(
-                    onClick = onDownloadUpdate,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShape.shapes.buttonMedium
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.download_update), modifier = Modifier.padding(vertical = 4.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewVersionDialog(
+    update: AppUpdate,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit
+) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = AppShape.shapes.dialog,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(AppSpacing.dialogPadding)
+            ) {
+                Text(
+                    text = stringResource(R.string.new_version_title, update.versionName),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+
+                if (update.body.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        MarkdownText(
+                            markdown = update.body,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
                 }
-            } else {
-                Button(
-                    onClick = onCheckUpdate,
+
+                Spacer(modifier = Modifier.height(AppSpacing.dialogPadding))
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isCheckingUpdate,
-                    shape = AppShape.shapes.buttonMedium
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (isCheckingUpdate) stringResource(R.string.checking) else stringResource(R.string.check_update),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Spacer(modifier = Modifier.width(AppSpacing.dialogButtonSpacing))
+                    Button(
+                        onClick = onDownload,
+                        enabled = update.downloadUrl.isNotEmpty(),
+                        shape = AppShape.shapes.buttonMedium
+                    ) {
+                        Text(stringResource(R.string.go_to_download))
+                    }
                 }
             }
         }
