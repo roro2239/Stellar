@@ -107,7 +107,6 @@
     <string name="project_declaration">Acknowledgement</string>
     <string name="project_declaration_content">This project is built on Shizuku, an excellent open-source project that provides the ability to call system APIs via ADB or Root.</string>
     <string name="cannot_open_browser">Cannot open browser</string>
-    <string name="visit_shizuku_project">Visit Shizuku Project</string>
     <string name="check_update">Check for Updates</string>
     <string name="current_version">Current version: %s</string>
     <string name="checking">Checking...</string>

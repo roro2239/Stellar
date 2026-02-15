@@ -109,7 +109,6 @@
     <string name="project_declaration">项目声明</string>
     <string name="project_declaration_content">本项目基于 Shizuku 开发。Shizuku 是一个优秀的开源项目，提供了通过 ADB 或 Root 调用系统 API 的能力。</string>
     <string name="cannot_open_browser">无法打开浏览器</string>
-    <string name="visit_shizuku_project">访问 Shizuku 项目</string>
     <string name="check_update">检查更新</string>
     <string name="current_version">当前版本: %s</string>
     <string name="checking">检查中...</string>

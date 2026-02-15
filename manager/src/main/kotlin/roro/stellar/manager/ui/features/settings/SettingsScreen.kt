@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -67,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -569,26 +569,52 @@ fun SettingsScreen(
                      
                      Spacer(modifier = Modifier.height(12.dp))
                      
-                     Button(
-                         onClick = {
-                             val intent = Intent(Intent.ACTION_VIEW, "https://github.com/RikkaApps/Shizuku".toUri())
-                             try {
-                                 context.startActivity(intent)
-                             } catch (_: Exception) {
-                                 Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
-                             }
-                         },
+                     Row(
                          modifier = Modifier.fillMaxWidth(),
-                         shape = AppShape.shapes.buttonMedium
+                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                      ) {
-                         Icon(
-                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                             contentDescription = null,
-                             modifier = Modifier.size(18.dp)
-                         )
-                         Spacer(modifier = Modifier.width(8.dp))
-                         Text(stringResource(R.string.visit_shizuku_project), modifier = Modifier.padding(vertical = 4.dp))
-                    }
+                         Button(
+                             onClick = {
+                                 val intent = Intent(Intent.ACTION_VIEW, "https://github.com/RikkaApps/Shizuku".toUri())
+                                 try {
+                                     context.startActivity(intent)
+                                 } catch (_: Exception) {
+                                     Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
+                                 }
+                             },
+                             modifier = Modifier.weight(1f),
+                             shape = AppShape.shapes.buttonMedium
+                         ) {
+                             Icon(
+                                 painter = painterResource(R.drawable.ic_github),
+                                 contentDescription = null,
+                                 modifier = Modifier.size(18.dp)
+                             )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text("Shizuku", modifier = Modifier.padding(vertical = 4.dp))
+                         }
+
+                         Button(
+                             onClick = {
+                                 val intent = Intent(Intent.ACTION_VIEW, "https://github.com/roro2239/Stellar".toUri())
+                                 try {
+                                     context.startActivity(intent)
+                                 } catch (_: Exception) {
+                                     Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
+                                 }
+                             },
+                             modifier = Modifier.weight(1f),
+                             shape = AppShape.shapes.buttonMedium
+                         ) {
+                             Icon(
+                                 painter = painterResource(R.drawable.ic_github),
+                                 contentDescription = null,
+                                 modifier = Modifier.size(18.dp)
+                             )
+                             Spacer(modifier = Modifier.width(8.dp))
+                             Text("Stellar", modifier = Modifier.padding(vertical = 4.dp))
+                         }
+                     }
                 }
             }
             }
