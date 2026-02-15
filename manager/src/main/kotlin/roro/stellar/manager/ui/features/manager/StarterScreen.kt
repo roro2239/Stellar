@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -24,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -75,6 +77,7 @@ data class StepData(
     val isOptional: Boolean = false
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun StarterScreen(
@@ -108,8 +111,8 @@ internal fun StarterScreen(
         }
     }
 
-    LaunchedEffect(isCompleted) {
-        if (isCompleted) {
+    LaunchedEffect(isCompleted, steps) {
+        if (isCompleted && steps.none { it.status == StepStatus.ERROR } && errorMessage == null) {
             delay(3000)
             onClose()
         }
@@ -122,7 +125,7 @@ internal fun StarterScreen(
                 title = if (isRoot) "Root 启动" else "无线调试启动",
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
@@ -147,7 +150,7 @@ internal fun StarterScreen(
 
                 var visible by remember { mutableStateOf(false) }
                 LaunchedEffect(index) {
-                    delay(index * 100L) // 增加延迟，让卡片依次出现
+                    delay(index * 100L)
                     visible = true
                 }
 
@@ -155,7 +158,6 @@ internal fun StarterScreen(
                     visible = visible,
                     enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -24 }
                 ) {
-                    // 为状态变化添加动画
                     val animatedAlpha by animateFloatAsState(
                         targetValue = if (step.status == StepStatus.PENDING) 0.7f else 1f,
                         animationSpec = tween(300),
@@ -218,7 +220,7 @@ internal fun StarterScreen(
                         TimelineActionStep(
                             isLast = true,
                             title = "返回",
-                            icon = Icons.Filled.ArrowBack,
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
                             onClick = onClose
                         )
                     }
@@ -256,6 +258,7 @@ internal fun StarterScreen(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun StepActionContent(
     step: StepData,
@@ -287,7 +290,7 @@ private fun StepActionContent(
                                     putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
                                 }
                             )
-                        } catch (e: ActivityNotFoundException) {
+                        } catch (_: ActivityNotFoundException) {
                             Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -322,7 +325,7 @@ private fun StepActionContent(
                                         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                                     )
-                                } catch (e: ActivityNotFoundException) {
+                                } catch (_: ActivityNotFoundException) {
                                     Toast.makeText(context, "无法打开通知设置", Toast.LENGTH_SHORT).show()
                                 }
                             }
@@ -345,7 +348,7 @@ private fun StepActionContent(
                                     putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
                                 }
                             )
-                        } catch (e: ActivityNotFoundException) {
+                        } catch (_: ActivityNotFoundException) {
                             Toast.makeText(context, "无法打开开发者选项", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -642,11 +645,11 @@ private fun TimelineLogCard(
                     )
                     FilledTonalButton(
                         onClick = {
-                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
                                 as android.content.ClipboardManager
                             val packageInfo = try {
                                 context.packageManager.getPackageInfo(context.packageName, 0)
-                            } catch (e: Exception) { null }
+                            } catch (_: Exception) { null }
                             val versionName = packageInfo?.versionName ?: "未知"
                             val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                 packageInfo?.longVersionCode?.toString() ?: "未知"
@@ -678,7 +681,7 @@ private fun TimelineLogCard(
                                 }
                             }
                             clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Stellar 日志", logText))
-                            android.widget.Toast.makeText(context, "日志已复制到剪贴板", android.widget.Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "日志已复制到剪贴板", Toast.LENGTH_SHORT).show()
                         },
                         shape = AppShape.shapes.buttonSmall14
                     ) {
@@ -909,18 +912,15 @@ internal class StarterViewModel(
                     updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
                 }
             }
-            startPairingService()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) startPairingService()
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun startPairingService() {
         val intent = AdbPairingService.startIntent(context)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         } catch (e: Throwable) {
             Log.e(AppConstants.TAG, "启动前台服务失败", e)
         }
@@ -1056,7 +1056,7 @@ internal class StarterViewModel(
             val systemPort = EnvironmentUtils.getAdbTcpPort()
 
             if (hasValidCustomPort) {
-                val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", customPort!!)
+                val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", customPort)
                 if (canConnect) {
                     detectedPort = customPort
                     launch(Dispatchers.Main) {
@@ -1096,6 +1096,7 @@ internal class StarterViewModel(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun startMdnsDetection(hasValidCustomPort: Boolean, customPort: Int) {
         var handled = false
         val portObserver = Observer<Int> { discoveredPort ->
@@ -1174,7 +1175,7 @@ internal class StarterViewModel(
 
         _currentStepIndex.value = if (hasPermission) 2 else 1
 
-        if (hasPermission) {
+        if (hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             startPairingService()
         }
     }
