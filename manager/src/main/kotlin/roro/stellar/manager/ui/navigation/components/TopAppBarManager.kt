@@ -1,7 +1,9 @@
 package roro.stellar.manager.ui.navigation.components
 
+import android.content.res.Configuration
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -9,6 +11,7 @@ import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +45,18 @@ fun StandardLargeTopAppBar(
     actions: @Composable () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val colors = if (isLandscape) {
+        TopAppBarDefaults.largeTopAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surface
+        )
+    } else {
+        TopAppBarDefaults.largeTopAppBarColors()
+    }
+
     LargeTopAppBar(
         title = {
             Text(
@@ -52,7 +67,8 @@ fun StandardLargeTopAppBar(
         },
         navigationIcon = navigationIcon,
         actions = { actions() },
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
+        colors = colors
     )
 }
 
@@ -63,6 +79,18 @@ fun FixedTopAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable () -> Unit = {}
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val colors = if (isLandscape) {
+        TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surface
+        )
+    } else {
+        TopAppBarDefaults.topAppBarColors()
+    }
+
     androidx.compose.material3.TopAppBar(
         title = {
             Text(
@@ -71,7 +99,8 @@ fun FixedTopAppBar(
             )
         },
         navigationIcon = navigationIcon,
-        actions = { actions() }
+        actions = { actions() },
+        colors = colors
     )
 }
 

@@ -38,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.json.JSONArray
 import org.json.JSONObject
 import roro.stellar.manager.StellarSettings
+import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
@@ -101,11 +102,14 @@ fun TerminalScreen(
 ) {
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val state by terminalViewModel.state.collectAsState()
+    val screenConfig = LocalScreenConfig.current
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var showQuickExecuteDialog by remember { mutableStateOf(false) }
     var editingCommand by remember { mutableStateOf<CommandItem?>(null) }
     var commands by remember { mutableStateOf(loadCommands()) }
+
+    val gridColumns = if (screenConfig.isLandscape) 4 else 2
 
     Scaffold(
         modifier = Modifier
@@ -127,7 +131,7 @@ fun TerminalScreen(
         }
     ) { paddingValues ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(gridColumns),
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = paddingValues.calculateTopPadding() + AppSpacing.topBarContentSpacing,

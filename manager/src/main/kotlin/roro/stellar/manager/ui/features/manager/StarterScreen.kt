@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -98,8 +100,12 @@ internal fun StarterScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val outputLines by viewModel.outputLines.collectAsState()
     val command by viewModel.command.collectAsState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val scrollState = rememberScrollState()
+
+    val horizontalPadding = if (isLandscape) 48.dp else AppSpacing.screenHorizontalPadding
 
     LaunchedEffect(currentStepIndex, steps) {
         if (currentStepIndex > 0) {
@@ -137,7 +143,7 @@ internal fun StarterScreen(
                 .verticalScroll(scrollState)
                 .padding(paddingValues)
                 .padding(
-                    horizontal = AppSpacing.screenHorizontalPadding,
+                    horizontal = horizontalPadding,
                     vertical = AppSpacing.topBarContentSpacing
                 )
                 .padding(bottom = AppSpacing.screenBottomPadding)

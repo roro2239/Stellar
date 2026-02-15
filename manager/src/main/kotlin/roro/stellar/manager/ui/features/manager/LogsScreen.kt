@@ -1,5 +1,6 @@
 package roro.stellar.manager.ui.features.manager
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +73,8 @@ internal fun LogsScreen(
     var logs by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     var selectedLevels by remember { mutableStateOf(setOf("V", "D", "I", "W", "E")) }
     var searchQuery by remember { mutableStateOf("") }
@@ -156,22 +160,62 @@ internal fun LogsScreen(
             )
         }
     ) { paddingValues ->
-        LogsContent(
-            paddingValues = paddingValues,
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            selectedLevels = selectedLevels,
-            onLevelToggle = { level ->
-                selectedLevels = if (level in selectedLevels) {
-                    selectedLevels - level
-                } else {
-                    selectedLevels + level
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(200.dp)
+                        .fillMaxHeight()
+                        .padding(start = AppSpacing.screenHorizontalPadding, top = 8.dp, bottom = 8.dp)
+                ) {
+                    SearchBar(searchQuery = searchQuery, onSearchQueryChange = { searchQuery = it })
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LogFilterBarVertical(selectedLevels = selectedLevels, onLevelToggle = { level ->
+                        selectedLevels = if (level in selectedLevels) {
+                            selectedLevels - level
+                        } else {
+                            selectedLevels + level
+                        }
+                    })
                 }
-            },
-            filteredLogs = filteredLogs,
-            isLoading = isLoading,
-            listState = listState
-        )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    if (filteredLogs.isEmpty() && !isLoading) {
+                        EmptyLogsView()
+                    } else {
+                        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                            items(filteredLogs) { log -> LogItem(log = log) }
+                        }
+                    }
+                }
+            }
+        } else {
+            LogsContent(
+                paddingValues = paddingValues,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                selectedLevels = selectedLevels,
+                onLevelToggle = { level ->
+                    selectedLevels = if (level in selectedLevels) {
+                        selectedLevels - level
+                    } else {
+                        selectedLevels + level
+                    }
+                },
+                filteredLogs = filteredLogs,
+                isLoading = isLoading,
+                listState = listState
+            )
+        }
     }
 }
 
@@ -394,6 +438,50 @@ private fun LogFilterBar(
                 shape = AppShape.shapes.buttonSmall14,
                 color = if (isSelected) levelColor.copy(alpha = 0.12f)
                        else MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(AppShape.shapes.iconSmall)
+                            .background(if (isSelected) levelColor else levelColor.copy(alpha = 0.4f))
+                    )
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isSelected) levelColor else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogFilterBarVertical(
+    selectedLevels: Set<String>,
+    onLevelToggle: (String) -> Unit
+) {
+    val levels = listOf("V" to "Verbose", "D" to "Debug", "I" to "Info", "W" to "Warn", "E" to "Error")
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        levels.forEach { (level, name) ->
+            val isSelected = level in selectedLevels
+            val levelColor = getLevelColor(level)
+
+            Surface(
+                onClick = { onLevelToggle(level) },
+                shape = AppShape.shapes.buttonSmall14,
+                color = if (isSelected) levelColor.copy(alpha = 0.12f)
+                       else MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

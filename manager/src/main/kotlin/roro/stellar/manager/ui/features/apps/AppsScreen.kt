@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
@@ -61,6 +63,7 @@ import roro.stellar.manager.common.state.Status
 import roro.stellar.manager.domain.apps.AppInfo
 import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.manager.domain.apps.AppsViewModel
+import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarInfoDialog
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -83,6 +86,8 @@ fun AppsScreen(
     var showPermissionError by remember { mutableStateOf(false) }
     val isServiceRunning = Stellar.pingBinder()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val screenConfig = LocalScreenConfig.current
+    val gridColumns = screenConfig.gridColumns
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -223,7 +228,8 @@ fun AppsScreen(
                         }
                     }
                 } else {
-                    LazyColumn(
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(gridColumns),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding() + AppSpacing.topBarContentSpacing,
@@ -231,11 +237,12 @@ fun AppsScreen(
                             start = AppSpacing.screenHorizontalPadding,
                             end = AppSpacing.screenHorizontalPadding
                         ),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Stellar 原生应用分组
                         if (stellarApps.isNotEmpty()) {
-                            item {
+                            item(span = { GridItemSpan(gridColumns) }) {
                                 Text(
                                     text = "Stellar 应用",
                                     style = MaterialTheme.typography.titleSmall,
@@ -260,7 +267,7 @@ fun AppsScreen(
 
                         // Shizuku 兼容应用分组
                         if (shizukuApps.isNotEmpty()) {
-                            item {
+                            item(span = { GridItemSpan(gridColumns) }) {
                                 Text(
                                     text = "Shizuku 兼容应用",
                                     style = MaterialTheme.typography.titleSmall,
