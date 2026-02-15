@@ -132,8 +132,7 @@ class SelfStarterService : Service(), LifecycleOwner {
                 }
             },
             onSuccess = {
-                Log.i(AppConstants.TAG, "服务启动成功，执行跟随服务命令")
-                CommandExecutor.executeFollowServiceCommands()
+                Log.i(AppConstants.TAG, "服务启动成功")
                 lifecycleScope.launch(Dispatchers.Main) { stopSelf() }
             })
     }

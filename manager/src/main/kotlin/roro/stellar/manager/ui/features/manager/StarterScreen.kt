@@ -1018,7 +1018,6 @@ internal class StarterViewModel(
                 }
             }
             _isCompleted.value = true
-            launch(Dispatchers.IO) { CommandExecutor.executeFollowServiceCommands() }
 
             // 非 Root 模式下，检查是否需要切换到用户设置的端口
             if (!isRoot && detectedPort > 0) {

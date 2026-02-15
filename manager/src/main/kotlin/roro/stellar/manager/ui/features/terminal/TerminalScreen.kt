@@ -40,6 +40,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
+import java.io.File
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -93,6 +94,27 @@ private fun saveCommands(commands: List<CommandItem>) {
     }
     StellarSettings.getPreferences().edit {
         putString(COMMANDS_KEY, array.toString())
+    }
+
+    // 将 FOLLOW_SERVICE 命令保存到文件，供服务端读取执行
+    saveFollowServiceCommandsToFile(commands.filter { it.mode == CommandMode.FOLLOW_SERVICE })
+}
+
+private fun saveFollowServiceCommandsToFile(commands: List<CommandItem>) {
+    try {
+        val file = File("/storage/emulated/0/Android/data/roro.stellar.manager/files/follow_commands.json")
+        file.parentFile?.mkdirs()
+
+        val array = JSONArray()
+        commands.forEach { cmd ->
+            array.put(JSONObject().apply {
+                put("title", cmd.title)
+                put("command", cmd.command)
+            })
+        }
+        file.writeText(array.toString())
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
 
