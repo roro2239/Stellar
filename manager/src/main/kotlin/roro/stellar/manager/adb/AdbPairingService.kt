@@ -77,15 +77,6 @@ class AdbPairingService : Service() {
 
         discoveredPort = port
 
-        val alertNotification = Notification.Builder(this, alertNotificationChannel)
-            .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("已找到配对服务")
-            .setContentText("请输入配对码")
-            .addAction(replyNotificationAction(port))
-            .setAutoCancel(true)
-            .build()
-        getSystemService(NotificationManager::class.java).notify(alertNotificationId, alertNotification)
-
         val notification = createInputNotification(port)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -98,6 +89,15 @@ class AdbPairingService : Service() {
         } catch (e: Exception) {
             Log.e(tag, "更新通知失败", e)
             getSystemService(NotificationManager::class.java).notify(notificationId, notification)
+
+            val alertNotification = Notification.Builder(this, alertNotificationChannel)
+                .setSmallIcon(R.drawable.stellar_icon)
+                .setContentTitle("已找到配对服务")
+                .setContentText("请输入配对码")
+                .addAction(replyNotificationAction(port))
+                .setAutoCancel(true)
+                .build()
+            getSystemService(NotificationManager::class.java).notify(alertNotificationId, alertNotification)
         }
     }
 
