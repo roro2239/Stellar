@@ -269,6 +269,10 @@
 
     <!-- Update -->
     <string name="new_version_title">发现新版本 v%s</string>
-    <string name="go_to_download">前往下载</string>
+    <string name="go_to_download">浏览器下载</string>
     <string name="no_download_available">暂无下载链接</string>
+    <string name="select_update_source">选择更新源</string>
+    <string name="install">安装</string>
+    <string name="downloading">下载中</string>
+    <string name="download_failed">下载失败: %s</string>
 </resources>
