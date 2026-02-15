@@ -1,0 +1,94 @@
+name: Sync Release to Gitee
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 获取最新Release
+        id: release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let release;
+            if (context.eventName === 'release') {
+              release = context.payload.release;
+            } else {
+              const { data: releases } = await github.rest.repos.listReleases({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 1
+              });
+              release = releases[0];
+            }
+            core.setOutput('id', release.id);
+            core.setOutput('tag', release.tag_name);
+            core.setOutput('name', release.name);
+            core.setOutput('body', release.body || '');
+
+      - name: 同步到Gitee
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE }}
+          GH_RELEASE_ID: ${{ steps.release.outputs.id }}
+          TAG: ${{ steps.release.outputs.tag }}
+          NAME: ${{ steps.release.outputs.name }}
+          BODY: ${{ steps.release.outputs.body }}
+        run: |
+          echo "同步 Release: $TAG"
+
+          # 检查并删除已存在的 Release
+          EXISTING=$(curl -s "https://gitee.com/api/v5/repos/su-su2239/Stellar/releases/tags/$TAG?access_token=$GITEE_TOKEN")
+          EXISTING_ID=$(echo $EXISTING | jq -r '.id // empty')
+          if [ -n "$EXISTING_ID" ]; then
+            echo "删除已存在的 Release: $EXISTING_ID"
+            curl -s -X DELETE "https://gitee.com/api/v5/repos/su-su2239/Stellar/releases/$EXISTING_ID?access_token=$GITEE_TOKEN"
+            echo "等待 5 秒..."
+            sleep 5
+          fi
+
+          echo "创建新 Release..."
+
+          RESPONSE=$(curl -s -X POST \
+            "https://gitee.com/api/v5/repos/su-su2239/Stellar/releases" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg token "$GITEE_TOKEN" \
+              --arg tag "$TAG" \
+              --arg name "$NAME" \
+              --arg body "$BODY" \
+              '{access_token: $token, tag_name: $tag, name: $name, body: $body, target_commitish: "main", prerelease: false}')")
+
+          echo "Gitee API 响应: $RESPONSE"
+          GITEE_RELEASE_ID=$(echo $RESPONSE | jq -r '.id')
+          echo "Gitee Release ID: $GITEE_RELEASE_ID"
+
+          if [ "$GITEE_RELEASE_ID" != "null" ]; then
+            mkdir -p assets
+
+            ASSETS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$GH_RELEASE_ID/assets")
+
+            echo "$ASSETS" | jq -r '.[] | "\(.name) \(.url)"' | while read name url; do
+              echo "下载 $name..."
+              curl -L -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/octet-stream" \
+                -o "assets/$name" "$url"
+
+              echo "文件大小: $(ls -lh assets/$name | awk '{print $5}')"
+
+              UPLOAD_URL="https://gitee.com/api/v5/repos/su-su2239/Stellar/releases/${GITEE_RELEASE_ID}/attach_files"
+              echo "上传 $name 到: $UPLOAD_URL"
+              UPLOAD_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
+                --connect-timeout 30 \
+                --max-time 300 \
+                -X POST "$UPLOAD_URL" \
+                -F "access_token=$GITEE_TOKEN" \
+                -F "file=@assets/$name")
+              echo "上传响应: $UPLOAD_RESPONSE"
+            done
+          fi
