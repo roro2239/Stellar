@@ -46,7 +46,7 @@ class StellarApplication : Application() {
     }
 
     private fun setupFollowStartupListener() {
-        Stellar.addBinderReceivedListenerSticky({
+        Stellar.addBinderReceivedListener({
             // TODO 清理无用代码 此处为空
         })
     }
