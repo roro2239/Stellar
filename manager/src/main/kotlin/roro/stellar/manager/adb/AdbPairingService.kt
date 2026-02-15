@@ -1,6 +1,5 @@
 package roro.stellar.manager.adb
 
-import android.annotation.TargetApi
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
@@ -16,15 +15,18 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.Observer
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
 import kotlin.getValue
+import androidx.core.content.edit
 
-@TargetApi(Build.VERSION_CODES.R)
+@RequiresApi(Build.VERSION_CODES.R)
 class AdbPairingService : Service() {
 
     companion object {
@@ -39,8 +41,10 @@ class AdbPairingService : Service() {
         private const val replyRequestId = 1
         private const val stopRequestId = 2
         private const val retryRequestId = 3
+        private const val stopAndRetryRequestId = 4
         private const val startAction = "start"
         private const val stopAction = "stop"
+        private const val stopAndRetryAction = "stop_and_retry"
         private const val replyAction = "reply"
         private const val remoteInputResultKey = "paring_code"
         private const val portKey = "paring_code"
@@ -53,6 +57,9 @@ class AdbPairingService : Service() {
 
         private fun stopIntent(context: Context): Intent =
             Intent(context, AdbPairingService::class.java).setAction(stopAction)
+
+        private fun stopAndRetryIntent(context: Context): Intent =
+            Intent(context, AdbPairingService::class.java).setAction(stopAndRetryAction)
 
         private fun replyIntent(context: Context, port: Int): Intent =
             Intent(context, AdbPairingService::class.java).setAction(replyAction).putExtra(portKey, port)
@@ -140,25 +147,26 @@ class AdbPairingService : Service() {
             stopAction -> {
                 onStopSearch()
             }
+            stopAndRetryAction -> {
+                onStopAndRetry()
+            }
             else -> {
                 return START_NOT_STICKY
             }
         }
-        if (notification != null) {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(notificationId, notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-                } else {
-                    startForeground(notificationId, notification)
-                }
-            } catch (e: Throwable) {
-                Log.e(tag, "启动前台服务失败", e)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(notificationId, notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                startForeground(notificationId, notification)
+            }
+        } catch (e: Throwable) {
+            Log.e(tag, "启动前台服务失败", e)
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    && e is ForegroundServiceStartNotAllowedException) {
-                    getSystemService(NotificationManager::class.java).notify(notificationId, notification)
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && e is ForegroundServiceStartNotAllowedException) {
+                getSystemService(NotificationManager::class.java).notify(notificationId, notification)
             }
         }
         return START_REDELIVER_INTENT
@@ -211,6 +219,13 @@ class AdbPairingService : Service() {
         return createManualInputNotification(discoveredPort)
     }
 
+    private fun onStopAndRetry(): Notification {
+        stopSearch()
+        adbMdns?.destroy()
+        adbMdns = null
+        return onStart()
+    }
+
     private fun onSearchMaxRefresh() {
         Log.i(tag, "搜索次数已达上限")
         stopSearch()
@@ -228,6 +243,7 @@ class AdbPairingService : Service() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onInput(code: String, port: Int): Notification {
         if (port == -1) {
             return createManualInputNotification(-1)
@@ -354,9 +370,9 @@ class AdbPairingService : Service() {
             val currentPort = preferences.getString(StellarSettings.TCPIP_PORT, "")
 
             if (tcpipPortEnabled && currentPort.isNullOrEmpty()) {
-                preferences.edit()
-                    .putString(StellarSettings.TCPIP_PORT, port.toString())
-                    .apply()
+                preferences.edit {
+                    putString(StellarSettings.TCPIP_PORT, port.toString())
+                }
                 Log.i(tag, "自动设置 TCP 端口: $port")
             }
 
@@ -364,6 +380,7 @@ class AdbPairingService : Service() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun grantSecureSettingsPermission(port: Int) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
@@ -376,7 +393,7 @@ class AdbPairingService : Service() {
                     try {
                         java.net.Socket("127.0.0.1", port).close()
                         break
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         kotlinx.coroutines.delay(interval)
                         elapsed += interval
                     }
@@ -384,7 +401,7 @@ class AdbPairingService : Service() {
 
                 AdbClient("127.0.0.1", port, key).use { client ->
                     client.connect()
-                    val command = "pm grant ${packageName} android.permission.WRITE_SECURE_SETTINGS"
+                    val command = "pm grant $packageName android.permission.WRITE_SECURE_SETTINGS"
                     client.shellCommand(command) { output ->
                         Log.d(tag, "授权命令输出: ${String(output)}")
                     }
@@ -477,6 +494,25 @@ class AdbPairingService : Service() {
             .build()
     }
 
+    private val stopAndRetryNotificationAction by lazy {
+        val pendingIntent = PendingIntent.getService(
+            this,
+            stopAndRetryRequestId,
+            stopAndRetryIntent(this),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                PendingIntent.FLAG_IMMUTABLE
+            else
+                0
+        )
+
+        Notification.Action.Builder(
+            null,
+            "搜索不到配对",
+            pendingIntent
+        )
+            .build()
+    }
+
     private val replyNotificationAction by lazy {
         val remoteInput = RemoteInput.Builder(remoteInputResultKey).run {
             setLabel("配对码")
@@ -523,6 +559,7 @@ class AdbPairingService : Service() {
             .setSmallIcon(R.drawable.stellar_icon)
             .setContentTitle("正在搜索配对服务")
             .addAction(stopNotificationAction)
+            .addAction(stopAndRetryNotificationAction)
             .build()
     }
 
