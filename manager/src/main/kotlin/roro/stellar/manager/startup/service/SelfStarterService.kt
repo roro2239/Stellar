@@ -39,9 +39,9 @@ class SelfStarterService : Service(), LifecycleOwner {
     private val portObserver = Observer<Int> { p ->
         if (p in 1..65535) {
             Log.i(
-                AppConstants.TAG, "通过 mDNS 发现 ADB 端口: $p，直接启动 Stellar"
+                AppConstants.TAG, "通过 mDNS 发现 ADB 端口: $p"
             )
-            startStellarViaAdb("127.0.0.1", p)
+            changeTcpipPortThenStart("127.0.0.1", p)
         } else {
             Log.w(AppConstants.TAG, "mDNS返回无效端口: $p")
         }
@@ -63,27 +63,11 @@ class SelfStarterService : Service(), LifecycleOwner {
             return START_NOT_STICKY
         }
 
-        val (shouldChange, tcpipPort) = adbWirelessHelper.shouldChangePort(-1)
-        if (shouldChange && tcpipPort > 0) {
-            Log.i(AppConstants.TAG, "TCP/IP 端口已配置: $tcpipPort，尝试直接连接")
-            lifecycleScope.launch(Dispatchers.IO) {
-                val canConnect = adbWirelessHelper.hasAdbPermission("127.0.0.1", tcpipPort)
-                if (canConnect) {
-                    Log.i(AppConstants.TAG, "TCP/IP 端口 $tcpipPort 可用，直接启动")
-                    startStellarViaAdb("127.0.0.1", tcpipPort)
-                } else {
-                    Log.w(AppConstants.TAG, "TCP/IP 端口 $tcpipPort 不可用，回退到默认流程")
-                    launch(Dispatchers.Main) { fallbackStart() }
-                }
-            }
-        } else {
-            fallbackStart()
-        }
-
+        discoverAndStart()
         return START_NOT_STICKY
     }
 
-    private fun fallbackStart() {
+    private fun discoverAndStart() {
         val wirelessEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1
         Log.d(AppConstants.TAG, "无线调试启用设置: $wirelessEnabled")
 
@@ -106,9 +90,9 @@ class SelfStarterService : Service(), LifecycleOwner {
             if (port > 0) {
                 Log.i(
                     AppConstants.TAG,
-                    "通过 SystemProperties 发现 ADB 端口: $port，直接启动 Stellar。"
+                    "通过 SystemProperties 发现 ADB 端口: $port"
                 )
-                startStellarViaAdb("127.0.0.1", port)
+                changeTcpipPortThenStart("127.0.0.1", port)
             } else {
                 Log.e(
                     AppConstants.TAG,
@@ -117,6 +101,31 @@ class SelfStarterService : Service(), LifecycleOwner {
                 stopSelf()
             }
         }
+    }
+
+    private fun changeTcpipPortThenStart(host: String, currentPort: Int) {
+        val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(currentPort)
+        if (!shouldChange) {
+            startStellarViaAdb(host, currentPort)
+            return
+        }
+
+        Log.i(AppConstants.TAG, "切换 TCP/IP 端口: $currentPort -> $newPort")
+        adbWirelessHelper.changeTcpipPortAfterStart(
+            host = host,
+            port = currentPort,
+            newPort = newPort,
+            coroutineScope = lifecycleScope,
+            onOutput = { },
+            onError = {
+                Log.w(AppConstants.TAG, "切换端口失败，使用原端口 $currentPort 启动", it)
+                startStellarViaAdb(host, currentPort)
+            },
+            onSuccess = {
+                Log.i(AppConstants.TAG, "端口切换成功，使用新端口 $newPort 启动")
+                startStellarViaAdb(host, newPort)
+            }
+        )
     }
 
     private fun startStellarViaAdb(host: String, port: Int) {
