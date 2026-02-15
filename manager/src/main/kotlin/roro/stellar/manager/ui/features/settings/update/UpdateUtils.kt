@@ -10,6 +10,7 @@ import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import roro.stellar.manager.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -110,7 +111,7 @@ object UpdateUtils {
             Log.d(TAG, "开始下载更新: $downloadUrl")
             
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "开始下载更新", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.start_downloading), Toast.LENGTH_SHORT).show()
             }
             
             val request = Request.Builder()
@@ -123,7 +124,7 @@ object UpdateUtils {
             if (!response.isSuccessful) {
                 Log.e(TAG, "下载失败，响应码: ${response.code}")
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "下载失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.download_failed_check_network), Toast.LENGTH_SHORT).show()
                 }
                 return@withContext
             }
@@ -165,7 +166,7 @@ object UpdateUtils {
         } catch (e: Exception) {
             Log.e(TAG, "更新失败: ${e.message}", e)
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "更新失败：${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.update_failed, e.message ?: ""), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -180,10 +181,10 @@ object UpdateUtils {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
-            Toast.makeText(context, "请授予安装未知应用权限", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.grant_install_permission), Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Log.e(TAG, "跳转安装权限设置失败: ${e.message}", e)
-            Toast.makeText(context, "无法打开设置页面", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.cannot_open_settings), Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -212,7 +213,7 @@ object UpdateUtils {
             Log.d(TAG, "启动安装器")
         } catch (e: Exception) {
             Log.e(TAG, "安装失败: ${e.message}", e)
-            Toast.makeText(context, "安装失败：${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.install_failed, e.message ?: ""), Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -32,11 +32,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.json.JSONArray
 import org.json.JSONObject
+import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
@@ -46,9 +48,9 @@ import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import java.util.UUID
 
-enum class CommandMode(val title: String, val icon: ImageVector, val description: String) {
-    CLICK_EXECUTE("点击执行", Icons.Outlined.PlayArrow, "手动点击执行命令"),
-    FOLLOW_SERVICE("跟随服务", Icons.Outlined.Sync, "服务启动时自动执行")
+enum class CommandMode(val titleRes: Int, val icon: ImageVector, val descriptionRes: Int) {
+    CLICK_EXECUTE(R.string.mode_click_execute, Icons.Outlined.PlayArrow, R.string.mode_click_execute_desc),
+    FOLLOW_SERVICE(R.string.mode_follow_service, Icons.Outlined.Sync, R.string.mode_follow_service_desc)
 }
 
 data class CommandItem(
@@ -117,7 +119,7 @@ fun TerminalScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             StandardLargeTopAppBar(
-                title = "命令",
+                title = stringResource(R.string.command),
                 scrollBehavior = scrollBehavior
             )
         },
@@ -126,7 +128,7 @@ fun TerminalScreen(
                 onClick = { showQuickExecuteDialog = true },
                 shape = AppShape.shapes.cardMedium
             ) {
-                Icon(Icons.Outlined.Terminal, contentDescription = "快速执行")
+                Icon(Icons.Outlined.Terminal, contentDescription = stringResource(R.string.quick_execute))
             }
         }
     ) { paddingValues ->
@@ -307,7 +309,7 @@ private fun CommandCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "执行",
+                        contentDescription = stringResource(R.string.execute),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -319,7 +321,7 @@ private fun CommandCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Edit,
-                        contentDescription = "编辑",
+                        contentDescription = stringResource(R.string.edit),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -335,7 +337,7 @@ private fun CommandCard(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Delete,
-                        contentDescription = "删除",
+                        contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -381,7 +383,7 @@ private fun AddCommandCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "添加命令",
+                    text = stringResource(R.string.add_command),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -417,8 +419,8 @@ private fun CreateCommandDialog(
 
     StellarDialog(
         onDismissRequest = onDismiss,
-        title = "创建命令",
-        confirmText = if (selectedMode == CommandMode.CLICK_EXECUTE) "执行" else "保存",
+        title = stringResource(R.string.create_command),
+        confirmText = if (selectedMode == CommandMode.CLICK_EXECUTE) stringResource(R.string.execute) else stringResource(R.string.save),
         confirmEnabled = command.isNotBlank(),
         onConfirm = { onConfirm(title.ifBlank { command.take(20) }, command, selectedMode) },
         onDismiss = onDismiss
@@ -428,8 +430,8 @@ private fun CreateCommandDialog(
                 value = title,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("标题") },
-                placeholder = { Text("命令名称") },
+                label = { Text(stringResource(R.string.title_label)) },
+                placeholder = { Text(stringResource(R.string.command_name)) },
                 shape = AppShape.shapes.inputField,
                 singleLine = true
             )
@@ -438,8 +440,8 @@ private fun CreateCommandDialog(
                 value = command,
                 onValueChange = { command = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("命令") },
-                placeholder = { Text("输入要执行的命令") },
+                label = { Text(stringResource(R.string.command_label)) },
+                placeholder = { Text(stringResource(R.string.command_placeholder)) },
                 shape = AppShape.shapes.inputField,
                 singleLine = false,
                 maxLines = 3,
@@ -450,7 +452,7 @@ private fun CreateCommandDialog(
             )
 
             Text(
-                text = "选择模式",
+                text = stringResource(R.string.select_mode),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium
             )
@@ -507,13 +509,13 @@ private fun ModeSelectionItem(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = mode.title,
+                    text = stringResource(mode.titleRes),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = contentColor
                 )
                 Text(
-                    text = mode.description,
+                    text = stringResource(mode.descriptionRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f)
                 )
@@ -536,8 +538,8 @@ private fun EditCommandDialog(
 
     StellarDialog(
         onDismissRequest = onDismiss,
-        title = "编辑命令",
-        confirmText = "保存",
+        title = stringResource(R.string.edit_command),
+        confirmText = stringResource(R.string.save),
         confirmEnabled = command.isNotBlank(),
         onConfirm = { onConfirm(title, command) },
         onDismiss = onDismiss
@@ -560,7 +562,7 @@ private fun EditCommandDialog(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = item.mode.title,
+                        text = stringResource(item.mode.titleRes),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -572,7 +574,7 @@ private fun EditCommandDialog(
                 value = title,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("标题") },
+                label = { Text(stringResource(R.string.title_label)) },
                 shape = AppShape.shapes.inputField,
                 singleLine = true
             )
@@ -581,7 +583,7 @@ private fun EditCommandDialog(
                 value = command,
                 onValueChange = { command = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("命令") },
+                label = { Text(stringResource(R.string.command_label)) },
                 shape = AppShape.shapes.inputField,
                 singleLine = false,
                 maxLines = 3,
@@ -603,8 +605,8 @@ private fun QuickExecuteDialog(
 
     StellarDialog(
         onDismissRequest = onDismiss,
-        title = "快速执行",
-        confirmText = "执行",
+        title = stringResource(R.string.quick_execute),
+        confirmText = stringResource(R.string.execute),
         confirmEnabled = command.isNotBlank(),
         onConfirm = { onExecute(command) },
         onDismiss = onDismiss
@@ -613,8 +615,8 @@ private fun QuickExecuteDialog(
             value = command,
             onValueChange = { command = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("命令") },
-            placeholder = { Text("输入要执行的命令") },
+            label = { Text(stringResource(R.string.command_label)) },
+            placeholder = { Text(stringResource(R.string.command_placeholder)) },
             shape = AppShape.shapes.inputField,
             singleLine = false,
             maxLines = 3,
@@ -657,7 +659,7 @@ private fun ExecutionResultDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = if (state.isRunning) "执行中" else "执行结果",
+                            text = if (state.isRunning) stringResource(R.string.executing) else stringResource(R.string.execution_result),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -675,7 +677,7 @@ private fun ExecutionResultDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             InfoText(
-                                label = "返回值",
+                                label = stringResource(R.string.return_value),
                                 value = result.exitCode.toString(),
                                 isError = result.isError
                             )
@@ -685,7 +687,7 @@ private fun ExecutionResultDialog(
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                             )
                             InfoText(
-                                label = "耗时",
+                                label = stringResource(R.string.time_elapsed),
                                 value = "${result.executionTimeMs}ms",
                                 isError = false
                             )
@@ -696,7 +698,7 @@ private fun ExecutionResultDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val output = if (state.isRunning) {
-                    state.currentOutput.ifEmpty { "执行中..." }
+                    state.currentOutput.ifEmpty { stringResource(R.string.executing_ellipsis) }
                 } else {
                     result?.output ?: ""
                 }
@@ -733,21 +735,21 @@ private fun ExecutionResultDialog(
                             onClick = {
                                 val textToCopy = result.output
                                 if (ClipboardUtils.put(context, textToCopy)) {
-                                    Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, "复制失败", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.copy_failed), Toast.LENGTH_SHORT).show()
                                 }
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("复制全部")
+                            Text(stringResource(R.string.copy_all))
                         }
                     }
                     if (!state.isRunning) {
                         TextButton(
                             onClick = onDismiss
                         ) {
-                            Text("关闭")
+                            Text(stringResource(R.string.close))
                         }
                     }
                 }

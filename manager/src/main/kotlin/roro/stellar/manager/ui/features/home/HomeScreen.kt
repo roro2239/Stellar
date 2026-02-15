@@ -22,7 +22,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import roro.stellar.Stellar
+import roro.stellar.manager.R
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.startup.command.Starter
@@ -130,7 +132,7 @@ fun HomeScreen(
                         StartRootCard(
                             isRestart = isRunning && isRoot,
                             onStartClick = {
-                                Toast.makeText(context, "没有 Root 权限", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.no_root_permission), Toast.LENGTH_SHORT).show()
                             }
                         )
                     }
@@ -142,8 +144,8 @@ fun HomeScreen(
     if (showStopDialog) {
         StellarConfirmDialog(
             onDismissRequest = { showStopDialog = false },
-            title = "停止服务",
-            message = "Stellar 服务将被停止。",
+            title = stringResource(R.string.stop_service),
+            message = stringResource(R.string.stop_service_message),
             onConfirm = {
                 if (Stellar.pingBinder()) {
                     try {
@@ -160,13 +162,13 @@ fun HomeScreen(
     if (showAdbCommandDialog) {
         StellarDialog(
             onDismissRequest = { showAdbCommandDialog = false },
-            title = "查看指令",
-            confirmText = "复制",
+            title = stringResource(R.string.view_command),
+            confirmText = stringResource(R.string.copy),
             onConfirm = {
                 if (ClipboardUtils.put(context, Starter.adbCommand)) {
                     Toast.makeText(
                         context,
-                        "${Starter.adbCommand}\n已被复制到剪贴板。",
+                        context.getString(R.string.copied_to_clipboard),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

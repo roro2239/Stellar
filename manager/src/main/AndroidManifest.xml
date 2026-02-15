@@ -43,7 +43,6 @@
         android:fullBackupContent="@xml/backup_descriptor"
         android:icon="@drawable/stellar"
         android:label="Stellar"
-        android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning"

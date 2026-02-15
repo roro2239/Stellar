@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
+import roro.stellar.manager.R
 import roro.stellar.manager.adb.AdbKeyException
 import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbWirelessHelper
@@ -99,7 +100,7 @@ class SelfStarterService : Service(), LifecycleOwner {
 
     private fun startStellarViaAdb(host: String, port: Int) {
         lifecycleScope.launch(Dispatchers.Main) {
-            Toast.makeText(this@SelfStarterService, "正在启动Stellar服务…", Toast.LENGTH_SHORT)
+            Toast.makeText(this@SelfStarterService, getString(R.string.starting_stellar_service), Toast.LENGTH_SHORT)
                 .show()
         }
 
@@ -113,18 +114,18 @@ class SelfStarterService : Service(), LifecycleOwner {
                     when (e) {
                         is AdbKeyException -> Toast.makeText(
                             applicationContext,
-                            "ADB密钥错误",
+                            getString(R.string.adb_key_error),
                             Toast.LENGTH_LONG
                         ).show()
 
                         is ConnectException -> Toast.makeText(
                             applicationContext,
-                            "ADB连接失败 $host:$port",
+                            getString(R.string.adb_connection_failed, host, port),
                             Toast.LENGTH_LONG
                         ).show()
 
                         else -> Toast.makeText(
-                            applicationContext, "错误: ${e.message}", Toast.LENGTH_LONG
+                            applicationContext, getString(R.string.error_prefix, e.message ?: ""), Toast.LENGTH_LONG
                         ).show()
                     }
                     stopSelf()

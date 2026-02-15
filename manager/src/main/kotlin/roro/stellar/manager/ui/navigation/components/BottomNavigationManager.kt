@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import roro.stellar.manager.ui.navigation.routes.MainScreen
 
@@ -29,12 +30,12 @@ fun StandardBottomNavigation(
                 icon = {
                     Icon(
                         imageVector = if (isSelected) screen.iconFilled else screen.icon,
-                        contentDescription = screen.label,
+                        contentDescription = stringResource(screen.labelRes),
                         modifier = Modifier.size(24.dp)
                     )
                 },
                 label = {
-                    Text(text = screen.label)
+                    Text(text = stringResource(screen.labelRes))
                 },
                 selected = isSelected,
                 onClick = { onItemClick(index) }
@@ -63,12 +64,12 @@ fun StandardNavigationRail(
                     icon = {
                         Icon(
                             imageVector = if (isSelected) screen.iconFilled else screen.icon,
-                            contentDescription = screen.label,
+                            contentDescription = stringResource(screen.labelRes),
                             modifier = Modifier.size(24.dp)
                         )
                     },
                     label = {
-                        Text(text = screen.label)
+                        Text(text = stringResource(screen.labelRes))
                     },
                     selected = isSelected,
                     onClick = { onItemClick(index) }

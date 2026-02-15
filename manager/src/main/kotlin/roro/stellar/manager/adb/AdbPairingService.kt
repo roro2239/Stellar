@@ -92,8 +92,8 @@ class AdbPairingService : Service() {
 
             val alertNotification = Notification.Builder(this, alertNotificationChannel)
                 .setSmallIcon(R.drawable.stellar_icon)
-                .setContentTitle("已找到配对服务")
-                .setContentText("请输入配对码")
+                .setContentTitle(getString(R.string.pairing_service_found))
+                .setContentText(getString(R.string.enter_pairing_code))
                 .addAction(replyNotificationAction(port))
                 .setAutoCancel(true)
                 .build()
@@ -111,7 +111,7 @@ class AdbPairingService : Service() {
         notificationManager.createNotificationChannel(
             NotificationChannel(
                 notificationChannel,
-                "无线调试配对",
+                getString(R.string.wireless_debugging_pairing_channel),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 setSound(null, null)
@@ -122,7 +122,7 @@ class AdbPairingService : Service() {
         notificationManager.createNotificationChannel(
             NotificationChannel(
                 alertNotificationChannel,
-                "配对提醒",
+                getString(R.string.pairing_alert_channel),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 setShowBadge(true)
@@ -281,8 +281,8 @@ class AdbPairingService : Service() {
 
                 val successNotification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
-                    .setContentTitle("配对成功")
-                    .setContentText("正在搜索连接服务...")
+                    .setContentTitle(getString(R.string.pairing_success))
+                    .setContentText(getString(R.string.searching_connect_service))
                     .setOngoing(true)
                     .build()
 
@@ -299,8 +299,8 @@ class AdbPairingService : Service() {
 
                 searchConnectService()
             } else {
-                val title = "配对失败，正在重试..."
-                val text = "请稍候，将自动返回输入界面"
+                val title = getString(R.string.pairing_failed_retrying)
+                val text = getString(R.string.please_wait_auto_return)
 
                 Log.i(tag, "配对失败，正在重试")
 
@@ -443,8 +443,8 @@ class AdbPairingService : Service() {
             } else {
                 val notification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.stellar_icon)
-                    .setContentTitle("未找到连接服务")
-                    .setContentText("请手动打开应用启动服务")
+                    .setContentTitle(getString(R.string.connect_service_not_found))
+                    .setContentText(getString(R.string.please_open_app_manually))
                     .setAutoCancel(true)
                     .build()
 
@@ -469,7 +469,7 @@ class AdbPairingService : Service() {
 
         Notification.Action.Builder(
             null,
-            "停止搜索",
+            getString(R.string.stop_search),
             pendingIntent
         )
             .build()
@@ -488,7 +488,7 @@ class AdbPairingService : Service() {
 
         Notification.Action.Builder(
             null,
-            "重试",
+            getString(R.string.retry),
             pendingIntent
         )
             .build()
@@ -507,7 +507,7 @@ class AdbPairingService : Service() {
 
         Notification.Action.Builder(
             null,
-            "搜索不到配对",
+            getString(R.string.cannot_find_pairing),
             pendingIntent
         )
             .build()
@@ -515,7 +515,7 @@ class AdbPairingService : Service() {
 
     private val replyNotificationAction by lazy {
         val remoteInput = RemoteInput.Builder(remoteInputResultKey).run {
-            setLabel("配对码")
+            setLabel(getString(R.string.pairing_code))
             build()
         }
 
@@ -531,7 +531,7 @@ class AdbPairingService : Service() {
 
         Notification.Action.Builder(
             null,
-            "输入配对码",
+            getString(R.string.enter_pairing_code_action),
             pendingIntent
         )
             .addRemoteInput(remoteInput)
@@ -557,7 +557,7 @@ class AdbPairingService : Service() {
     private val searchingNotification by lazy {
         Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("正在搜索配对服务")
+            .setContentTitle(getString(R.string.searching_pairing_service))
             .addAction(stopNotificationAction)
             .addAction(stopAndRetryNotificationAction)
             .build()
@@ -565,7 +565,7 @@ class AdbPairingService : Service() {
 
     private fun createInputNotification(port: Int): Notification =
         Notification.Builder(this, notificationChannel)
-            .setContentTitle("已找到配对服务")
+            .setContentTitle(getString(R.string.pairing_service_found))
             .setSmallIcon(R.drawable.stellar_icon)
             .addAction(replyNotificationAction(port))
             .build()
@@ -573,14 +573,14 @@ class AdbPairingService : Service() {
     private fun createMaxRefreshNotification(): Notification =
         Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("未找到配对服务")
-            .setContentText("请确保已打开无线调试配对页面")
+            .setContentTitle(getString(R.string.pairing_service_not_found))
+            .setContentText(getString(R.string.ensure_wireless_debugging_open))
             .addAction(retryNotificationAction)
             .build()
 
     private val workingNotification by lazy {
         Notification.Builder(this, notificationChannel)
-            .setContentTitle("正在进行配对")
+            .setContentTitle(getString(R.string.pairing_in_progress))
             .setSmallIcon(R.drawable.stellar_icon)
             .build()
     }
@@ -588,8 +588,8 @@ class AdbPairingService : Service() {
     private fun createManualInputNotification(port: Int): Notification =
         Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.stellar_icon)
-            .setContentTitle("已停止搜索")
-            .setContentText(if (port > 0) "请输入配对码" else "未找到配对服务，请重试")
+            .setContentTitle(getString(R.string.search_stopped))
+            .setContentText(if (port > 0) getString(R.string.enter_pairing_code) else getString(R.string.pairing_service_not_found_retry))
             .addAction(if (port > 0) replyNotificationAction(port) else retryNotificationAction)
             .build()
 
