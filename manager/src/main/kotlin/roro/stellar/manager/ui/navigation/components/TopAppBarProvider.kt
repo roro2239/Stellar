@@ -29,9 +29,3 @@ fun TopAppBarProvider(
         content()
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun rememberCurrentTopAppBarState(): TopAppBarState {
-    return LocalTopAppBarState.current ?: rememberTopAppBarState()
-}

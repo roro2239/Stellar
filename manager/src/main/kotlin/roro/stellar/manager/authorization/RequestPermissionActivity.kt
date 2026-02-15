@@ -45,7 +45,6 @@ import roro.stellar.manager.util.Logger.Companion.LOGGER
 import roro.stellar.server.ktx.workerHandler
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 class RequestPermissionActivity : ComponentActivity() {
 
@@ -81,10 +80,11 @@ class RequestPermissionActivity : ComponentActivity() {
         Stellar.addBinderReceivedListenerSticky(listener, workerHandler)
 
         return try {
-            countDownLatch.await(5, TimeUnit.SECONDS)
-            true
-        } catch (e: TimeoutException) {
-            LOGGER.e(e, "在 5 秒内未收到 Binder")
+            val received = countDownLatch.await(5, TimeUnit.SECONDS)
+            if (!received) LOGGER.e("在 5 秒内未收到 Binder")
+            received
+        } catch (e: InterruptedException) {
+            LOGGER.e("等待 Binder 时被中断", e)
             false
         }
     }

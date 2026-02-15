@@ -103,4 +103,3 @@ fun FixedTopAppBar(
         colors = colors
     )
 }
-

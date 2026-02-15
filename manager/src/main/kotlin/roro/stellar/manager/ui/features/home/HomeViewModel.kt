@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.common.state.Resource
 import roro.stellar.manager.model.ServiceStatus
-import roro.stellar.manager.util.Logger.Companion.LOGGER
 
 class HomeViewModel : ViewModel() {
 
@@ -25,17 +24,8 @@ class HomeViewModel : ViewModel() {
         val uid = Stellar.uid
         val apiVersion = Stellar.version
         val patchVersion = Stellar.serverPatchVersion.let { if (it < 0) 0 else it }
-        
-        val seContext = if (apiVersion >= 6) {
-            try {
-                Stellar.sELinuxContext
-            } catch (tr: Throwable) {
-                LOGGER.w(tr, "getSELinuxContext")
-                null
-            }
-        } else null
 
-        return ServiceStatus(uid, apiVersion, patchVersion, seContext)
+        return ServiceStatus(uid, apiVersion, patchVersion)
     }
 
     fun reload() {

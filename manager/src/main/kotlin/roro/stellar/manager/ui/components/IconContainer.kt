@@ -14,38 +14,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
-
-enum class IconContainerSize {
-    Small, Medium, Large
-}
 
 @Composable
 fun IconContainer(
     icon: ImageVector,
     modifier: Modifier = Modifier,
-    size: IconContainerSize = IconContainerSize.Medium,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     iconColor: Color = MaterialTheme.colorScheme.primary,
     shape: Shape = CircleShape
 ) {
-    val containerSize = when (size) {
-        IconContainerSize.Small -> AppSpacing.iconContainerSizeSmall
-        IconContainerSize.Medium -> AppSpacing.iconContainerSize
-        IconContainerSize.Large -> AppSpacing.iconContainerSizeLarge
-    }
-
-    val iconSize = when (size) {
-        IconContainerSize.Small -> AppSpacing.iconSizeSmall
-        IconContainerSize.Medium -> AppSpacing.iconSize
-        IconContainerSize.Large -> AppSpacing.iconSizeLarge
-    }
-
     IconContainerBase(
         modifier = modifier,
-        containerSize = containerSize,
-        iconSize = iconSize,
+        containerSize = AppSpacing.iconContainerSize,
+        iconSize = AppSpacing.iconSize,
         containerColor = containerColor,
         iconColor = iconColor,
         shape = shape
@@ -54,7 +36,7 @@ fun IconContainer(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
-            modifier = Modifier.size(iconSize)
+            modifier = Modifier.size(AppSpacing.iconSize)
         )
     }
 }

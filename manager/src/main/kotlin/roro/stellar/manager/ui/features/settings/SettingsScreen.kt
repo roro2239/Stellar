@@ -656,21 +656,6 @@ private fun savePreference(key: String, value: Boolean) {
     StellarSettings.getPreferences().edit { putBoolean(key, value) }
 }
 
-private fun saveBootSettingsToExternalStorage(context: Context) {
-    try {
-        val prefs = StellarSettings.getPreferences()
-        val startOnBoot = prefs.getBoolean(KEEP_START_ON_BOOT, false)
-        val startOnBootWireless = prefs.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false)
-
-        val externalDir = context.getExternalFilesDir(null) ?: return
-        val settingsFile = java.io.File(externalDir, "boot_settings.txt")
-        settingsFile.writeText("$KEEP_START_ON_BOOT=$startOnBoot\n$KEEP_START_ON_BOOT_WIRELESS=$startOnBootWireless")
-        Log.i(TAG, "已保存开机启动设置到外部存储: root=$startOnBoot, wireless=$startOnBootWireless")
-    } catch (e: Exception) {
-        Log.e(TAG, "保存开机启动设置失败", e)
-    }
-}
-
 private fun toggleBootComponent(
     context: Context,
     componentName: ComponentName,
@@ -678,7 +663,6 @@ private fun toggleBootComponent(
     enabled: Boolean
 ): Boolean {
     savePreference(key, enabled)
-    saveBootSettingsToExternalStorage(context)
 
     try {
         context.packageManager.setComponentEnabled(componentName, enabled)
