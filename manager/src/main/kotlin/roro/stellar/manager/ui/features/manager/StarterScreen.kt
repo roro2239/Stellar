@@ -1,6 +1,7 @@
 package roro.stellar.manager.ui.features.manager
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -553,6 +554,7 @@ private fun TimelineStep(
     }
 }
 
+@SuppressLint("StringFormatInvalid")
 @Composable
 private fun TimelineLogCard(
     isLast: Boolean,
@@ -1004,6 +1006,7 @@ internal class StarterViewModel(
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     private fun setSuccess() {
         viewModelScope.launch {
             val steps = _steps.value
@@ -1052,6 +1055,7 @@ internal class StarterViewModel(
 
     // ========== ADB 检测流程 ==========
 
+    @SuppressLint("StringFormatInvalid")
     private fun startDetection() {
         viewModelScope.launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
@@ -1105,6 +1109,7 @@ internal class StarterViewModel(
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     @RequiresApi(Build.VERSION_CODES.R)
     private fun startMdnsDetection(hasValidCustomPort: Boolean, customPort: Int) {
         var handled = false
@@ -1375,6 +1380,7 @@ internal class StarterViewModel(
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     private fun getErrorMessage(code: Int): String = when (code) {
         9 -> context.getString(R.string.error_cannot_kill_process)
         3 -> context.getString(R.string.error_cannot_set_classpath)

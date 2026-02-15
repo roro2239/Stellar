@@ -1,5 +1,6 @@
 package roro.stellar.manager.ui.features.manager
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -65,6 +66,7 @@ import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
+@SuppressLint("LocalContextGetResourceValueCall", "StringFormatInvalid")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LogsScreen(

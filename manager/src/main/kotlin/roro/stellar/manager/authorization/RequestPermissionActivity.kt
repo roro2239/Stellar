@@ -63,7 +63,7 @@ class RequestPermissionActivity : ComponentActivity() {
         data.putString(REQUEST_PERMISSION_REPLY_PERMISSION, permission)
         try {
             Stellar.dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data)
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             LOGGER.e("dispatchPermissionConfirmationResult")
         }
     }
@@ -112,7 +112,7 @@ class RequestPermissionActivity : ComponentActivity() {
 
         val label = try {
             ai.loadLabel(packageManager).toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             ai.packageName
         }
 
