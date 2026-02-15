@@ -267,6 +267,10 @@
 
     <!-- Update -->
     <string name="new_version_title">New Version v%s</string>
-    <string name="go_to_download">Download</string>
+    <string name="go_to_download">Open in Browser</string>
     <string name="no_download_available">No download available</string>
+    <string name="select_update_source">Select Update Source</string>
+    <string name="install">Install</string>
+    <string name="downloading">Downloading</string>
+    <string name="download_failed">Download failed: %s</string>
 </resources>

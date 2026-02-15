@@ -8,7 +8,9 @@ import androidx.core.net.toUri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +49,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -58,6 +61,7 @@ import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -92,6 +96,9 @@ import roro.stellar.manager.ui.components.SettingsContentCard
 import roro.stellar.manager.ui.components.SettingsSwitchCard
 import roro.stellar.manager.ui.components.SettingsClickableCard
 import roro.stellar.manager.util.update.AppUpdate
+import roro.stellar.manager.util.update.ApkDownloader
+import roro.stellar.manager.util.update.DownloadState
+import roro.stellar.manager.util.update.UpdateSource
 import roro.stellar.manager.util.update.UpdateUtils
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
@@ -168,6 +175,10 @@ fun SettingsScreen(
     var isCheckingUpdate by remember { mutableStateOf(false) }
     var pendingUpdate by remember { mutableStateOf<AppUpdate?>(null) }
     var showUpdateDialog by remember { mutableStateOf(false) }
+    var showSourceDialog by remember { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableIntStateOf(0) }
+    var downloadError by remember { mutableStateOf<String?>(null) }
 
     var shizukuCompatEnabled by remember { mutableStateOf(true) }
     var isServiceConnected by remember { mutableStateOf(false) }
@@ -477,6 +488,7 @@ fun SettingsScreen(
                                     }
                                 }
                             },
+                            onLongClick = { showSourceDialog = true },
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
@@ -511,7 +523,8 @@ fun SettingsScreen(
                                     isCheckingUpdate = false
                                 }
                             }
-                        }
+                        },
+                        onLongClick = { showSourceDialog = true }
                     )
                 }
             }
@@ -624,9 +637,44 @@ fun SettingsScreen(
     if (showUpdateDialog && pendingUpdate != null) {
         NewVersionDialog(
             update = pendingUpdate!!,
-            onDismiss = { showUpdateDialog = false },
+            isDownloading = isDownloading,
+            downloadProgress = downloadProgress,
+            downloadError = downloadError,
+            onDismiss = {
+                if (!isDownloading) {
+                    showUpdateDialog = false
+                    downloadError = null
+                }
+            },
             onDownload = {
+                val url = pendingUpdate!!.downloadUrl
+                if (url.isNotEmpty()) {
+                    isDownloading = true
+                    downloadProgress = 0
+                    downloadError = null
+                    scope.launch {
+                        ApkDownloader.download(context, url, "stellar_${pendingUpdate!!.versionName}.apk").collect { state ->
+                            when (state) {
+                                is DownloadState.Progress -> downloadProgress = state.progress
+                                is DownloadState.Success -> {
+                                    isDownloading = false
+                                    showUpdateDialog = false
+                                    ApkDownloader.installApk(context, state.file)
+                                }
+                                is DownloadState.Error -> {
+                                    isDownloading = false
+                                    downloadError = state.message
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, context.getString(R.string.no_download_available), Toast.LENGTH_SHORT).show()
+                }
+            },
+            onOpenBrowser = {
                 showUpdateDialog = false
+                downloadError = null
                 val url = pendingUpdate!!.downloadUrl
                 if (url.isNotEmpty()) {
                     try {
@@ -634,8 +682,33 @@ fun SettingsScreen(
                     } catch (_: Exception) {
                         Toast.makeText(context, context.getString(R.string.cannot_open_browser), Toast.LENGTH_SHORT).show()
                     }
-                } else {
-                    Toast.makeText(context, context.getString(R.string.no_download_available), Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    if (showSourceDialog) {
+        UpdateSourceDialog(
+            onDismiss = { showSourceDialog = false },
+            onSourceSelected = { source ->
+                showSourceDialog = false
+                isCheckingUpdate = true
+                scope.launch {
+                    try {
+                        val update = UpdateUtils.checkUpdate(source)
+                        if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
+                            pendingUpdate = update
+                            showUpdateDialog = true
+                        } else if (update != null) {
+                            Toast.makeText(context, context.getString(R.string.already_latest_version), Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.check_update_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (_: Exception) {
+                        Toast.makeText(context, context.getString(R.string.check_update_failed), Toast.LENGTH_SHORT).show()
+                    } finally {
+                        isCheckingUpdate = false
+                    }
                 }
             }
         )
@@ -685,14 +758,21 @@ private fun toggleBootComponent(
     return true
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun UpdateCard(
     isCheckingUpdate: Boolean,
     onCheckUpdate: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -766,10 +846,14 @@ private fun UpdateCard(
 @Composable
 private fun NewVersionDialog(
     update: AppUpdate,
+    isDownloading: Boolean,
+    downloadProgress: Int,
+    downloadError: String?,
     onDismiss: () -> Unit,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
+    onOpenBrowser: () -> Unit
 ) {
-    BasicAlertDialog(onDismissRequest = onDismiss) {
+    BasicAlertDialog(onDismissRequest = { if (!isDownloading) onDismiss() }) {
         Surface(
             shape = AppShape.shapes.dialog,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -803,23 +887,100 @@ private fun NewVersionDialog(
                     }
                 }
 
+                AnimatedVisibility(visible = isDownloading || downloadError != null) {
+                    Column(modifier = Modifier.padding(top = AppSpacing.sectionSpacing)) {
+                        if (isDownloading) {
+                            LinearProgressIndicator(
+                                progress = { downloadProgress / 100f },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.downloading) + " $downloadProgress%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (downloadError != null) {
+                            Text(
+                                text = stringResource(R.string.download_failed, downloadError),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(AppSpacing.dialogPadding))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+
+                    Button(
+                        onClick = if (downloadError != null) onOpenBrowser else onDownload,
+                        enabled = update.downloadUrl.isNotEmpty() && !isDownloading,
+                        modifier = Modifier.weight(1f),
+                        shape = AppShape.shapes.buttonMedium
+                    ) {
+                        Text(stringResource(if (downloadError != null) R.string.go_to_download else R.string.install))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UpdateSourceDialog(
+    onDismiss: () -> Unit,
+    onSourceSelected: (UpdateSource) -> Unit
+) {
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = AppShape.shapes.dialog,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(AppSpacing.dialogPadding)
+            ) {
+                Text(
+                    text = stringResource(R.string.select_update_source),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
+
+                UpdateSource.entries.forEach { source ->
+                    Button(
+                        onClick = { onSourceSelected(source) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = AppShape.shapes.buttonMedium
+                    ) {
+                        Text(source.displayName)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.dialogPadding))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
                         Text(stringResource(R.string.cancel))
-                    }
-                    Spacer(modifier = Modifier.width(AppSpacing.dialogButtonSpacing))
-                    Button(
-                        onClick = onDownload,
-                        enabled = update.downloadUrl.isNotEmpty(),
-                        shape = AppShape.shapes.buttonMedium
-                    ) {
-                        Text(stringResource(R.string.go_to_download))
                     }
                 }
             }
