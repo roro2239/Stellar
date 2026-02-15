@@ -259,6 +259,9 @@
 
     <!-- Self Starter Service -->
     <string name="starting_stellar_service">Starting Stellar service…</string>
+    <string name="boot_start_success">Stellar service started successfully on boot</string>
+    <string name="boot_start_failed">Stellar boot start failed: %s</string>
+    <string name="boot_start_root_no_permission">Root access unavailable, boot start failed</string>
     <string name="adb_key_error">ADB key error</string>
     <string name="adb_connection_failed">ADB connection failed %1$s:%2$d</string>
 
