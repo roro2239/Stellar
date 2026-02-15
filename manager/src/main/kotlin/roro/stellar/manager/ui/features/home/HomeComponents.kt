@@ -17,11 +17,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Adb
 import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
@@ -93,8 +96,8 @@ fun ServerStatusCard(
                 HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                InfoRow("版本", "$apiVersion.$patchVersion", contentColor)
-                InfoRow("运行模式", user, contentColor)
+                InfoRow("版本", "$apiVersion.$patchVersion", contentColor, Icons.Default.Info)
+                InfoRow("运行模式", user, contentColor, if (isRoot) Icons.Default.Security else Icons.Default.Adb)
 
                 if (needsUpdate) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -119,19 +122,34 @@ fun ServerStatusCard(
 fun InfoRow(
     label: String,
     value: String,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = contentColor.copy(alpha = 0.7f)
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor.copy(alpha = 0.7f)
+            )
+        }
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
