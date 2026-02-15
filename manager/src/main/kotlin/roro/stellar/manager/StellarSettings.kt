@@ -3,7 +3,6 @@ package roro.stellar.manager
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
-import androidx.annotation.IntDef
 import roro.stellar.manager.util.EmptySharedPreferencesImpl
 import roro.stellar.manager.util.PortBlacklistUtils
 
@@ -52,20 +51,4 @@ object StellarSettings {
             }
         }
     }
-
-    @IntDef(LaunchMethod.UNKNOWN, LaunchMethod.ROOT, LaunchMethod.ADB)
-    @Retention(AnnotationRetention.SOURCE)
-    annotation class LaunchMethod {
-        companion object {
-            const val UNKNOWN = -1
-            const val ROOT = 0
-            const val ADB = 1
-        }
-    }
-
-    @LaunchMethod
-    fun getLastLaunchMode(): Int = getPreferences().getInt("mode", LaunchMethod.UNKNOWN)
-
-    fun setLastLaunchMode(@LaunchMethod method: Int) =
-        getPreferences().edit().putInt("mode", method).apply()
 }

@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -33,7 +32,7 @@ fun ModernStatusCard(
     } else {
         MaterialTheme.colorScheme.errorContainer
     }
-    
+
     val contentColor = if (isPositive) {
         MaterialTheme.colorScheme.onPrimaryContainer
     } else {
@@ -82,9 +81,9 @@ fun ModernStatusCard(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.width(16.dp))
-                    
+
                     Column {
                         Text(
                             text = title,
@@ -101,7 +100,7 @@ fun ModernStatusCard(
                         }
                     }
                 }
-                
+
                 if (statusText.isNotEmpty() || action != null) {
                     Column(
                         horizontalAlignment = Alignment.End,
@@ -128,7 +127,7 @@ fun ModernStatusCard(
                     }
                 }
             }
-            
+
             content()
         }
     }
@@ -175,9 +174,9 @@ fun ModernActionCard(
                         modifier = Modifier.size(24.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
@@ -191,9 +190,9 @@ fun ModernActionCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Button(
                 onClick = onButtonClick,
                 modifier = Modifier.fillMaxWidth(),
@@ -202,74 +201,6 @@ fun ModernActionCard(
                 Text(
                     text = buttonText,
                     modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ModernSettingCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    showArrow: Boolean = true,
-    iconBackgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
-    cardBackgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = AppShape.shapes.cardLarge,
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-        colors = CardDefaults.cardColors(
-            containerColor = cardBackgroundColor
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(AppShape.shapes.iconSmall)
-                    .background(color = iconBackgroundColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            if (showArrow) {
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

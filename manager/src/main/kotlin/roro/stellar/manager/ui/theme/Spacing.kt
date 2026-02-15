@@ -15,16 +15,10 @@ object AppSpacing {
     val selectorItemSpacing = 4.dp
     val selectorItemHeight = 40.dp
     val selectorItemHeightSmall = 36.dp
-    val elementSpacing = 8.dp
     val sectionSpacing = 16.dp
     val cardPadding = 16.dp
-    val cardPaddingLarge = 20.dp
     val iconContainerSize = 40.dp
-    val iconContainerSizeLarge = 48.dp
-    val iconContainerSizeSmall = 36.dp
     val iconSize = 22.dp
-    val iconSizeLarge = 24.dp
-    val iconSizeSmall = 18.dp
     val titleSubtitleSpacing = 4.dp
     val iconTextSpacing = 12.dp
 }

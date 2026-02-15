@@ -5,8 +5,6 @@ import android.content.pm.PackageInfo
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.annotation.MainThread
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -34,16 +32,6 @@ fun ComponentActivity.appsViewModel() = viewModels<AppsViewModel> {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return AppsViewModel(this@appsViewModel) as T
-        }
-    }
-}
-
-@MainThread
-fun Fragment.appsViewModel() = activityViewModels<AppsViewModel> { 
-    object : androidx.lifecycle.ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return AppsViewModel(requireContext()) as T
         }
     }
 }
