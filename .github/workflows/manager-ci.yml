@@ -20,6 +20,8 @@ jobs:
     steps:
     - name: 检出代码
       uses: actions/checkout@v4
+      with:
+        submodules: true
       
     - name: 设置 JDK 21
       uses: actions/setup-java@v4
