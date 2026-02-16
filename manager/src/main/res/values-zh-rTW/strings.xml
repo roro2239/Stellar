@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_home">啟動</string>
+    <string name="nav_apps">授權應用</string>
+    <string name="nav_terminal">命令</string>
+    <string name="nav_settings">設定</string>
+
+    <!-- Common -->
+    <string name="confirm">確定</string>
+    <string name="cancel">取消</string>
+    <string name="back">返回</string>
+    <string name="copy">複製</string>
+    <string name="close">關閉</string>
+    <string name="save">儲存</string>
+    <string name="retry">重試</string>
+    <string name="refresh">重新整理</string>
+    <string name="execute">執行</string>
+    <string name="delete">刪除</string>
+    <string name="edit">編輯</string>
+    <string name="start">啟動</string>
+    <string name="stop">停止</string>
+    <string name="restart">重新啟動</string>
+    <string name="unknown">未知</string>
+    <string name="error_prefix">錯誤: %s</string>
+    <string name="press_again_to_exit">再按一次退出應用</string>
+    <string name="no_root_permission">沒有 Root 權限</string>
+    <string name="copied_to_clipboard">已複製到剪貼簿</string>
+    <string name="copy_failed">複製失敗</string>
+
+    <!-- Theme -->
+    <string name="theme_light">淺色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_auto">跟隨系統</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">服務狀態</string>
+    <string name="service_running">正在執行</string>
+    <string name="service_not_running">未執行</string>
+    <string name="version">版本</string>
+    <string name="run_mode">執行模式</string>
+    <string name="upgradable_to_version">可升級到版本 %1$d.%2$d</string>
+    <string name="root_restart">Root 重新啟動</string>
+    <string name="root_start">Root 啟動</string>
+    <string name="root_start_subtitle">透過 Root 權限啟動 Stellar 服務</string>
+    <string name="wireless_debugging">無線偵錯</string>
+    <string name="wireless_debugging_subtitle">透過無線偵錯啟動 Stellar 服務</string>
+    <string name="wired_adb">有線 ADB</string>
+    <string name="wired_adb_subtitle">透過 ADB 啟動 Stellar 服務</string>
+    <string name="view">檢視</string>
+    <string name="stop_service">停止服務</string>
+    <string name="stop_service_message">Stellar 服務將被停止。</string>
+    <string name="view_command">檢視指令</string>
+    <string name="copied_to_clipboard_with_content">%s\n已被複製到剪貼簿。</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">授權應用</string>
+    <string name="service_not_running_title">服務未執行</string>
+    <string name="service_not_running_hint">請先啟動 Stellar 服務\n服務執行後可管理授權應用</string>
+    <string name="load_failed">載入失敗</string>
+    <string name="unknown_error">未知錯誤</string>
+    <string name="no_authorized_apps">暫無授權應用</string>
+    <string name="no_authorized_apps_hint">目前沒有應用請求 Stellar 權限\n應用請求權限後會在這裡顯示</string>
+    <string name="stellar_apps">Stellar 應用</string>
+    <string name="shizuku_compat_apps">Shizuku 相容應用</string>
+    <string name="adb_permission_restricted">ADB 權限受限</string>
+    <string name="adb_permission_restricted_message">您的裝置製造商很可能限制了 ADB 的權限。\n\n請在開發者選項中調整相關設定，或嘗試使用 Root 模式執行。</string>
+    <string name="permission_ask">詢問</string>
+    <string name="permission_allow">允許</string>
+    <string name="permission_deny">拒絕</string>
+    <string name="shizuku_permission">Shizuku 權限</string>
+    <string name="shizuku_permission_subtitle">使用 Shizuku 功能</string>
+    <string name="basic_permission">基礎權限</string>
+    <string name="basic_permission_subtitle">使用 Stellar 功能</string>
+    <string name="follow_startup">跟隨啟動</string>
+    <string name="follow_startup_subtitle">隨 Stellar 一起啟動</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">主題</string>
+    <string name="theme_subtitle">選擇應用的外觀主題</string>
+    <string name="boot_start_wireless">開機啟動（無線偵錯）</string>
+    <string name="boot_start_wireless_subtitle">Stellar 可以透過無線偵錯開機啟動</string>
+    <string name="boot_start_root">開機啟動（Root）</string>
+    <string name="boot_start_root_subtitle">Stellar 可以透過 Root 權限開機啟動</string>
+    <string name="auto_enable_accessibility">將自動開啟無障礙服務以實現開機自啟</string>
+    <string name="shizuku_compat_layer">Shizuku 相容層</string>
+    <string name="shizuku_compat_layer_subtitle">允許 Shizuku 應用透過 Stellar 服務執行</string>
+    <string name="shizuku_compat_enabled">Shizuku 相容層已啟用</string>
+    <string name="shizuku_compat_disabled">Shizuku 相容層已停用</string>
+    <string name="setting_failed">設定失敗: %s</string>
+    <string name="drop_privileges">降權啟動</string>
+    <string name="drop_privileges_subtitle">Root 啟動後降權到 Shell 使用者執行</string>
+    <string name="tcpip_port">TCP/IP 連接埠</string>
+    <string name="tcpip_port_subtitle">透過無線偵錯啟動後，將 adbd 的 TCP/IP 連接埠切換到指定連接埠</string>
+    <string name="cannot_generate_safe_port">無法產生安全連接埠，請手動設定</string>
+    <string name="auto_generated_safe_port">已自動產生安全連接埠 %s</string>
+    <string name="port_number">連接埠號</string>
+    <string name="port_example">例如: 5555</string>
+    <string name="cannot_generate_safe_port_manual">無法產生安全連接埠，請手動輸入</string>
+    <string name="port_invalid">連接埠號無效，請輸入 1-65535 之間的數字</string>
+    <string name="port_blacklisted_warning">警告：連接埠 %d 可能被惡意掃描，建議使用其他連接埠</string>
+    <string name="port_set_to">連接埠已設定為 %s</string>
+    <string name="service_logs">服務日誌</string>
+    <string name="service_logs_subtitle">檢視 Stellar 服務執行日誌</string>
+    <string name="already_latest_version">已是最新版本</string>
+    <string name="check_update_failed">檢查更新失敗</string>
+    <string name="project_declaration">專案聲明</string>
+    <string name="project_declaration_content">本專案基於 Shizuku 開發。Shizuku 是一個優秀的開源專案，提供了透過 ADB 或 Root 呼叫系統 API 的能力。</string>
+    <string name="cannot_open_browser">無法開啟瀏覽器</string>
+    <string name="check_update">檢查更新</string>
+    <string name="current_version">目前版本: %s</string>
+    <string name="checking">檢查中...</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">服務未執行</string>
+    <string name="load_logs_failed">載入日誌失敗: %s</string>
+    <string name="logs_cleared">日誌已清除</string>
+    <string name="clear_logs_failed">清除日誌失敗: %s</string>
+    <string name="no_logs_to_copy">沒有日誌可複製</string>
+    <string name="logs_copied">日誌已複製到剪貼簿</string>
+    <string name="copy_logs">複製日誌</string>
+    <string name="clear_logs">清除日誌</string>
+    <string name="search_logs">搜尋日誌...</string>
+    <string name="clear">清除</string>
+    <string name="no_logs">暫無日誌</string>
+    <string name="logs_will_show">日誌將在服務執行時顯示</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">點擊執行</string>
+    <string name="mode_click_execute_desc">手動點擊執行命令</string>
+    <string name="mode_follow_service">跟隨服務</string>
+    <string name="mode_follow_service_desc">服務啟動時自動執行</string>
+    <string name="command">命令</string>
+    <string name="quick_execute">快速執行</string>
+    <string name="add_command">新增命令</string>
+    <string name="create_command">建立命令</string>
+    <string name="edit_command">編輯命令</string>
+    <string name="title_label">標題</string>
+    <string name="command_name">命令名稱</string>
+    <string name="command_label">命令</string>
+    <string name="command_placeholder">輸入要執行的命令</string>
+    <string name="select_mode">選擇模式</string>
+    <string name="executing">執行中</string>
+    <string name="execution_result">執行結果</string>
+    <string name="return_value">回傳值</string>
+    <string name="time_elapsed">耗時</string>
+    <string name="executing_ellipsis">執行中...</string>
+    <string name="copy_all">複製全部</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">Root 啟動</string>
+    <string name="wireless_debugging_start">無線偵錯啟動</string>
+    <string name="error_report">錯誤報告</string>
+    <string name="enable_wireless_debugging">開啟無線偵錯</string>
+    <string name="cannot_open_dev_options">無法開啟開發者選項</string>
+    <string name="open_dev_options">開啟開發者選項</string>
+    <string name="already_enabled_continue">已開啟，繼續</string>
+    <string name="grant_notification_permission">授權通知權限</string>
+    <string name="need_notification_permission">需要通知權限才能繼續配對</string>
+    <string name="cannot_open_notification_settings">無法開啟通知設定</string>
+    <string name="grant_permission">授予權限</string>
+    <string name="wireless_debugging_pairing">無線偵錯配對</string>
+    <string name="open_wireless_debugging_settings">開啟無線偵錯設定</string>
+    <string name="pairing_done_continue">配對完成，繼續</string>
+    <string name="check_root_permission">檢查 Root 權限</string>
+    <string name="waiting_check">等待檢查</string>
+    <string name="check_existing_service">檢查現有服務</string>
+    <string name="waiting_execute">等待執行</string>
+    <string name="start_service_process">啟動服務程序</string>
+    <string name="wait_binder_response">等待 Binder 回應</string>
+    <string name="start_complete">啟動完成</string>
+    <string name="waiting_complete">等待完成</string>
+    <string name="detect_adb_port">偵測 ADB 連接埠</string>
+    <string name="waiting_detect">等待偵測</string>
+    <string name="detect_pairing_status">偵測配對狀態</string>
+    <string name="connect_adb_service">連線 ADB 服務</string>
+    <string name="waiting_connect">等待連線</string>
+    <string name="verify_connection">驗證連線狀態</string>
+    <string name="waiting_verify">等待驗證</string>
+    <string name="detecting_adb_port">正在偵測可用的 ADB 連接埠...</string>
+    <string name="port_available">連接埠 %d 可用</string>
+    <string name="already_paired">已配對</string>
+    <string name="no_port_detected">未偵測到可用連接埠</string>
+    <string name="need_pairing">需要配對</string>
+    <string name="enable_wireless_debugging_hint">請在開發者選項中開啟無線偵錯功能</string>
+    <string name="notification_permission_granted">通知權限已授予</string>
+    <string name="notification_permission_required">必須授予通知權限才能進行配對</string>
+    <string name="pairing_instruction">在無線偵錯頁面點擊「使用配對碼配對裝置」，然後在通知中心輸入配對碼</string>
+    <string name="connection_success">連線成功</string>
+    <string name="verification_passed">驗證通過</string>
+    <string name="checking_ellipsis">正在檢查...</string>
+    <string name="completed">已完成</string>
+    <string name="starting_ellipsis">正在啟動...</string>
+    <string name="waiting_response">等待回應...</string>
+    <string name="pairing_failed_retry">配對未成功，請重新配對</string>
+    <string name="need_pairing_to_connect">需要配對才能連線</string>
+    <string name="checking_root_permission">正在檢查 Root 權限...</string>
+    <string name="root_permission_acquired">Root 權限已取得</string>
+    <string name="error_cannot_kill_process">無法終止程序，請先從應用中停止現有服務</string>
+    <string name="error_cannot_set_classpath">無法設定 CLASSPATH</string>
+    <string name="error_cannot_create_process">無法建立程序</string>
+    <string name="error_app_process_failed">app_process 執行失敗</string>
+    <string name="error_permission_insufficient">權限不足，需要 root 或 adb 權限</string>
+    <string name="error_cannot_get_app_path">無法取得應用路徑</string>
+    <string name="error_selinux_blocked">SELinux 阻止了應用透過 binder 連線</string>
+    <string name="error_start_failed_exit_code">啟動失敗，退出碼: %d</string>
+    <string name="error_wait_service_timeout">等待服務啟動逾時\n\n服務程序可能已崩潰，請檢查裝置日誌</string>
+    <string name="error_start_failed_check_logs">服務啟動失敗，請查看日誌了解詳情</string>
+    <string name="service_started_successfully">服務已成功啟動</string>
+    <string name="execution_failed">執行失敗</string>
+    <string name="startup_log">啟動日誌</string>
+    <string name="device_info">裝置資訊:</string>
+    <string name="device_model">  機型: %s</string>
+    <string name="android_version">  Android 版本: %s</string>
+    <string name="app_version">  應用版本: %s</string>
+    <string name="time_label">  時間: %s</string>
+    <string name="executed_command">執行命令:</string>
+    <string name="command_output">命令輸出:</string>
+    <string name="error_info">錯誤資訊:</string>
+    <string name="log_copied">日誌已複製到剪貼簿</string>
+    <string name="connecting_ellipsis">正在連線...</string>
+    <string name="switching_port">正在切換到使用者設定的連接埠 %d...</string>
+    <string name="port_switch_failed">連接埠切換失敗: %s</string>
+    <string name="port_switched_to">連接埠已切換到 %d</string>
+    <string name="pairing_complete">配對完成</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">授權請求</string>
+    <string name="permission_allow_prefix">要允許 </string>
+    <string name="permission_use_stellar"> 使用 Stellar 嗎？</string>
+    <string name="permission_follow_startup"> 每次都跟隨 Stellar 一起啟動嗎？</string>
+    <string name="permission_use_generic"> 使用 %s 嗎？</string>
+    <string name="always_allow">始終允許</string>
+    <string name="allow_once">僅此一次</string>
+    <string name="deny">拒絕</string>
+    <string name="deny_and_dont_ask">拒絕且不再詢問</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">已找到配對服務</string>
+    <string name="enter_pairing_code">請輸入配對碼</string>
+    <string name="wireless_debugging_pairing_channel">無線偵錯配對</string>
+    <string name="pairing_alert_channel">配對提醒</string>
+    <string name="searching_pairing_service">正在搜尋配對服務</string>
+    <string name="pairing_success">配對成功</string>
+    <string name="searching_connect_service">正在搜尋連線服務...</string>
+    <string name="pairing_failed_retrying">配對失敗，正在重試...</string>
+    <string name="please_wait_auto_return">請稍候，將自動返回輸入介面</string>
+    <string name="connect_service_not_found">未找到連線服務</string>
+    <string name="please_open_app_manually">請手動開啟應用啟動服務</string>
+    <string name="stop_search">停止搜尋</string>
+    <string name="cannot_find_pairing">搜尋不到配對</string>
+    <string name="pairing_code">配對碼</string>
+    <string name="enter_pairing_code_action">輸入配對碼</string>
+    <string name="pairing_service_not_found">未找到配對服務</string>
+    <string name="ensure_wireless_debugging_open">請確保已開啟無線偵錯配對頁面</string>
+    <string name="pairing_in_progress">正在進行配對</string>
+    <string name="search_stopped">已停止搜尋</string>
+    <string name="pairing_service_not_found_retry">未找到配對服務，請重試</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">正在啟動 Stellar 服務…</string>
+    <string name="boot_start_success">Stellar 服務已在開機時成功啟動</string>
+    <string name="boot_start_failed">Stellar 開機啟動失敗: %s</string>
+    <string name="boot_start_root_no_permission">Root 權限不可用，開機啟動失敗</string>
+    <string name="adb_key_error">ADB 金鑰錯誤</string>
+    <string name="adb_connection_failed">ADB 連線失敗 %1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">發現新版本 v%s</string>
+    <string name="go_to_download">瀏覽器下載</string>
+    <string name="no_download_available">暫無下載連結</string>
+    <string name="select_update_source">選擇更新來源</string>
+    <string name="install">安裝</string>
+    <string name="downloading">下載中</string>
+    <string name="download_failed">下載失敗: %s</string>
+</resources>
