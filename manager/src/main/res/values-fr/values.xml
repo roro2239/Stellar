@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Utilisé pour le démarrage automatique au boot</string>
+</resources>

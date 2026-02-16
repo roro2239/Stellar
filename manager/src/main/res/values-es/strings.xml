@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_apps">Aplicaciones</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Common -->
+    <string name="confirm">Aceptar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="back">Atrás</string>
+    <string name="copy">Copiar</string>
+    <string name="close">Cerrar</string>
+    <string name="save">Guardar</string>
+    <string name="retry">Reintentar</string>
+    <string name="refresh">Actualizar</string>
+    <string name="execute">Ejecutar</string>
+    <string name="delete">Eliminar</string>
+    <string name="edit">Editar</string>
+    <string name="start">Iniciar</string>
+    <string name="stop">Detener</string>
+    <string name="restart">Reiniciar</string>
+    <string name="unknown">Desconocido</string>
+    <string name="error_prefix">Error: %s</string>
+    <string name="press_again_to_exit">Pulse de nuevo para salir</string>
+    <string name="no_root_permission">Sin acceso Root</string>
+    <string name="copied_to_clipboard">Copiado al portapapeles</string>
+    <string name="copy_failed">Error al copiar</string>
+
+    <!-- Theme -->
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="theme_auto">Automático</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">Estado del servicio</string>
+    <string name="service_running">En ejecución</string>
+    <string name="service_not_running">Detenido</string>
+    <string name="version">Versión</string>
+    <string name="run_mode">Modo</string>
+    <string name="upgradable_to_version">Actualización disponible a v%1$d.%2$d</string>
+    <string name="root_restart">Reinicio Root</string>
+    <string name="root_start">Inicio Root</string>
+    <string name="root_start_subtitle">Iniciar el servicio Stellar mediante Root</string>
+    <string name="wireless_debugging">Depuración inalámbrica</string>
+    <string name="wireless_debugging_subtitle">Iniciar el servicio Stellar mediante depuración inalámbrica</string>
+    <string name="wired_adb">ADB por cable</string>
+    <string name="wired_adb_subtitle">Iniciar el servicio Stellar mediante ADB</string>
+    <string name="view">Ver</string>
+    <string name="stop_service">Detener servicio</string>
+    <string name="stop_service_message">El servicio Stellar se detendrá.</string>
+    <string name="view_command">Ver comando</string>
+    <string name="copied_to_clipboard_with_content">%s\nCopiado al portapapeles.</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">Aplicaciones autorizadas</string>
+    <string name="service_not_running_title">Servicio detenido</string>
+    <string name="service_not_running_hint">Inicie primero el servicio Stellar.\nPodrá gestionar las aplicaciones autorizadas una vez que el servicio esté en ejecución.</string>
+    <string name="load_failed">Error al cargar</string>
+    <string name="unknown_error">Error desconocido</string>
+    <string name="no_authorized_apps">Sin aplicaciones autorizadas</string>
+    <string name="no_authorized_apps_hint">Ninguna aplicación ha solicitado permisos de Stellar.\nLas aplicaciones aparecerán aquí tras solicitar acceso.</string>
+    <string name="stellar_apps">Aplicaciones Stellar</string>
+    <string name="shizuku_compat_apps">Aplicaciones compatibles con Shizuku</string>
+    <string name="adb_permission_restricted">Permisos ADB restringidos</string>
+    <string name="adb_permission_restricted_message">Es probable que el fabricante de su dispositivo haya restringido los permisos de ADB.\n\nAjuste la configuración en las Opciones de desarrollador o pruebe el modo Root.</string>
+    <string name="permission_ask">Preguntar</string>
+    <string name="permission_allow">Permitir</string>
+    <string name="permission_deny">Denegar</string>
+    <string name="shizuku_permission">Permiso Shizuku</string>
+    <string name="shizuku_permission_subtitle">Acceder a las funciones de Shizuku</string>
+    <string name="basic_permission">Permiso básico</string>
+    <string name="basic_permission_subtitle">Acceder a las funciones de Stellar</string>
+    <string name="follow_startup">Inicio automático</string>
+    <string name="follow_startup_subtitle">Iniciar con Stellar</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">Tema</string>
+    <string name="theme_subtitle">Elegir la apariencia de la aplicación</string>
+    <string name="boot_start_wireless">Inicio al arrancar (Depuración inalámbrica)</string>
+    <string name="boot_start_wireless_subtitle">Iniciar Stellar mediante depuración inalámbrica al arrancar</string>
+    <string name="boot_start_root">Inicio al arrancar (Root)</string>
+    <string name="boot_start_root_subtitle">Iniciar Stellar mediante Root al arrancar</string>
+    <string name="auto_enable_accessibility">El servicio de accesibilidad se activará automáticamente para el inicio al arrancar</string>
+    <string name="shizuku_compat_layer">Compatibilidad con Shizuku</string>
+    <string name="shizuku_compat_layer_subtitle">Permitir que las aplicaciones Shizuku funcionen a través de Stellar</string>
+    <string name="shizuku_compat_enabled">Compatibilidad con Shizuku activada</string>
+    <string name="shizuku_compat_disabled">Compatibilidad con Shizuku desactivada</string>
+    <string name="setting_failed">Error en la configuración: %s</string>
+    <string name="drop_privileges">Reducir privilegios</string>
+    <string name="drop_privileges_subtitle">Ejecutar como usuario Shell tras el inicio Root</string>
+    <string name="tcpip_port">Puerto TCP/IP</string>
+    <string name="tcpip_port_subtitle">Cambiar el puerto TCP/IP de adbd tras iniciar mediante depuración inalámbrica</string>
+    <string name="cannot_generate_safe_port">No se pudo generar un puerto seguro, configúrelo manualmente</string>
+    <string name="auto_generated_safe_port">Puerto seguro generado automáticamente: %s</string>
+    <string name="port_number">Puerto</string>
+    <string name="port_example">Ej.: 5555</string>
+    <string name="cannot_generate_safe_port_manual">No se pudo generar un puerto seguro, introdúzcalo manualmente</string>
+    <string name="port_invalid">Puerto no válido, introduzca un número entre 1 y 65535</string>
+    <string name="port_blacklisted_warning">Advertencia: el puerto %d puede ser objetivo de escáneres, se recomienda usar otro puerto</string>
+    <string name="port_set_to">Puerto establecido en %s</string>
+    <string name="service_logs">Registros del servicio</string>
+    <string name="service_logs_subtitle">Ver los registros del servicio Stellar</string>
+    <string name="already_latest_version">Ya está actualizado</string>
+    <string name="check_update_failed">Error al buscar actualizaciones</string>
+    <string name="project_declaration">Agradecimientos</string>
+    <string name="project_declaration_content">Este proyecto está basado en Shizuku, un excelente proyecto de código abierto que permite llamar a las API del sistema mediante ADB o Root.</string>
+    <string name="cannot_open_browser">No se pudo abrir el navegador</string>
+    <string name="check_update">Buscar actualizaciones</string>
+    <string name="current_version">Versión actual: %s</string>
+    <string name="checking">Comprobando…</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">Servicio detenido</string>
+    <string name="load_logs_failed">Error al cargar los registros: %s</string>
+    <string name="logs_cleared">Registros borrados</string>
+    <string name="clear_logs_failed">Error al borrar los registros: %s</string>
+    <string name="no_logs_to_copy">No hay registros para copiar</string>
+    <string name="logs_copied">Registros copiados al portapapeles</string>
+    <string name="copy_logs">Copiar registros</string>
+    <string name="clear_logs">Borrar registros</string>
+    <string name="search_logs">Buscar en registros…</string>
+    <string name="clear">Borrar</string>
+    <string name="no_logs">Sin registros</string>
+    <string name="logs_will_show">Los registros aparecerán cuando el servicio esté en ejecución</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">Ejecución manual</string>
+    <string name="mode_click_execute_desc">Pulse para ejecutar comandos manualmente</string>
+    <string name="mode_follow_service">Inicio del servicio</string>
+    <string name="mode_follow_service_desc">Ejecutar automáticamente al iniciar el servicio</string>
+    <string name="command">Comandos</string>
+    <string name="quick_execute">Ejecución rápida</string>
+    <string name="add_command">Añadir comando</string>
+    <string name="create_command">Nuevo comando</string>
+    <string name="edit_command">Editar comando</string>
+    <string name="title_label">Título</string>
+    <string name="command_name">Nombre del comando</string>
+    <string name="command_label">Comando</string>
+    <string name="command_placeholder">Introduzca el comando a ejecutar</string>
+    <string name="select_mode">Seleccionar modo</string>
+    <string name="executing">Ejecutando</string>
+    <string name="execution_result">Resultado</string>
+    <string name="return_value">Código de salida</string>
+    <string name="time_elapsed">Duración</string>
+    <string name="executing_ellipsis">Ejecutando…</string>
+    <string name="copy_all">Copiar todo</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">Inicio Root</string>
+    <string name="wireless_debugging_start">Inicio por depuración inalámbrica</string>
+    <string name="error_report">Informe de error</string>
+    <string name="enable_wireless_debugging">Activar depuración inalámbrica</string>
+    <string name="cannot_open_dev_options">No se pudieron abrir las Opciones de desarrollador</string>
+    <string name="open_dev_options">Abrir Opciones de desarrollador</string>
+    <string name="already_enabled_continue">Activado, continuar</string>
+    <string name="grant_notification_permission">Permiso de notificaciones</string>
+    <string name="need_notification_permission">Se requiere permiso de notificaciones para continuar el emparejamiento</string>
+    <string name="cannot_open_notification_settings">No se pudo abrir la configuración de notificaciones</string>
+    <string name="grant_permission">Conceder permiso</string>
+    <string name="wireless_debugging_pairing">Emparejamiento de depuración inalámbrica</string>
+    <string name="open_wireless_debugging_settings">Abrir depuración inalámbrica</string>
+    <string name="pairing_done_continue">Emparejado, continuar</string>
+    <string name="check_root_permission">Comprobar acceso Root</string>
+    <string name="waiting_check">Esperando</string>
+    <string name="check_existing_service">Comprobar servicio existente</string>
+    <string name="waiting_execute">Esperando</string>
+    <string name="start_service_process">Iniciar servicio</string>
+    <string name="wait_binder_response">Esperando Binder</string>
+    <string name="start_complete">Completado</string>
+    <string name="waiting_complete">Esperando</string>
+    <string name="detect_adb_port">Detectar puerto ADB</string>
+    <string name="waiting_detect">Detectando</string>
+    <string name="detect_pairing_status">Comprobar estado de emparejamiento</string>
+    <string name="connect_adb_service">Conectar a ADB</string>
+    <string name="waiting_connect">Conectando</string>
+    <string name="verify_connection">Verificar conexión</string>
+    <string name="waiting_verify">Verificando</string>
+    <string name="detecting_adb_port">Detectando puerto ADB disponible…</string>
+    <string name="port_available">Puerto %d disponible</string>
+    <string name="already_paired">Emparejado</string>
+    <string name="no_port_detected">No se detectó ningún puerto disponible</string>
+    <string name="need_pairing">Emparejamiento necesario</string>
+    <string name="enable_wireless_debugging_hint">Active la depuración inalámbrica en las Opciones de desarrollador</string>
+    <string name="notification_permission_granted">Permiso de notificaciones concedido</string>
+    <string name="notification_permission_required">Se requiere permiso de notificaciones para el emparejamiento</string>
+    <string name="pairing_instruction">Pulse «Emparejar dispositivo con código» en los ajustes de depuración inalámbrica y luego introduzca el código en la notificación</string>
+    <string name="connection_success">Conectado</string>
+    <string name="verification_passed">Verificado</string>
+    <string name="checking_ellipsis">Comprobando…</string>
+    <string name="completed">Completado</string>
+    <string name="starting_ellipsis">Iniciando…</string>
+    <string name="waiting_response">Esperando respuesta…</string>
+    <string name="pairing_failed_retry">Emparejamiento fallido, inténtelo de nuevo</string>
+    <string name="need_pairing_to_connect">Se necesita emparejamiento para conectar</string>
+    <string name="checking_root_permission">Comprobando acceso Root…</string>
+    <string name="root_permission_acquired">Acceso Root obtenido</string>
+    <string name="error_cannot_kill_process">No se pudo terminar el proceso, detenga primero el servicio existente desde la aplicación</string>
+    <string name="error_cannot_set_classpath">No se pudo establecer CLASSPATH</string>
+    <string name="error_cannot_create_process">No se pudo crear el proceso</string>
+    <string name="error_app_process_failed">Error en la ejecución de app_process</string>
+    <string name="error_permission_insufficient">Permisos insuficientes, se requiere acceso Root o ADB</string>
+    <string name="error_cannot_get_app_path">No se pudo obtener la ruta de la aplicación</string>
+    <string name="error_selinux_blocked">SELinux bloqueó la conexión binder</string>
+    <string name="error_start_failed_exit_code">Error de inicio, código de salida: %d</string>
+    <string name="error_wait_service_timeout">Tiempo de espera agotado para el inicio del servicio\n\nEl proceso del servicio puede haberse bloqueado, compruebe los registros del dispositivo</string>
+    <string name="error_start_failed_check_logs">Error al iniciar el servicio, consulte los registros para más detalles</string>
+    <string name="service_started_successfully">Servicio iniciado correctamente</string>
+    <string name="execution_failed">Error de ejecución</string>
+    <string name="startup_log">Registro de inicio</string>
+    <string name="device_info">Info del dispositivo:</string>
+    <string name="device_model">  Modelo: %s</string>
+    <string name="android_version">  Android: %s</string>
+    <string name="app_version">  Versión: %s</string>
+    <string name="time_label">  Hora: %s</string>
+    <string name="executed_command">Comando:</string>
+    <string name="command_output">Salida:</string>
+    <string name="error_info">Error:</string>
+    <string name="log_copied">Registro copiado al portapapeles</string>
+    <string name="connecting_ellipsis">Conectando…</string>
+    <string name="switching_port">Cambiando al puerto configurado %d…</string>
+    <string name="port_switch_failed">Error al cambiar el puerto: %s</string>
+    <string name="port_switched_to">Puerto cambiado a %d</string>
+    <string name="pairing_complete">Emparejamiento completado</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">Solicitud de permiso</string>
+    <string name="permission_allow_prefix">¿Permitir a </string>
+    <string name="permission_use_stellar"> usar Stellar?</string>
+    <string name="permission_follow_startup"> iniciarse con Stellar cada vez?</string>
+    <string name="permission_use_generic"> usar %s?</string>
+    <string name="always_allow">Permitir siempre</string>
+    <string name="allow_once">Permitir una vez</string>
+    <string name="deny">Denegar</string>
+    <string name="deny_and_dont_ask">Denegar y no volver a preguntar</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">Servicio de emparejamiento encontrado</string>
+    <string name="enter_pairing_code">Introduzca el código de emparejamiento</string>
+    <string name="wireless_debugging_pairing_channel">Emparejamiento de depuración inalámbrica</string>
+    <string name="pairing_alert_channel">Alerta de emparejamiento</string>
+    <string name="searching_pairing_service">Buscando servicio de emparejamiento</string>
+    <string name="pairing_success">Emparejamiento exitoso</string>
+    <string name="searching_connect_service">Buscando servicio de conexión…</string>
+    <string name="pairing_failed_retrying">Emparejamiento fallido, reintentando…</string>
+    <string name="please_wait_auto_return">Espere, volviendo a la pantalla de entrada</string>
+    <string name="connect_service_not_found">Servicio de conexión no encontrado</string>
+    <string name="please_open_app_manually">Abra la aplicación para iniciar el servicio</string>
+    <string name="stop_search">Detener búsqueda</string>
+    <string name="cannot_find_pairing">No se encontró emparejamiento</string>
+    <string name="pairing_code">Código de emparejamiento</string>
+    <string name="enter_pairing_code_action">Introducir código de emparejamiento</string>
+    <string name="pairing_service_not_found">Servicio de emparejamiento no encontrado</string>
+    <string name="ensure_wireless_debugging_open">Asegúrese de que la página de emparejamiento de depuración inalámbrica esté abierta</string>
+    <string name="pairing_in_progress">Emparejamiento en curso</string>
+    <string name="search_stopped">Búsqueda detenida</string>
+    <string name="pairing_service_not_found_retry">Servicio de emparejamiento no encontrado, inténtelo de nuevo</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">Iniciando servicio Stellar…</string>
+    <string name="boot_start_success">El servicio Stellar se inició correctamente al arrancar</string>
+    <string name="boot_start_failed">Error en el inicio al arrancar de Stellar: %s</string>
+    <string name="boot_start_root_no_permission">Acceso Root no disponible, error en el inicio al arrancar</string>
+    <string name="adb_key_error">Error de clave ADB</string>
+    <string name="adb_connection_failed">Error de conexión ADB %1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">Nueva versión v%s</string>
+    <string name="go_to_download">Abrir en navegador</string>
+    <string name="no_download_available">No hay descargas disponibles</string>
+    <string name="select_update_source">Seleccionar fuente de actualización</string>
+    <string name="install">Instalar</string>
+    <string name="downloading">Descargando</string>
+    <string name="download_failed">Error de descarga: %s</string>
+</resources>
