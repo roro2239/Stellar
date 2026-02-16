@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_home">Запуск</string>
+    <string name="nav_apps">Приложения</string>
+    <string name="nav_terminal">Терминал</string>
+    <string name="nav_settings">Настройки</string>
+
+    <!-- Common -->
+    <string name="confirm">ОК</string>
+    <string name="cancel">Отмена</string>
+    <string name="back">Назад</string>
+    <string name="copy">Копировать</string>
+    <string name="close">Закрыть</string>
+    <string name="save">Сохранить</string>
+    <string name="retry">Повторить</string>
+    <string name="refresh">Обновить</string>
+    <string name="execute">Выполнить</string>
+    <string name="delete">Удалить</string>
+    <string name="edit">Изменить</string>
+    <string name="start">Запустить</string>
+    <string name="stop">Остановить</string>
+    <string name="restart">Перезапустить</string>
+    <string name="unknown">Неизвестно</string>
+    <string name="error_prefix">Ошибка: %s</string>
+    <string name="press_again_to_exit">Нажмите ещё раз для выхода</string>
+    <string name="no_root_permission">Нет Root-доступа</string>
+    <string name="copied_to_clipboard">Скопировано в буфер обмена</string>
+    <string name="copy_failed">Не удалось скопировать</string>
+
+    <!-- Theme -->
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_auto">Системная</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">Состояние сервиса</string>
+    <string name="service_running">Работает</string>
+    <string name="service_not_running">Не запущен</string>
+    <string name="version">Версия</string>
+    <string name="run_mode">Режим</string>
+    <string name="upgradable_to_version">Доступно обновление до v%1$d.%2$d</string>
+    <string name="root_restart">Перезапуск Root</string>
+    <string name="root_start">Запуск Root</string>
+    <string name="root_start_subtitle">Запустить сервис Stellar через Root</string>
+    <string name="wireless_debugging">Беспроводная отладка</string>
+    <string name="wireless_debugging_subtitle">Запустить сервис Stellar через беспроводную отладку</string>
+    <string name="wired_adb">Проводной ADB</string>
+    <string name="wired_adb_subtitle">Запустить сервис Stellar через ADB</string>
+    <string name="view">Просмотр</string>
+    <string name="stop_service">Остановить сервис</string>
+    <string name="stop_service_message">Сервис Stellar будет остановлен.</string>
+    <string name="view_command">Просмотр команды</string>
+    <string name="copied_to_clipboard_with_content">%s\nСкопировано в буфер обмена.</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">Авторизованные приложения</string>
+    <string name="service_not_running_title">Сервис не запущен</string>
+    <string name="service_not_running_hint">Сначала запустите сервис Stellar.\nУправление приложениями будет доступно после запуска сервиса.</string>
+    <string name="load_failed">Ошибка загрузки</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+    <string name="no_authorized_apps">Нет авторизованных приложений</string>
+    <string name="no_authorized_apps_hint">Ни одно приложение ещё не запрашивало разрешения Stellar.\nПриложения появятся здесь после запроса доступа.</string>
+    <string name="stellar_apps">Приложения Stellar</string>
+    <string name="shizuku_compat_apps">Совместимые с Shizuku</string>
+    <string name="adb_permission_restricted">Разрешения ADB ограничены</string>
+    <string name="adb_permission_restricted_message">Производитель вашего устройства, вероятно, ограничил разрешения ADB.\n\nИзмените соответствующие настройки в параметрах разработчика или попробуйте режим Root.</string>
+    <string name="permission_ask">Спрашивать</string>
+    <string name="permission_allow">Разрешить</string>
+    <string name="permission_deny">Отклонить</string>
+    <string name="shizuku_permission">Разрешение Shizuku</string>
+    <string name="shizuku_permission_subtitle">Доступ к функциям Shizuku</string>
+    <string name="basic_permission">Базовое разрешение</string>
+    <string name="basic_permission_subtitle">Доступ к функциям Stellar</string>
+    <string name="follow_startup">Автозапуск</string>
+    <string name="follow_startup_subtitle">Запускать вместе со Stellar</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">Тема</string>
+    <string name="theme_subtitle">Выбрать оформление приложения</string>
+    <string name="boot_start_wireless">Автозапуск (Беспроводная отладка)</string>
+    <string name="boot_start_wireless_subtitle">Запускать Stellar через беспроводную отладку при загрузке</string>
+    <string name="boot_start_root">Автозапуск (Root)</string>
+    <string name="boot_start_root_subtitle">Запускать Stellar через Root при загрузке</string>
+    <string name="auto_enable_accessibility">Служба специальных возможностей будет включена автоматически для автозапуска</string>
+    <string name="shizuku_compat_layer">Совместимость с Shizuku</string>
+    <string name="shizuku_compat_layer_subtitle">Разрешить приложениям Shizuku работать через Stellar</string>
+    <string name="shizuku_compat_enabled">Совместимость с Shizuku включена</string>
+    <string name="shizuku_compat_disabled">Совместимость с Shizuku отключена</string>
+    <string name="setting_failed">Ошибка настройки: %s</string>
+    <string name="drop_privileges">Понижение привилегий</string>
+    <string name="drop_privileges_subtitle">Работать от пользователя Shell после запуска Root</string>
+    <string name="tcpip_port">Порт TCP/IP</string>
+    <string name="tcpip_port_subtitle">Переключить порт TCP/IP adbd после запуска через беспроводную отладку</string>
+    <string name="cannot_generate_safe_port">Не удалось сгенерировать безопасный порт, задайте вручную</string>
+    <string name="auto_generated_safe_port">Автоматически сгенерирован безопасный порт %s</string>
+    <string name="port_number">Порт</string>
+    <string name="port_example">Напр.: 5555</string>
+    <string name="cannot_generate_safe_port_manual">Не удалось сгенерировать безопасный порт, введите вручную</string>
+    <string name="port_invalid">Недопустимый порт, введите число от 1 до 65535</string>
+    <string name="port_blacklisted_warning">Внимание: порт %d может быть целью сканеров, рекомендуется использовать другой порт</string>
+    <string name="port_set_to">Порт установлен на %s</string>
+    <string name="service_logs">Журнал сервиса</string>
+    <string name="service_logs_subtitle">Просмотр журнала сервиса Stellar</string>
+    <string name="already_latest_version">Уже последняя версия</string>
+    <string name="check_update_failed">Ошибка проверки обновлений</string>
+    <string name="project_declaration">Благодарности</string>
+    <string name="project_declaration_content">Этот проект основан на Shizuku — отличном проекте с открытым исходным кодом, предоставляющем возможность вызова системных API через ADB или Root.</string>
+    <string name="cannot_open_browser">Не удалось открыть браузер</string>
+    <string name="check_update">Проверить обновления</string>
+    <string name="current_version">Текущая версия: %s</string>
+    <string name="checking">Проверка…</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">Сервис не запущен</string>
+    <string name="load_logs_failed">Ошибка загрузки журнала: %s</string>
+    <string name="logs_cleared">Журнал очищен</string>
+    <string name="clear_logs_failed">Ошибка очистки журнала: %s</string>
+    <string name="no_logs_to_copy">Нет записей для копирования</string>
+    <string name="logs_copied">Журнал скопирован в буфер обмена</string>
+    <string name="copy_logs">Копировать журнал</string>
+    <string name="clear_logs">Очистить журнал</string>
+    <string name="search_logs">Поиск в журнале…</string>
+    <string name="clear">Очистить</string>
+    <string name="no_logs">Нет записей</string>
+    <string name="logs_will_show">Записи появятся при работающем сервисе</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">Ручной запуск</string>
+    <string name="mode_click_execute_desc">Нажмите для выполнения команд вручную</string>
+    <string name="mode_follow_service">Запуск сервиса</string>
+    <string name="mode_follow_service_desc">Выполнять автоматически при запуске сервиса</string>
+    <string name="command">Команды</string>
+    <string name="quick_execute">Быстрый запуск</string>
+    <string name="add_command">Добавить команду</string>
+    <string name="create_command">Новая команда</string>
+    <string name="edit_command">Изменить команду</string>
+    <string name="title_label">Название</string>
+    <string name="command_name">Имя команды</string>
+    <string name="command_label">Команда</string>
+    <string name="command_placeholder">Введите команду для выполнения</string>
+    <string name="select_mode">Выбрать режим</string>
+    <string name="executing">Выполняется</string>
+    <string name="execution_result">Результат</string>
+    <string name="return_value">Код возврата</string>
+    <string name="time_elapsed">Время</string>
+    <string name="executing_ellipsis">Выполняется…</string>
+    <string name="copy_all">Копировать всё</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">Запуск Root</string>
+    <string name="wireless_debugging_start">Запуск через беспроводную отладку</string>
+    <string name="error_report">Отчёт об ошибке</string>
+    <string name="enable_wireless_debugging">Включить беспроводную отладку</string>
+    <string name="cannot_open_dev_options">Не удалось открыть параметры разработчика</string>
+    <string name="open_dev_options">Открыть параметры разработчика</string>
+    <string name="already_enabled_continue">Включено, продолжить</string>
+    <string name="grant_notification_permission">Разрешение на уведомления</string>
+    <string name="need_notification_permission">Для продолжения сопряжения требуется разрешение на уведомления</string>
+    <string name="cannot_open_notification_settings">Не удалось открыть настройки уведомлений</string>
+    <string name="grant_permission">Предоставить разрешение</string>
+    <string name="wireless_debugging_pairing">Сопряжение беспроводной отладки</string>
+    <string name="open_wireless_debugging_settings">Открыть беспроводную отладку</string>
+    <string name="pairing_done_continue">Сопряжено, продолжить</string>
+    <string name="check_root_permission">Проверка Root-доступа</string>
+    <string name="waiting_check">Ожидание</string>
+    <string name="check_existing_service">Проверка существующего сервиса</string>
+    <string name="waiting_execute">Ожидание</string>
+    <string name="start_service_process">Запуск сервиса</string>
+    <string name="wait_binder_response">Ожидание Binder</string>
+    <string name="start_complete">Завершено</string>
+    <string name="waiting_complete">Ожидание</string>
+    <string name="detect_adb_port">Обнаружение порта ADB</string>
+    <string name="waiting_detect">Обнаружение</string>
+    <string name="detect_pairing_status">Проверка состояния сопряжения</string>
+    <string name="connect_adb_service">Подключение к ADB</string>
+    <string name="waiting_connect">Подключение</string>
+    <string name="verify_connection">Проверка подключения</string>
+    <string name="waiting_verify">Проверка</string>
+    <string name="detecting_adb_port">Обнаружение доступного порта ADB…</string>
+    <string name="port_available">Порт %d доступен</string>
+    <string name="already_paired">Сопряжено</string>
+    <string name="no_port_detected">Доступный порт не обнаружен</string>
+    <string name="need_pairing">Требуется сопряжение</string>
+    <string name="enable_wireless_debugging_hint">Включите беспроводную отладку в параметрах разработчика</string>
+    <string name="notification_permission_granted">Разрешение на уведомления получено</string>
+    <string name="notification_permission_required">Для сопряжения требуется разрешение на уведомления</string>
+    <string name="pairing_instruction">Нажмите «Сопряжение устройства по коду» в настройках беспроводной отладки, затем введите код в уведомлении</string>
+    <string name="connection_success">Подключено</string>
+    <string name="verification_passed">Проверено</string>
+    <string name="checking_ellipsis">Проверка…</string>
+    <string name="completed">Готово</string>
+    <string name="starting_ellipsis">Запуск…</string>
+    <string name="waiting_response">Ожидание ответа…</string>
+    <string name="pairing_failed_retry">Сопряжение не удалось, попробуйте снова</string>
+    <string name="need_pairing_to_connect">Для подключения требуется сопряжение</string>
+    <string name="checking_root_permission">Проверка Root-доступа…</string>
+    <string name="root_permission_acquired">Root-доступ получен</string>
+    <string name="error_cannot_kill_process">Не удалось завершить процесс, сначала остановите существующий сервис из приложения</string>
+    <string name="error_cannot_set_classpath">Не удалось установить CLASSPATH</string>
+    <string name="error_cannot_create_process">Не удалось создать процесс</string>
+    <string name="error_app_process_failed">Ошибка выполнения app_process</string>
+    <string name="error_permission_insufficient">Недостаточно прав, требуется Root или ADB</string>
+    <string name="error_cannot_get_app_path">Не удалось получить путь приложения</string>
+    <string name="error_selinux_blocked">SELinux заблокировал подключение через binder</string>
+    <string name="error_start_failed_exit_code">Ошибка запуска, код выхода: %d</string>
+    <string name="error_wait_service_timeout">Превышено время ожидания запуска сервиса\n\nПроцесс сервиса мог аварийно завершиться, проверьте журнал устройства</string>
+    <string name="error_start_failed_check_logs">Не удалось запустить сервис, подробности в журнале</string>
+    <string name="service_started_successfully">Сервис успешно запущен</string>
+    <string name="execution_failed">Ошибка выполнения</string>
+    <string name="startup_log">Журнал запуска</string>
+    <string name="device_info">Информация об устройстве:</string>
+    <string name="device_model">  Модель: %s</string>
+    <string name="android_version">  Android: %s</string>
+    <string name="app_version">  Версия: %s</string>
+    <string name="time_label">  Время: %s</string>
+    <string name="executed_command">Команда:</string>
+    <string name="command_output">Вывод:</string>
+    <string name="error_info">Ошибка:</string>
+    <string name="log_copied">Журнал скопирован в буфер обмена</string>
+    <string name="connecting_ellipsis">Подключение…</string>
+    <string name="switching_port">Переключение на пользовательский порт %d…</string>
+    <string name="port_switch_failed">Ошибка переключения порта: %s</string>
+    <string name="port_switched_to">Порт переключён на %d</string>
+    <string name="pairing_complete">Сопряжение завершено</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">Запрос разрешения</string>
+    <string name="permission_allow_prefix">Разрешить </string>
+    <string name="permission_use_stellar"> использовать Stellar?</string>
+    <string name="permission_follow_startup"> запускаться вместе со Stellar каждый раз?</string>
+    <string name="permission_use_generic"> использовать %s?</string>
+    <string name="always_allow">Всегда разрешать</string>
+    <string name="allow_once">Разрешить один раз</string>
+    <string name="deny">Отклонить</string>
+    <string name="deny_and_dont_ask">Отклонить и больше не спрашивать</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">Служба сопряжения найдена</string>
+    <string name="enter_pairing_code">Введите код сопряжения</string>
+    <string name="wireless_debugging_pairing_channel">Сопряжение беспроводной отладки</string>
+    <string name="pairing_alert_channel">Уведомление о сопряжении</string>
+    <string name="searching_pairing_service">Поиск службы сопряжения</string>
+    <string name="pairing_success">Сопряжение выполнено</string>
+    <string name="searching_connect_service">Поиск службы подключения…</string>
+    <string name="pairing_failed_retrying">Сопряжение не удалось, повторная попытка…</string>
+    <string name="please_wait_auto_return">Подождите, автоматический возврат к экрану ввода</string>
+    <string name="connect_service_not_found">Служба подключения не найдена</string>
+    <string name="please_open_app_manually">Откройте приложение для запуска сервиса</string>
+    <string name="stop_search">Остановить поиск</string>
+    <string name="cannot_find_pairing">Сопряжение не найдено</string>
+    <string name="pairing_code">Код сопряжения</string>
+    <string name="enter_pairing_code_action">Ввести код сопряжения</string>
+    <string name="pairing_service_not_found">Служба сопряжения не найдена</string>
+    <string name="ensure_wireless_debugging_open">Убедитесь, что страница сопряжения беспроводной отладки открыта</string>
+    <string name="pairing_in_progress">Выполняется сопряжение</string>
+    <string name="search_stopped">Поиск остановлен</string>
+    <string name="pairing_service_not_found_retry">Служба сопряжения не найдена, попробуйте снова</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">Запуск сервиса Stellar…</string>
+    <string name="boot_start_success">Сервис Stellar успешно запущен при загрузке</string>
+    <string name="boot_start_failed">Ошибка автозапуска Stellar: %s</string>
+    <string name="boot_start_root_no_permission">Root-доступ недоступен, автозапуск не удался</string>
+    <string name="adb_key_error">Ошибка ключа ADB</string>
+    <string name="adb_connection_failed">Ошибка подключения ADB %1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">Новая версия v%s</string>
+    <string name="go_to_download">Открыть в браузере</string>
+    <string name="no_download_available">Нет доступных загрузок</string>
+    <string name="select_update_source">Выбрать источник обновления</string>
+    <string name="install">Установить</string>
+    <string name="downloading">Загрузка</string>
+    <string name="download_failed">Ошибка загрузки: %s</string>
+</resources>

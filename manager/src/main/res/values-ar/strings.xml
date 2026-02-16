@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_home">تشغيل</string>
+    <string name="nav_apps">التطبيقات</string>
+    <string name="nav_terminal">الطرفية</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Common -->
+    <string name="confirm">موافق</string>
+    <string name="cancel">إلغاء</string>
+    <string name="back">رجوع</string>
+    <string name="copy">نسخ</string>
+    <string name="close">إغلاق</string>
+    <string name="save">حفظ</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="refresh">تحديث</string>
+    <string name="execute">تنفيذ</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="start">تشغيل</string>
+    <string name="stop">إيقاف</string>
+    <string name="restart">إعادة التشغيل</string>
+    <string name="unknown">غير معروف</string>
+    <string name="error_prefix">خطأ: %s</string>
+    <string name="press_again_to_exit">اضغط مرة أخرى للخروج</string>
+    <string name="no_root_permission">لا يوجد صلاحية Root</string>
+    <string name="copied_to_clipboard">تم النسخ إلى الحافظة</string>
+    <string name="copy_failed">فشل النسخ</string>
+
+    <!-- Theme -->
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    <string name="theme_auto">تلقائي</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">حالة الخدمة</string>
+    <string name="service_running">قيد التشغيل</string>
+    <string name="service_not_running">متوقفة</string>
+    <string name="version">الإصدار</string>
+    <string name="run_mode">الوضع</string>
+    <string name="upgradable_to_version">يمكن الترقية إلى الإصدار %1$d.%2$d</string>
+    <string name="root_restart">إعادة تشغيل Root</string>
+    <string name="root_start">تشغيل Root</string>
+    <string name="root_start_subtitle">تشغيل خدمة Stellar عبر Root</string>
+    <string name="wireless_debugging">التصحيح اللاسلكي</string>
+    <string name="wireless_debugging_subtitle">تشغيل خدمة Stellar عبر التصحيح اللاسلكي</string>
+    <string name="wired_adb">ADB سلكي</string>
+    <string name="wired_adb_subtitle">تشغيل خدمة Stellar عبر ADB</string>
+    <string name="view">عرض</string>
+    <string name="stop_service">إيقاف الخدمة</string>
+    <string name="stop_service_message">سيتم إيقاف خدمة Stellar.</string>
+    <string name="view_command">عرض الأمر</string>
+    <string name="copied_to_clipboard_with_content">%s\nتم النسخ إلى الحافظة.</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">التطبيقات المصرّح لها</string>
+    <string name="service_not_running_title">الخدمة متوقفة</string>
+    <string name="service_not_running_hint">يرجى تشغيل خدمة Stellar أولاً.\nيمكنك إدارة التطبيقات المصرّح لها بعد تشغيل الخدمة.</string>
+    <string name="load_failed">فشل التحميل</string>
+    <string name="unknown_error">خطأ غير معروف</string>
+    <string name="no_authorized_apps">لا توجد تطبيقات مصرّح لها</string>
+    <string name="no_authorized_apps_hint">لم يطلب أي تطبيق صلاحيات Stellar بعد.\nستظهر التطبيقات هنا بعد طلب الوصول.</string>
+    <string name="stellar_apps">تطبيقات Stellar</string>
+    <string name="shizuku_compat_apps">تطبيقات متوافقة مع Shizuku</string>
+    <string name="adb_permission_restricted">صلاحيات ADB مقيّدة</string>
+    <string name="adb_permission_restricted_message">من المحتمل أن الشركة المصنّعة لجهازك قيّدت صلاحيات ADB.\n\nيرجى تعديل الإعدادات في خيارات المطور، أو جرّب وضع Root.</string>
+    <string name="permission_ask">سؤال</string>
+    <string name="permission_allow">سماح</string>
+    <string name="permission_deny">رفض</string>
+    <string name="shizuku_permission">صلاحية Shizuku</string>
+    <string name="shizuku_permission_subtitle">الوصول إلى ميزات Shizuku</string>
+    <string name="basic_permission">الصلاحية الأساسية</string>
+    <string name="basic_permission_subtitle">الوصول إلى ميزات Stellar</string>
+    <string name="follow_startup">تشغيل تلقائي</string>
+    <string name="follow_startup_subtitle">التشغيل مع Stellar</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">المظهر</string>
+    <string name="theme_subtitle">اختيار مظهر التطبيق</string>
+    <string name="boot_start_wireless">تشغيل عند الإقلاع (التصحيح اللاسلكي)</string>
+    <string name="boot_start_wireless_subtitle">تشغيل Stellar عبر التصحيح اللاسلكي عند الإقلاع</string>
+    <string name="boot_start_root">تشغيل عند الإقلاع (Root)</string>
+    <string name="boot_start_root_subtitle">تشغيل Stellar عبر Root عند الإقلاع</string>
+    <string name="auto_enable_accessibility">سيتم تفعيل خدمة إمكانية الوصول تلقائياً للتشغيل عند الإقلاع</string>
+    <string name="shizuku_compat_layer">توافق Shizuku</string>
+    <string name="shizuku_compat_layer_subtitle">السماح لتطبيقات Shizuku بالعمل عبر Stellar</string>
+    <string name="shizuku_compat_enabled">تم تفعيل توافق Shizuku</string>
+    <string name="shizuku_compat_disabled">تم تعطيل توافق Shizuku</string>
+    <string name="setting_failed">فشل الإعداد: %s</string>
+    <string name="drop_privileges">تخفيض الصلاحيات</string>
+    <string name="drop_privileges_subtitle">التشغيل كمستخدم Shell بعد تشغيل Root</string>
+    <string name="tcpip_port">منفذ TCP/IP</string>
+    <string name="tcpip_port_subtitle">تغيير منفذ TCP/IP لـ adbd بعد التشغيل عبر التصحيح اللاسلكي</string>
+    <string name="cannot_generate_safe_port">تعذّر إنشاء منفذ آمن، يرجى تعيينه يدوياً</string>
+    <string name="auto_generated_safe_port">تم إنشاء منفذ آمن تلقائياً: %s</string>
+    <string name="port_number">المنفذ</string>
+    <string name="port_example">مثال: 5555</string>
+    <string name="cannot_generate_safe_port_manual">تعذّر إنشاء منفذ آمن، يرجى إدخاله يدوياً</string>
+    <string name="port_invalid">منفذ غير صالح، يرجى إدخال رقم بين 1 و 65535</string>
+    <string name="port_blacklisted_warning">تحذير: المنفذ %d قد يكون مستهدفاً من الماسحات، يُنصح باستخدام منفذ آخر</string>
+    <string name="port_set_to">تم تعيين المنفذ إلى %s</string>
+    <string name="service_logs">سجلات الخدمة</string>
+    <string name="service_logs_subtitle">عرض سجلات خدمة Stellar</string>
+    <string name="already_latest_version">الإصدار محدّث</string>
+    <string name="check_update_failed">فشل التحقق من التحديثات</string>
+    <string name="project_declaration">شكر وتقدير</string>
+    <string name="project_declaration_content">هذا المشروع مبني على Shizuku، وهو مشروع مفتوح المصدر ممتاز يوفر إمكانية استدعاء واجهات النظام عبر ADB أو Root.</string>
+    <string name="cannot_open_browser">تعذّر فتح المتصفح</string>
+    <string name="check_update">التحقق من التحديثات</string>
+    <string name="current_version">الإصدار الحالي: %s</string>
+    <string name="checking">جارٍ التحقق…</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">الخدمة متوقفة</string>
+    <string name="load_logs_failed">فشل تحميل السجلات: %s</string>
+    <string name="logs_cleared">تم مسح السجلات</string>
+    <string name="clear_logs_failed">فشل مسح السجلات: %s</string>
+    <string name="no_logs_to_copy">لا توجد سجلات للنسخ</string>
+    <string name="logs_copied">تم نسخ السجلات إلى الحافظة</string>
+    <string name="copy_logs">نسخ السجلات</string>
+    <string name="clear_logs">مسح السجلات</string>
+    <string name="search_logs">البحث في السجلات…</string>
+    <string name="clear">مسح</string>
+    <string name="no_logs">لا توجد سجلات</string>
+    <string name="logs_will_show">ستظهر السجلات عند تشغيل الخدمة</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">تنفيذ يدوي</string>
+    <string name="mode_click_execute_desc">اضغط لتنفيذ الأوامر يدوياً</string>
+    <string name="mode_follow_service">بدء الخدمة</string>
+    <string name="mode_follow_service_desc">التنفيذ تلقائياً عند بدء الخدمة</string>
+    <string name="command">الأوامر</string>
+    <string name="quick_execute">تنفيذ سريع</string>
+    <string name="add_command">إضافة أمر</string>
+    <string name="create_command">أمر جديد</string>
+    <string name="edit_command">تعديل الأمر</string>
+    <string name="title_label">العنوان</string>
+    <string name="command_name">اسم الأمر</string>
+    <string name="command_label">الأمر</string>
+    <string name="command_placeholder">أدخل الأمر المراد تنفيذه</string>
+    <string name="select_mode">اختيار الوضع</string>
+    <string name="executing">جارٍ التنفيذ</string>
+    <string name="execution_result">النتيجة</string>
+    <string name="return_value">رمز الخروج</string>
+    <string name="time_elapsed">المدة</string>
+    <string name="executing_ellipsis">جارٍ التنفيذ…</string>
+    <string name="copy_all">نسخ الكل</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">تشغيل Root</string>
+    <string name="wireless_debugging_start">تشغيل عبر التصحيح اللاسلكي</string>
+    <string name="error_report">تقرير الخطأ</string>
+    <string name="enable_wireless_debugging">تفعيل التصحيح اللاسلكي</string>
+    <string name="cannot_open_dev_options">تعذّر فتح خيارات المطور</string>
+    <string name="open_dev_options">فتح خيارات المطور</string>
+    <string name="already_enabled_continue">مفعّل، متابعة</string>
+    <string name="grant_notification_permission">إذن الإشعارات</string>
+    <string name="need_notification_permission">يلزم إذن الإشعارات لمتابعة الاقتران</string>
+    <string name="cannot_open_notification_settings">تعذّر فتح إعدادات الإشعارات</string>
+    <string name="grant_permission">منح الإذن</string>
+    <string name="wireless_debugging_pairing">اقتران التصحيح اللاسلكي</string>
+    <string name="open_wireless_debugging_settings">فتح التصحيح اللاسلكي</string>
+    <string name="pairing_done_continue">تم الاقتران، متابعة</string>
+    <string name="check_root_permission">التحقق من صلاحية Root</string>
+    <string name="waiting_check">بانتظار</string>
+    <string name="check_existing_service">التحقق من الخدمة الحالية</string>
+    <string name="waiting_execute">بانتظار</string>
+    <string name="start_service_process">بدء الخدمة</string>
+    <string name="wait_binder_response">بانتظار Binder</string>
+    <string name="start_complete">اكتمل</string>
+    <string name="waiting_complete">بانتظار</string>
+    <string name="detect_adb_port">اكتشاف منفذ ADB</string>
+    <string name="waiting_detect">جارٍ الاكتشاف</string>
+    <string name="detect_pairing_status">التحقق من حالة الاقتران</string>
+    <string name="connect_adb_service">الاتصال بـ ADB</string>
+    <string name="waiting_connect">جارٍ الاتصال</string>
+    <string name="verify_connection">التحقق من الاتصال</string>
+    <string name="waiting_verify">جارٍ التحقق</string>
+    <string name="detecting_adb_port">جارٍ اكتشاف منفذ ADB المتاح…</string>
+    <string name="port_available">المنفذ %d متاح</string>
+    <string name="already_paired">مقترن</string>
+    <string name="no_port_detected">لم يتم اكتشاف منفذ متاح</string>
+    <string name="need_pairing">يلزم الاقتران</string>
+    <string name="enable_wireless_debugging_hint">يرجى تفعيل التصحيح اللاسلكي في خيارات المطور</string>
+    <string name="notification_permission_granted">تم منح إذن الإشعارات</string>
+    <string name="notification_permission_required">يلزم إذن الإشعارات للاقتران</string>
+    <string name="pairing_instruction">اضغط على «إقران الجهاز برمز الإقران» في إعدادات التصحيح اللاسلكي، ثم أدخل الرمز في الإشعار</string>
+    <string name="connection_success">تم الاتصال</string>
+    <string name="verification_passed">تم التحقق</string>
+    <string name="checking_ellipsis">جارٍ التحقق…</string>
+    <string name="completed">اكتمل</string>
+    <string name="starting_ellipsis">جارٍ التشغيل…</string>
+    <string name="waiting_response">بانتظار الاستجابة…</string>
+    <string name="pairing_failed_retry">فشل الاقتران، يرجى المحاولة مرة أخرى</string>
+    <string name="need_pairing_to_connect">يلزم الاقتران للاتصال</string>
+    <string name="checking_root_permission">جارٍ التحقق من صلاحية Root…</string>
+    <string name="root_permission_acquired">تم الحصول على صلاحية Root</string>
+    <string name="error_cannot_kill_process">تعذّر إنهاء العملية، يرجى إيقاف الخدمة الحالية من التطبيق أولاً</string>
+    <string name="error_cannot_set_classpath">تعذّر تعيين CLASSPATH</string>
+    <string name="error_cannot_create_process">تعذّر إنشاء العملية</string>
+    <string name="error_app_process_failed">فشل تنفيذ app_process</string>
+    <string name="error_permission_insufficient">صلاحيات غير كافية، يلزم صلاحية Root أو ADB</string>
+    <string name="error_cannot_get_app_path">تعذّر الحصول على مسار التطبيق</string>
+    <string name="error_selinux_blocked">منع SELinux الاتصال عبر binder</string>
+    <string name="error_start_failed_exit_code">فشل التشغيل، رمز الخروج: %d</string>
+    <string name="error_wait_service_timeout">انتهت مهلة انتظار بدء الخدمة\n\nربما تعطّلت عملية الخدمة، يرجى التحقق من سجلات الجهاز</string>
+    <string name="error_start_failed_check_logs">فشل بدء الخدمة، راجع السجلات لمزيد من التفاصيل</string>
+    <string name="service_started_successfully">تم تشغيل الخدمة بنجاح</string>
+    <string name="execution_failed">فشل التنفيذ</string>
+    <string name="startup_log">سجل التشغيل</string>
+    <string name="device_info">معلومات الجهاز:</string>
+    <string name="device_model">  الطراز: %s</string>
+    <string name="android_version">  Android: %s</string>
+    <string name="app_version">  إصدار التطبيق: %s</string>
+    <string name="time_label">  الوقت: %s</string>
+    <string name="executed_command">الأمر:</string>
+    <string name="command_output">المخرجات:</string>
+    <string name="error_info">الخطأ:</string>
+    <string name="log_copied">تم نسخ السجل إلى الحافظة</string>
+    <string name="connecting_ellipsis">جارٍ الاتصال…</string>
+    <string name="switching_port">جارٍ التبديل إلى المنفذ المحدد %d…</string>
+    <string name="port_switch_failed">فشل تبديل المنفذ: %s</string>
+    <string name="port_switched_to">تم تبديل المنفذ إلى %d</string>
+    <string name="pairing_complete">اكتمل الاقتران</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">طلب إذن</string>
+    <string name="permission_allow_prefix">هل تسمح لـ </string>
+    <string name="permission_use_stellar"> باستخدام Stellar؟</string>
+    <string name="permission_follow_startup"> بالتشغيل مع Stellar في كل مرة؟</string>
+    <string name="permission_use_generic"> باستخدام %s؟</string>
+    <string name="always_allow">السماح دائماً</string>
+    <string name="allow_once">السماح مرة واحدة</string>
+    <string name="deny">رفض</string>
+    <string name="deny_and_dont_ask">رفض وعدم السؤال مجدداً</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">تم العثور على خدمة الاقتران</string>
+    <string name="enter_pairing_code">أدخل رمز الاقتران</string>
+    <string name="wireless_debugging_pairing_channel">اقتران التصحيح اللاسلكي</string>
+    <string name="pairing_alert_channel">تنبيه الاقتران</string>
+    <string name="searching_pairing_service">جارٍ البحث عن خدمة الاقتران</string>
+    <string name="pairing_success">تم الاقتران بنجاح</string>
+    <string name="searching_connect_service">جارٍ البحث عن خدمة الاتصال…</string>
+    <string name="pairing_failed_retrying">فشل الاقتران، جارٍ إعادة المحاولة…</string>
+    <string name="please_wait_auto_return">يرجى الانتظار، سيتم العودة تلقائياً إلى شاشة الإدخال</string>
+    <string name="connect_service_not_found">لم يتم العثور على خدمة الاتصال</string>
+    <string name="please_open_app_manually">يرجى فتح التطبيق لتشغيل الخدمة</string>
+    <string name="stop_search">إيقاف البحث</string>
+    <string name="cannot_find_pairing">لم يتم العثور على اقتران</string>
+    <string name="pairing_code">رمز الاقتران</string>
+    <string name="enter_pairing_code_action">إدخال رمز الاقتران</string>
+    <string name="pairing_service_not_found">لم يتم العثور على خدمة الاقتران</string>
+    <string name="ensure_wireless_debugging_open">تأكد من فتح صفحة اقتران التصحيح اللاسلكي</string>
+    <string name="pairing_in_progress">جارٍ الاقتران</string>
+    <string name="search_stopped">تم إيقاف البحث</string>
+    <string name="pairing_service_not_found_retry">لم يتم العثور على خدمة الاقتران، يرجى المحاولة مرة أخرى</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">جارٍ تشغيل خدمة Stellar…</string>
+    <string name="boot_start_success">تم تشغيل خدمة Stellar بنجاح عند الإقلاع</string>
+    <string name="boot_start_failed">فشل التشغيل عند الإقلاع لـ Stellar: %s</string>
+    <string name="boot_start_root_no_permission">صلاحية Root غير متاحة، فشل التشغيل عند الإقلاع</string>
+    <string name="adb_key_error">خطأ في مفتاح ADB</string>
+    <string name="adb_connection_failed">فشل اتصال ADB ‏%1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">إصدار جديد v%s</string>
+    <string name="go_to_download">فتح في المتصفح</string>
+    <string name="no_download_available">لا تتوفر تنزيلات</string>
+    <string name="select_update_source">اختيار مصدر التحديث</string>
+    <string name="install">تثبيت</string>
+    <string name="downloading">جارٍ التنزيل</string>
+    <string name="download_failed">فشل التنزيل: %s</string>
+</resources>

@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_home">Démarrer</string>
+    <string name="nav_apps">Applications</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="nav_settings">Paramètres</string>
+
+    <!-- Common -->
+    <string name="confirm">OK</string>
+    <string name="cancel">Annuler</string>
+    <string name="back">Retour</string>
+    <string name="copy">Copier</string>
+    <string name="close">Fermer</string>
+    <string name="save">Enregistrer</string>
+    <string name="retry">Réessayer</string>
+    <string name="refresh">Actualiser</string>
+    <string name="execute">Exécuter</string>
+    <string name="delete">Supprimer</string>
+    <string name="edit">Modifier</string>
+    <string name="start">Démarrer</string>
+    <string name="stop">Arrêter</string>
+    <string name="restart">Redémarrer</string>
+    <string name="unknown">Inconnu</string>
+    <string name="error_prefix">Erreur : %s</string>
+    <string name="press_again_to_exit">Appuyez à nouveau pour quitter</string>
+    <string name="no_root_permission">Pas d\'accès Root</string>
+    <string name="copied_to_clipboard">Copié dans le presse-papiers</string>
+    <string name="copy_failed">Échec de la copie</string>
+
+    <!-- Theme -->
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_auto">Automatique</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">État du service</string>
+    <string name="service_running">En cours d\'exécution</string>
+    <string name="service_not_running">Arrêté</string>
+    <string name="version">Version</string>
+    <string name="run_mode">Mode</string>
+    <string name="upgradable_to_version">Mise à jour disponible vers v%1$d.%2$d</string>
+    <string name="root_restart">Redémarrage Root</string>
+    <string name="root_start">Démarrage Root</string>
+    <string name="root_start_subtitle">Démarrer le service Stellar via Root</string>
+    <string name="wireless_debugging">Débogage sans fil</string>
+    <string name="wireless_debugging_subtitle">Démarrer le service Stellar via le débogage sans fil</string>
+    <string name="wired_adb">ADB filaire</string>
+    <string name="wired_adb_subtitle">Démarrer le service Stellar via ADB</string>
+    <string name="view">Voir</string>
+    <string name="stop_service">Arrêter le service</string>
+    <string name="stop_service_message">Le service Stellar sera arrêté.</string>
+    <string name="view_command">Voir la commande</string>
+    <string name="copied_to_clipboard_with_content">%s\nCopié dans le presse-papiers.</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">Applications autorisées</string>
+    <string name="service_not_running_title">Service arrêté</string>
+    <string name="service_not_running_hint">Veuillez d\'abord démarrer le service Stellar.\nVous pourrez gérer les applications autorisées une fois le service en cours d\'exécution.</string>
+    <string name="load_failed">Échec du chargement</string>
+    <string name="unknown_error">Erreur inconnue</string>
+    <string name="no_authorized_apps">Aucune application autorisée</string>
+    <string name="no_authorized_apps_hint">Aucune application n\'a demandé les permissions Stellar.\nLes applications apparaîtront ici après avoir demandé l\'accès.</string>
+    <string name="stellar_apps">Applications Stellar</string>
+    <string name="shizuku_compat_apps">Applications compatibles Shizuku</string>
+    <string name="adb_permission_restricted">Permissions ADB restreintes</string>
+    <string name="adb_permission_restricted_message">Le fabricant de votre appareil a probablement restreint les permissions ADB.\n\nVeuillez ajuster les paramètres dans les Options pour les développeurs, ou essayez le mode Root.</string>
+    <string name="permission_ask">Demander</string>
+    <string name="permission_allow">Autoriser</string>
+    <string name="permission_deny">Refuser</string>
+    <string name="shizuku_permission">Permission Shizuku</string>
+    <string name="shizuku_permission_subtitle">Accéder aux fonctionnalités Shizuku</string>
+    <string name="basic_permission">Permission de base</string>
+    <string name="basic_permission_subtitle">Accéder aux fonctionnalités Stellar</string>
+    <string name="follow_startup">Démarrage auto</string>
+    <string name="follow_startup_subtitle">Démarrer avec Stellar</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">Thème</string>
+    <string name="theme_subtitle">Choisir l\'apparence de l\'application</string>
+    <string name="boot_start_wireless">Démarrage au boot (Débogage sans fil)</string>
+    <string name="boot_start_wireless_subtitle">Démarrer Stellar via le débogage sans fil au démarrage</string>
+    <string name="boot_start_root">Démarrage au boot (Root)</string>
+    <string name="boot_start_root_subtitle">Démarrer Stellar via Root au démarrage</string>
+    <string name="auto_enable_accessibility">Le service d\'accessibilité sera activé automatiquement pour le démarrage au boot</string>
+    <string name="shizuku_compat_layer">Compatibilité Shizuku</string>
+    <string name="shizuku_compat_layer_subtitle">Autoriser les applications Shizuku à fonctionner via Stellar</string>
+    <string name="shizuku_compat_enabled">Compatibilité Shizuku activée</string>
+    <string name="shizuku_compat_disabled">Compatibilité Shizuku désactivée</string>
+    <string name="setting_failed">Échec du paramétrage : %s</string>
+    <string name="drop_privileges">Réduction des privilèges</string>
+    <string name="drop_privileges_subtitle">Exécuter en tant qu\'utilisateur Shell après le démarrage Root</string>
+    <string name="tcpip_port">Port TCP/IP</string>
+    <string name="tcpip_port_subtitle">Changer le port TCP/IP d\'adbd après le démarrage via le débogage sans fil</string>
+    <string name="cannot_generate_safe_port">Impossible de générer un port sûr, veuillez le définir manuellement</string>
+    <string name="auto_generated_safe_port">Port sûr généré automatiquement : %s</string>
+    <string name="port_number">Port</string>
+    <string name="port_example">Ex : 5555</string>
+    <string name="cannot_generate_safe_port_manual">Impossible de générer un port sûr, veuillez le saisir manuellement</string>
+    <string name="port_invalid">Port invalide, veuillez entrer un nombre entre 1 et 65535</string>
+    <string name="port_blacklisted_warning">Attention : le port %d peut être ciblé par des scanners, il est recommandé d\'utiliser un autre port</string>
+    <string name="port_set_to">Port défini sur %s</string>
+    <string name="service_logs">Journaux du service</string>
+    <string name="service_logs_subtitle">Voir les journaux du service Stellar</string>
+    <string name="already_latest_version">Déjà à jour</string>
+    <string name="check_update_failed">Échec de la vérification des mises à jour</string>
+    <string name="project_declaration">Remerciements</string>
+    <string name="project_declaration_content">Ce projet est basé sur Shizuku, un excellent projet open source qui permet d\'appeler les API système via ADB ou Root.</string>
+    <string name="cannot_open_browser">Impossible d\'ouvrir le navigateur</string>
+    <string name="check_update">Vérifier les mises à jour</string>
+    <string name="current_version">Version actuelle : %s</string>
+    <string name="checking">Vérification…</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">Service arrêté</string>
+    <string name="load_logs_failed">Échec du chargement des journaux : %s</string>
+    <string name="logs_cleared">Journaux effacés</string>
+    <string name="clear_logs_failed">Échec de l\'effacement des journaux : %s</string>
+    <string name="no_logs_to_copy">Aucun journal à copier</string>
+    <string name="logs_copied">Journaux copiés dans le presse-papiers</string>
+    <string name="copy_logs">Copier les journaux</string>
+    <string name="clear_logs">Effacer les journaux</string>
+    <string name="search_logs">Rechercher dans les journaux…</string>
+    <string name="clear">Effacer</string>
+    <string name="no_logs">Aucun journal</string>
+    <string name="logs_will_show">Les journaux apparaîtront lorsque le service sera en cours d\'exécution</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">Exécution manuelle</string>
+    <string name="mode_click_execute_desc">Appuyez pour exécuter les commandes manuellement</string>
+    <string name="mode_follow_service">Démarrage du service</string>
+    <string name="mode_follow_service_desc">Exécuter automatiquement au démarrage du service</string>
+    <string name="command">Commandes</string>
+    <string name="quick_execute">Exécution rapide</string>
+    <string name="add_command">Ajouter une commande</string>
+    <string name="create_command">Nouvelle commande</string>
+    <string name="edit_command">Modifier la commande</string>
+    <string name="title_label">Titre</string>
+    <string name="command_name">Nom de la commande</string>
+    <string name="command_label">Commande</string>
+    <string name="command_placeholder">Entrez la commande à exécuter</string>
+    <string name="select_mode">Sélectionner le mode</string>
+    <string name="executing">En cours</string>
+    <string name="execution_result">Résultat</string>
+    <string name="return_value">Code de retour</string>
+    <string name="time_elapsed">Durée</string>
+    <string name="executing_ellipsis">En cours…</string>
+    <string name="copy_all">Tout copier</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">Démarrage Root</string>
+    <string name="wireless_debugging_start">Démarrage par débogage sans fil</string>
+    <string name="error_report">Rapport d\'erreur</string>
+    <string name="enable_wireless_debugging">Activer le débogage sans fil</string>
+    <string name="cannot_open_dev_options">Impossible d\'ouvrir les Options pour les développeurs</string>
+    <string name="open_dev_options">Ouvrir les Options pour les développeurs</string>
+    <string name="already_enabled_continue">Activé, continuer</string>
+    <string name="grant_notification_permission">Permission de notification</string>
+    <string name="need_notification_permission">La permission de notification est requise pour continuer l\'appairage</string>
+    <string name="cannot_open_notification_settings">Impossible d\'ouvrir les paramètres de notification</string>
+    <string name="grant_permission">Accorder la permission</string>
+    <string name="wireless_debugging_pairing">Appairage du débogage sans fil</string>
+    <string name="open_wireless_debugging_settings">Ouvrir le débogage sans fil</string>
+    <string name="pairing_done_continue">Appairé, continuer</string>
+    <string name="check_root_permission">Vérifier l\'accès Root</string>
+    <string name="waiting_check">En attente</string>
+    <string name="check_existing_service">Vérifier le service existant</string>
+    <string name="waiting_execute">En attente</string>
+    <string name="start_service_process">Démarrer le service</string>
+    <string name="wait_binder_response">En attente du Binder</string>
+    <string name="start_complete">Terminé</string>
+    <string name="waiting_complete">En attente</string>
+    <string name="detect_adb_port">Détecter le port ADB</string>
+    <string name="waiting_detect">Détection</string>
+    <string name="detect_pairing_status">Vérifier l\'état de l\'appairage</string>
+    <string name="connect_adb_service">Connexion à ADB</string>
+    <string name="waiting_connect">Connexion</string>
+    <string name="verify_connection">Vérifier la connexion</string>
+    <string name="waiting_verify">Vérification</string>
+    <string name="detecting_adb_port">Détection du port ADB disponible…</string>
+    <string name="port_available">Port %d disponible</string>
+    <string name="already_paired">Appairé</string>
+    <string name="no_port_detected">Aucun port disponible détecté</string>
+    <string name="need_pairing">Appairage requis</string>
+    <string name="enable_wireless_debugging_hint">Veuillez activer le débogage sans fil dans les Options pour les développeurs</string>
+    <string name="notification_permission_granted">Permission de notification accordée</string>
+    <string name="notification_permission_required">La permission de notification est requise pour l\'appairage</string>
+    <string name="pairing_instruction">Appuyez sur « Appairer l\'appareil avec un code » dans les paramètres de débogage sans fil, puis entrez le code dans la notification</string>
+    <string name="connection_success">Connecté</string>
+    <string name="verification_passed">Vérifié</string>
+    <string name="checking_ellipsis">Vérification…</string>
+    <string name="completed">Terminé</string>
+    <string name="starting_ellipsis">Démarrage…</string>
+    <string name="waiting_response">En attente de la réponse…</string>
+    <string name="pairing_failed_retry">Échec de l\'appairage, veuillez réessayer</string>
+    <string name="need_pairing_to_connect">Appairage requis pour la connexion</string>
+    <string name="checking_root_permission">Vérification de l\'accès Root…</string>
+    <string name="root_permission_acquired">Accès Root obtenu</string>
+    <string name="error_cannot_kill_process">Impossible de terminer le processus, veuillez d\'abord arrêter le service existant depuis l\'application</string>
+    <string name="error_cannot_set_classpath">Impossible de définir CLASSPATH</string>
+    <string name="error_cannot_create_process">Impossible de créer le processus</string>
+    <string name="error_app_process_failed">Échec de l\'exécution d\'app_process</string>
+    <string name="error_permission_insufficient">Permissions insuffisantes, accès Root ou ADB requis</string>
+    <string name="error_cannot_get_app_path">Impossible d\'obtenir le chemin de l\'application</string>
+    <string name="error_selinux_blocked">SELinux a bloqué la connexion binder</string>
+    <string name="error_start_failed_exit_code">Échec du démarrage, code de sortie : %d</string>
+    <string name="error_wait_service_timeout">Délai d\'attente dépassé pour le démarrage du service\n\nLe processus du service a peut-être planté, veuillez vérifier les journaux de l\'appareil</string>
+    <string name="error_start_failed_check_logs">Échec du démarrage du service, consultez les journaux pour plus de détails</string>
+    <string name="service_started_successfully">Service démarré avec succès</string>
+    <string name="execution_failed">Échec de l\'exécution</string>
+    <string name="startup_log">Journal de démarrage</string>
+    <string name="device_info">Infos appareil :</string>
+    <string name="device_model">  Modèle : %s</string>
+    <string name="android_version">  Android : %s</string>
+    <string name="app_version">  Version : %s</string>
+    <string name="time_label">  Heure : %s</string>
+    <string name="executed_command">Commande :</string>
+    <string name="command_output">Sortie :</string>
+    <string name="error_info">Erreur :</string>
+    <string name="log_copied">Journal copié dans le presse-papiers</string>
+    <string name="connecting_ellipsis">Connexion…</string>
+    <string name="switching_port">Basculement vers le port configuré %d…</string>
+    <string name="port_switch_failed">Échec du changement de port : %s</string>
+    <string name="port_switched_to">Port changé en %d</string>
+    <string name="pairing_complete">Appairage terminé</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">Demande de permission</string>
+    <string name="permission_allow_prefix">Autoriser </string>
+    <string name="permission_use_stellar"> à utiliser Stellar ?</string>
+    <string name="permission_follow_startup"> à démarrer avec Stellar à chaque fois ?</string>
+    <string name="permission_use_generic"> à utiliser %s ?</string>
+    <string name="always_allow">Toujours autoriser</string>
+    <string name="allow_once">Autoriser une fois</string>
+    <string name="deny">Refuser</string>
+    <string name="deny_and_dont_ask">Refuser et ne plus demander</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">Service d\'appairage trouvé</string>
+    <string name="enter_pairing_code">Entrez le code d\'appairage</string>
+    <string name="wireless_debugging_pairing_channel">Appairage du débogage sans fil</string>
+    <string name="pairing_alert_channel">Alerte d\'appairage</string>
+    <string name="searching_pairing_service">Recherche du service d\'appairage</string>
+    <string name="pairing_success">Appairage réussi</string>
+    <string name="searching_connect_service">Recherche du service de connexion…</string>
+    <string name="pairing_failed_retrying">Échec de l\'appairage, nouvelle tentative…</string>
+    <string name="please_wait_auto_return">Veuillez patienter, retour automatique à l\'écran de saisie</string>
+    <string name="connect_service_not_found">Service de connexion introuvable</string>
+    <string name="please_open_app_manually">Veuillez ouvrir l\'application pour démarrer le service</string>
+    <string name="stop_search">Arrêter la recherche</string>
+    <string name="cannot_find_pairing">Appairage introuvable</string>
+    <string name="pairing_code">Code d\'appairage</string>
+    <string name="enter_pairing_code_action">Entrer le code d\'appairage</string>
+    <string name="pairing_service_not_found">Service d\'appairage introuvable</string>
+    <string name="ensure_wireless_debugging_open">Assurez-vous que la page d\'appairage du débogage sans fil est ouverte</string>
+    <string name="pairing_in_progress">Appairage en cours</string>
+    <string name="search_stopped">Recherche arrêtée</string>
+    <string name="pairing_service_not_found_retry">Service d\'appairage introuvable, veuillez réessayer</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">Démarrage du service Stellar…</string>
+    <string name="boot_start_success">Le service Stellar a démarré avec succès au boot</string>
+    <string name="boot_start_failed">Échec du démarrage au boot de Stellar : %s</string>
+    <string name="boot_start_root_no_permission">Accès Root indisponible, échec du démarrage au boot</string>
+    <string name="adb_key_error">Erreur de clé ADB</string>
+    <string name="adb_connection_failed">Échec de la connexion ADB %1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">Nouvelle version v%s</string>
+    <string name="go_to_download">Ouvrir dans le navigateur</string>
+    <string name="no_download_available">Aucun téléchargement disponible</string>
+    <string name="select_update_source">Choisir la source de mise à jour</string>
+    <string name="install">Installer</string>
+    <string name="downloading">Téléchargement</string>
+    <string name="download_failed">Échec du téléchargement : %s</string>
+</resources>
