@@ -169,7 +169,7 @@ fun PermissionRequestDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.stellar_icon),
+                        painter = painterResource(id = R.drawable.ic_stellar),
                         contentDescription = null,
                         modifier = Modifier.size(48.dp)
                     )

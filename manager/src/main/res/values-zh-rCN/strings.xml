@@ -1,3 +1,276 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Navigation -->
+    <string name="nav_home">启动</string>
+    <string name="nav_apps">授权应用</string>
+    <string name="nav_terminal">命令</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Common -->
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="back">返回</string>
+    <string name="copy">复制</string>
+    <string name="close">关闭</string>
+    <string name="save">保存</string>
+    <string name="retry">重试</string>
+    <string name="refresh">刷新</string>
+    <string name="execute">执行</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="start">启动</string>
+    <string name="stop">停止</string>
+    <string name="restart">重启</string>
+    <string name="unknown">未知</string>
+    <string name="error_prefix">错误: %s</string>
+    <string name="press_again_to_exit">再按一次退出应用</string>
+    <string name="no_root_permission">没有 Root 权限</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
+    <string name="copy_failed">复制失败</string>
+
+    <!-- Theme -->
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_auto">跟随系统</string>
+
+    <!-- Home Screen -->
+    <string name="service_status">服务状态</string>
+    <string name="service_running">正在运行</string>
+    <string name="service_not_running">未运行</string>
+    <string name="version">版本</string>
+    <string name="run_mode">运行模式</string>
+    <string name="upgradable_to_version">可升级到版本 %1$d.%2$d</string>
+    <string name="root_restart">Root 重启</string>
+    <string name="root_start">Root 启动</string>
+    <string name="root_start_subtitle">通过 Root 权限启动 Stellar 服务</string>
+    <string name="wireless_debugging">无线调试</string>
+    <string name="wireless_debugging_subtitle">通过无线调试启动 Stellar 服务</string>
+    <string name="wired_adb">有线 ADB</string>
+    <string name="wired_adb_subtitle">通过 ADB 启动 Stellar 服务</string>
+    <string name="view">查看</string>
+    <string name="stop_service">停止服务</string>
+    <string name="stop_service_message">Stellar 服务将被停止。</string>
+    <string name="view_command">查看指令</string>
+    <string name="copied_to_clipboard_with_content">%s\n已被复制到剪贴板。</string>
+
+    <!-- Apps Screen -->
+    <string name="authorized_apps">授权应用</string>
+    <string name="service_not_running_title">服务未运行</string>
+    <string name="service_not_running_hint">请先启动 Stellar 服务\n服务运行后可管理授权应用</string>
+    <string name="load_failed">加载失败</string>
+    <string name="unknown_error">未知错误</string>
+    <string name="no_authorized_apps">暂无授权应用</string>
+    <string name="no_authorized_apps_hint">当前没有应用请求 Stellar 权限\n应用请求权限后会在这里显示</string>
+    <string name="stellar_apps">Stellar 应用</string>
+    <string name="shizuku_compat_apps">Shizuku 兼容应用</string>
+    <string name="adb_permission_restricted">ADB 权限受限</string>
+    <string name="adb_permission_restricted_message">您的设备制造商很可能限制了 ADB 的权限。\n\n请在开发者选项中调整相关设置，或尝试使用 Root 模式运行。</string>
+    <string name="permission_ask">询问</string>
+    <string name="permission_allow">允许</string>
+    <string name="permission_deny">拒绝</string>
+    <string name="shizuku_permission">Shizuku 权限</string>
+    <string name="shizuku_permission_subtitle">使用 Shizuku 功能</string>
+    <string name="basic_permission">基础权限</string>
+    <string name="basic_permission_subtitle">使用 Stellar 功能</string>
+    <string name="follow_startup">跟随启动</string>
+    <string name="follow_startup_subtitle">随 Stellar 一起启动</string>
+
+    <!-- Settings Screen -->
+    <string name="theme">主题</string>
+    <string name="theme_subtitle">选择应用的外观主题</string>
+    <string name="boot_start_wireless">开机启动（无线调试）</string>
+    <string name="boot_start_wireless_subtitle">Stellar 可以通过无线调试开机启动</string>
+    <string name="boot_start_root">开机启动（Root）</string>
+    <string name="boot_start_root_subtitle">Stellar 可以通过Root权限开机启动</string>
+    <string name="auto_enable_accessibility">将自动开启无障碍服务以实现开机自启</string>
+    <string name="shizuku_compat_layer">Shizuku 兼容层</string>
+    <string name="shizuku_compat_layer_subtitle">允许 Shizuku 应用通过 Stellar 服务运行</string>
+    <string name="shizuku_compat_enabled">Shizuku 兼容层已启用</string>
+    <string name="shizuku_compat_disabled">Shizuku 兼容层已禁用</string>
+    <string name="setting_failed">设置失败: %s</string>
+    <string name="drop_privileges">降权激活</string>
+    <string name="drop_privileges_subtitle">Root 启动后降权到 Shell 用户运行</string>
+    <string name="tcpip_port">TCP/IP 端口</string>
+    <string name="tcpip_port_subtitle">通过无线调试启动后，将 adbd 的 TCP/IP 端口切换到指定端口</string>
+    <string name="cannot_generate_safe_port">无法生成安全端口，请手动设置</string>
+    <string name="auto_generated_safe_port">已自动生成安全端口 %s</string>
+    <string name="port_number">端口号</string>
+    <string name="port_example">例如: 5555</string>
+    <string name="cannot_generate_safe_port_manual">无法生成安全端口，请手动输入</string>
+    <string name="port_invalid">端口号无效，请输入 1-65535 之间的数字</string>
+    <string name="port_blacklisted_warning">警告：端口 %d 可能被恶意扫描，建议使用其他端口</string>
+    <string name="port_set_to">端口已设置为 %s</string>
+    <string name="service_logs">服务日志</string>
+    <string name="service_logs_subtitle">查看 Stellar 服务运行日志</string>
+    <string name="already_latest_version">已是最新版本</string>
+    <string name="check_update_failed">检查更新失败</string>
+    <string name="project_declaration">项目声明</string>
+    <string name="project_declaration_content">本项目基于 Shizuku 开发。Shizuku 是一个优秀的开源项目，提供了通过 ADB 或 Root 调用系统 API 的能力。</string>
+    <string name="cannot_open_browser">无法打开浏览器</string>
+    <string name="check_update">检查更新</string>
+    <string name="current_version">当前版本: %s</string>
+    <string name="checking">检查中...</string>
+
+    <!-- Logs Screen -->
+    <string name="service_not_running_toast">服务未运行</string>
+    <string name="load_logs_failed">加载日志失败: %s</string>
+    <string name="logs_cleared">日志已清除</string>
+    <string name="clear_logs_failed">清除日志失败: %s</string>
+    <string name="no_logs_to_copy">没有日志可复制</string>
+    <string name="logs_copied">日志已复制到剪贴板</string>
+    <string name="copy_logs">复制日志</string>
+    <string name="clear_logs">清除日志</string>
+    <string name="search_logs">搜索日志...</string>
+    <string name="clear">清除</string>
+    <string name="no_logs">暂无日志</string>
+    <string name="logs_will_show">日志将在服务运行时显示</string>
+
+    <!-- Terminal Screen -->
+    <string name="mode_click_execute">点击执行</string>
+    <string name="mode_click_execute_desc">手动点击执行命令</string>
+    <string name="mode_follow_service">跟随服务</string>
+    <string name="mode_follow_service_desc">服务启动时自动执行</string>
+    <string name="command">命令</string>
+    <string name="quick_execute">快速执行</string>
+    <string name="add_command">添加命令</string>
+    <string name="create_command">创建命令</string>
+    <string name="edit_command">编辑命令</string>
+    <string name="title_label">标题</string>
+    <string name="command_name">命令名称</string>
+    <string name="command_label">命令</string>
+    <string name="command_placeholder">输入要执行的命令</string>
+    <string name="select_mode">选择模式</string>
+    <string name="executing">执行中</string>
+    <string name="execution_result">执行结果</string>
+    <string name="return_value">返回值</string>
+    <string name="time_elapsed">耗时</string>
+    <string name="executing_ellipsis">执行中...</string>
+    <string name="copy_all">复制全部</string>
+
+    <!-- Starter Screen -->
+    <string name="root_start_title">Root 启动</string>
+    <string name="wireless_debugging_start">无线调试启动</string>
+    <string name="error_report">错误报告</string>
+    <string name="enable_wireless_debugging">开启无线调试</string>
+    <string name="cannot_open_dev_options">无法打开开发者选项</string>
+    <string name="open_dev_options">打开开发者选项</string>
+    <string name="already_enabled_continue">已开启，继续</string>
+    <string name="grant_notification_permission">授权通知权限</string>
+    <string name="need_notification_permission">需要通知权限才能继续配对</string>
+    <string name="cannot_open_notification_settings">无法打开通知设置</string>
+    <string name="grant_permission">授予权限</string>
+    <string name="wireless_debugging_pairing">无线调试配对</string>
+    <string name="open_wireless_debugging_settings">打开无线调试设置</string>
+    <string name="pairing_done_continue">配对完成，继续</string>
+    <string name="check_root_permission">检查 Root 权限</string>
+    <string name="waiting_check">等待检查</string>
+    <string name="check_existing_service">检查现有服务</string>
+    <string name="waiting_execute">等待执行</string>
+    <string name="start_service_process">启动服务进程</string>
+    <string name="wait_binder_response">等待 Binder 响应</string>
+    <string name="start_complete">启动完成</string>
+    <string name="waiting_complete">等待完成</string>
+    <string name="detect_adb_port">检测 ADB 端口</string>
+    <string name="waiting_detect">等待检测</string>
+    <string name="detect_pairing_status">检测配对状态</string>
+    <string name="connect_adb_service">连接 ADB 服务</string>
+    <string name="waiting_connect">等待连接</string>
+    <string name="verify_connection">验证连接状态</string>
+    <string name="waiting_verify">等待验证</string>
+    <string name="detecting_adb_port">正在检测可用的 ADB 端口...</string>
+    <string name="port_available">端口 %d 可用</string>
+    <string name="already_paired">已配对</string>
+    <string name="no_port_detected">未检测到可用端口</string>
+    <string name="need_pairing">需要配对</string>
+    <string name="enable_wireless_debugging_hint">请在开发者选项中开启无线调试功能</string>
+    <string name="notification_permission_granted">通知权限已授予</string>
+    <string name="notification_permission_required">必须授予通知权限才能进行配对</string>
+    <string name="pairing_instruction">在无线调试页面点击「使用配对码配对设备」，然后在通知中心输入配对码</string>
+    <string name="connection_success">连接成功</string>
+    <string name="verification_passed">验证通过</string>
+    <string name="checking_ellipsis">正在检查...</string>
+    <string name="completed">已完成</string>
+    <string name="starting_ellipsis">正在启动...</string>
+    <string name="waiting_response">等待响应...</string>
+    <string name="pairing_failed_retry">配对未成功，请重新配对</string>
+    <string name="need_pairing_to_connect">需要配对才能连接</string>
+    <string name="checking_root_permission">正在检查 Root 权限...</string>
+    <string name="root_permission_acquired">Root 权限已获取</string>
+    <string name="error_cannot_kill_process">无法终止进程，请先从应用中停止现有服务</string>
+    <string name="error_cannot_set_classpath">无法设置 CLASSPATH</string>
+    <string name="error_cannot_create_process">无法创建进程</string>
+    <string name="error_app_process_failed">app_process 执行失败</string>
+    <string name="error_permission_insufficient">权限不足，需要 root 或 adb 权限</string>
+    <string name="error_cannot_get_app_path">无法获取应用路径</string>
+    <string name="error_selinux_blocked">SELinux 阻止了应用通过 binder 连接</string>
+    <string name="error_start_failed_exit_code">启动失败，退出码: %d</string>
+    <string name="error_wait_service_timeout">等待服务启动超时\n\n服务进程可能已崩溃，请检查设备日志</string>
+    <string name="error_start_failed_check_logs">服务启动失败，请查看日志了解详情</string>
+    <string name="service_started_successfully">服务已成功启动</string>
+    <string name="execution_failed">执行失败</string>
+    <string name="startup_log">启动日志</string>
+    <string name="device_info">设备信息:</string>
+    <string name="device_model">  机型: %s</string>
+    <string name="android_version">  Android 版本: %s</string>
+    <string name="app_version">  应用版本: %s</string>
+    <string name="time_label">  时间: %s</string>
+    <string name="executed_command">执行命令:</string>
+    <string name="command_output">命令输出:</string>
+    <string name="error_info">错误信息:</string>
+    <string name="log_copied">日志已复制到剪贴板</string>
+    <string name="connecting_ellipsis">正在连接...</string>
+    <string name="switching_port">正在切换到用户设置的端口 %d...</string>
+    <string name="port_switch_failed">端口切换失败: %s</string>
+    <string name="port_switched_to">端口已切换到 %d</string>
+    <string name="pairing_complete">配对完成</string>
+
+    <!-- Permission Request -->
+    <string name="permission_request">授权请求</string>
+    <string name="permission_allow_prefix">要允许 </string>
+    <string name="permission_use_stellar"> 使用 Stellar 吗？</string>
+    <string name="permission_follow_startup"> 每次都跟随 Stellar 一起启动吗？</string>
+    <string name="permission_use_generic"> 使用 %s 吗？</string>
+    <string name="always_allow">始终允许</string>
+    <string name="allow_once">仅此一次</string>
+    <string name="deny">拒绝</string>
+    <string name="deny_and_dont_ask">拒绝且不再询问</string>
+
+    <!-- ADB Pairing Service -->
+    <string name="pairing_service_found">已找到配对服务</string>
+    <string name="enter_pairing_code">请输入配对码</string>
+    <string name="wireless_debugging_pairing_channel">无线调试配对</string>
+    <string name="pairing_alert_channel">配对提醒</string>
+    <string name="searching_pairing_service">正在搜索配对服务</string>
+    <string name="pairing_success">配对成功</string>
+    <string name="searching_connect_service">正在搜索连接服务...</string>
+    <string name="pairing_failed_retrying">配对失败，正在重试...</string>
+    <string name="please_wait_auto_return">请稍候，将自动返回输入界面</string>
+    <string name="connect_service_not_found">未找到连接服务</string>
+    <string name="please_open_app_manually">请手动打开应用启动服务</string>
+    <string name="stop_search">停止搜索</string>
+    <string name="cannot_find_pairing">搜索不到配对</string>
+    <string name="pairing_code">配对码</string>
+    <string name="enter_pairing_code_action">输入配对码</string>
+    <string name="pairing_service_not_found">未找到配对服务</string>
+    <string name="ensure_wireless_debugging_open">请确保已打开无线调试配对页面</string>
+    <string name="pairing_in_progress">正在进行配对</string>
+    <string name="search_stopped">已停止搜索</string>
+    <string name="pairing_service_not_found_retry">未找到配对服务，请重试</string>
+
+    <!-- Self Starter Service -->
+    <string name="starting_stellar_service">正在启动Stellar服务…</string>
+    <string name="boot_start_success">Stellar 服务已在开机时成功启动</string>
+    <string name="boot_start_failed">Stellar 开机启动失败: %s</string>
+    <string name="boot_start_root_no_permission">Root 权限不可用，开机启动失败</string>
+    <string name="adb_key_error">ADB密钥错误</string>
+    <string name="adb_connection_failed">ADB连接失败 %1$s:%2$d</string>
+
+    <!-- Update -->
+    <string name="new_version_title">发现新版本 v%s</string>
+    <string name="go_to_download">浏览器下载</string>
+    <string name="no_download_available">暂无下载链接</string>
+    <string name="select_update_source">选择更新源</string>
+    <string name="install">安装</string>
+    <string name="downloading">下载中</string>
+    <string name="download_failed">下载失败: %s</string>
 </resources>

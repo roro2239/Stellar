@@ -91,7 +91,7 @@ class AdbPairingService : Service() {
             getSystemService(NotificationManager::class.java).notify(notificationId, notification)
 
             val alertNotification = Notification.Builder(this, alertNotificationChannel)
-                .setSmallIcon(R.drawable.stellar_icon)
+                .setSmallIcon(R.drawable.ic_stellar)
                 .setContentTitle(getString(R.string.pairing_service_found))
                 .setContentText(getString(R.string.enter_pairing_code))
                 .addAction(replyNotificationAction(port))
@@ -280,7 +280,7 @@ class AdbPairingService : Service() {
                 stopSearch()
 
                 val successNotification = Notification.Builder(this, notificationChannel)
-                    .setSmallIcon(R.drawable.stellar_icon)
+                    .setSmallIcon(R.drawable.ic_stellar)
                     .setContentTitle(getString(R.string.pairing_success))
                     .setContentText(getString(R.string.searching_connect_service))
                     .setOngoing(true)
@@ -305,7 +305,7 @@ class AdbPairingService : Service() {
                 Log.i(tag, "配对失败，正在重试")
 
                 val failureNotification = Notification.Builder(this, notificationChannel)
-                    .setSmallIcon(R.drawable.stellar_icon)
+                    .setSmallIcon(R.drawable.ic_stellar)
                     .setContentTitle(title)
                     .setContentText(text)
                     .setOngoing(true)
@@ -442,7 +442,7 @@ class AdbPairingService : Service() {
                 grantSecureSettingsPermission(systemPort)
             } else {
                 val notification = Notification.Builder(this, notificationChannel)
-                    .setSmallIcon(R.drawable.stellar_icon)
+                    .setSmallIcon(R.drawable.ic_stellar)
                     .setContentTitle(getString(R.string.connect_service_not_found))
                     .setContentText(getString(R.string.please_open_app_manually))
                     .setAutoCancel(true)
@@ -556,7 +556,7 @@ class AdbPairingService : Service() {
 
     private val searchingNotification by lazy {
         Notification.Builder(this, notificationChannel)
-            .setSmallIcon(R.drawable.stellar_icon)
+            .setSmallIcon(R.drawable.ic_stellar)
             .setContentTitle(getString(R.string.searching_pairing_service))
             .addAction(stopNotificationAction)
             .addAction(stopAndRetryNotificationAction)
@@ -566,13 +566,13 @@ class AdbPairingService : Service() {
     private fun createInputNotification(port: Int): Notification =
         Notification.Builder(this, notificationChannel)
             .setContentTitle(getString(R.string.pairing_service_found))
-            .setSmallIcon(R.drawable.stellar_icon)
+            .setSmallIcon(R.drawable.ic_stellar)
             .addAction(replyNotificationAction(port))
             .build()
 
     private fun createMaxRefreshNotification(): Notification =
         Notification.Builder(this, notificationChannel)
-            .setSmallIcon(R.drawable.stellar_icon)
+            .setSmallIcon(R.drawable.ic_stellar)
             .setContentTitle(getString(R.string.pairing_service_not_found))
             .setContentText(getString(R.string.ensure_wireless_debugging_open))
             .addAction(retryNotificationAction)
@@ -581,13 +581,13 @@ class AdbPairingService : Service() {
     private val workingNotification by lazy {
         Notification.Builder(this, notificationChannel)
             .setContentTitle(getString(R.string.pairing_in_progress))
-            .setSmallIcon(R.drawable.stellar_icon)
+            .setSmallIcon(R.drawable.ic_stellar)
             .build()
     }
 
     private fun createManualInputNotification(port: Int): Notification =
         Notification.Builder(this, notificationChannel)
-            .setSmallIcon(R.drawable.stellar_icon)
+            .setSmallIcon(R.drawable.ic_stellar)
             .setContentTitle(getString(R.string.search_stopped))
             .setContentText(if (port > 0) getString(R.string.enter_pairing_code) else getString(R.string.pairing_service_not_found_retry))
             .addAction(if (port > 0) replyNotificationAction(port) else retryNotificationAction)

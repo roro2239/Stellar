@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="main_layout_manager" translatable="false">androidx.recyclerview.widget.LinearLayoutManager</string>
-    <string name="accessibility_service_description">用于开机自启动服务</string>
+    <string name="accessibility_service_description">Used for boot auto-start</string>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>
