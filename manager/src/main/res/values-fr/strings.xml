@@ -270,6 +270,7 @@
     <string name="go_to_download">Ouvrir dans le navigateur</string>
     <string name="no_download_available">Aucun téléchargement disponible</string>
     <string name="select_update_source">Choisir la source de mise à jour</string>
+    <string name="long_press_switch_source">Appui long pour changer de source</string>
     <string name="install">Installer</string>
     <string name="downloading">Téléchargement</string>
     <string name="download_failed">Échec du téléchargement : %s</string>

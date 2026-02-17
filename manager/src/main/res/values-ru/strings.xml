@@ -270,6 +270,7 @@
     <string name="go_to_download">Открыть в браузере</string>
     <string name="no_download_available">Нет доступных загрузок</string>
     <string name="select_update_source">Выбрать источник обновления</string>
+    <string name="long_press_switch_source">Долгое нажатие для смены источника</string>
     <string name="install">Установить</string>
     <string name="downloading">Загрузка</string>
     <string name="download_failed">Ошибка загрузки: %s</string>

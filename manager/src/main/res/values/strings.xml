@@ -272,6 +272,7 @@
     <string name="go_to_download">Open in Browser</string>
     <string name="no_download_available">No download available</string>
     <string name="select_update_source">Select Update Source</string>
+    <string name="long_press_switch_source">Long press to switch source</string>
     <string name="install">Install</string>
     <string name="downloading">Downloading</string>
     <string name="download_failed">Download failed: %s</string>

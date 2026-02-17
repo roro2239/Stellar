@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -142,6 +143,7 @@ fun SettingsScreen(
     }
 
     val scope = rememberCoroutineScope()
+    var currentSource by remember { mutableStateOf<UpdateSource?>(null) }
 
     LaunchedEffect(Unit) {
         val isRoot = withContext(Dispatchers.IO) {
@@ -156,6 +158,7 @@ fun SettingsScreen(
             startOnBoot = context.packageManager.isComponentEnabled(componentName) &&
                     !preferences.getBoolean(KEEP_START_ON_BOOT_WIRELESS, false)
         }
+        currentSource = UpdateUtils.getPreferredSource()
     }
 
     var tcpipPort by remember {
@@ -489,6 +492,7 @@ fun SettingsScreen(
                                 }
                             },
                             onLongClick = { showSourceDialog = true },
+                            currentSource = currentSource,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
@@ -524,7 +528,8 @@ fun SettingsScreen(
                                 }
                             }
                         },
-                        onLongClick = { showSourceDialog = true }
+                        onLongClick = { showSourceDialog = true },
+                        currentSource = currentSource
                     )
                 }
             }
@@ -692,6 +697,7 @@ fun SettingsScreen(
             onDismiss = { showSourceDialog = false },
             onSourceSelected = { source ->
                 showSourceDialog = false
+                currentSource = source
                 isCheckingUpdate = true
                 scope.launch {
                     try {
@@ -764,15 +770,11 @@ private fun UpdateCard(
     isCheckingUpdate: Boolean,
     onCheckUpdate: () -> Unit,
     onLongClick: () -> Unit,
+    currentSource: UpdateSource?,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {},
-                onLongClick = onLongClick
-            ),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -781,6 +783,11 @@ private fun UpdateCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(AppShape.shapes.cardMedium)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongClick
+                )
                 .padding(16.dp)
         ) {
             Row(
@@ -805,11 +812,41 @@ private fun UpdateCard(
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.check_update),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.check_update),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (currentSource != null) {
+                            Text(
+                                text = currentSource.displayName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = AppShape.shapes.tag
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.long_press_switch_source),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.current_version, BuildConfig.VERSION_NAME),

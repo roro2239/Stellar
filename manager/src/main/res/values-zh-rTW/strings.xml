@@ -270,6 +270,7 @@
     <string name="go_to_download">瀏覽器下載</string>
     <string name="no_download_available">暫無下載連結</string>
     <string name="select_update_source">選擇更新來源</string>
+    <string name="long_press_switch_source">長按切換更新來源</string>
     <string name="install">安裝</string>
     <string name="downloading">下載中</string>
     <string name="download_failed">下載失敗: %s</string>

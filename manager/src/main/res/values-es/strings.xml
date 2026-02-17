@@ -270,6 +270,7 @@
     <string name="go_to_download">Abrir en navegador</string>
     <string name="no_download_available">No hay descargas disponibles</string>
     <string name="select_update_source">Seleccionar fuente de actualización</string>
+    <string name="long_press_switch_source">Mantén pulsado para cambiar fuente</string>
     <string name="install">Instalar</string>
     <string name="downloading">Descargando</string>
     <string name="download_failed">Error de descarga: %s</string>

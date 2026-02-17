@@ -270,6 +270,7 @@
     <string name="go_to_download">فتح في المتصفح</string>
     <string name="no_download_available">لا تتوفر تنزيلات</string>
     <string name="select_update_source">اختيار مصدر التحديث</string>
+    <string name="long_press_switch_source">اضغط مطولاً لتغيير المصدر</string>
     <string name="install">تثبيت</string>
     <string name="downloading">جارٍ التنزيل</string>
     <string name="download_failed">فشل التنزيل: %s</string>

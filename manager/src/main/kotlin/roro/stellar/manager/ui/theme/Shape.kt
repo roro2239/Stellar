@@ -17,6 +17,7 @@ data class AppShapes(
     val inputField: ContinuousRoundedRectangle = ContinuousRoundedRectangle(16.dp, continuity = g2),
     val dialog: ContinuousRoundedRectangle = ContinuousRoundedRectangle(28.dp, continuity = g2),
     val dialogContent: ContinuousRoundedRectangle = ContinuousRoundedRectangle(16.dp, continuity = g2),
+    val tag: ContinuousRoundedRectangle = ContinuousRoundedRectangle(6.dp, continuity = g2),
 )
 
 object AppShape {
