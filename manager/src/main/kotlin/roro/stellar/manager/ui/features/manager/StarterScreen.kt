@@ -64,7 +64,6 @@ import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
-import roro.stellar.manager.util.CommandExecutor
 import roro.stellar.manager.util.EnvironmentUtils
 import java.net.ConnectException
 import javax.net.ssl.SSLException

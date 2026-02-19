@@ -14,6 +14,7 @@ object StellarSettings {
     const val TCPIP_PORT_ENABLED = "tcpip_port_enabled"
     const val THEME_MODE = "theme_mode"
     const val DROP_PRIVILEGES = "drop_privileges"
+    const val SHIZUKU_COMPAT_ENABLED = "shizuku_compat_enabled"
 
     private var preferences: SharedPreferences? = null
 

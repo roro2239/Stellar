@@ -14,11 +14,10 @@ import roro.stellar.StellarApiConstants
 import roro.stellar.server.BinderSender.register
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.binder.BinderDistributor
-import roro.stellar.server.bootstrap.ServerBootstrap
-import roro.stellar.server.command.FollowCommandExecutor
 import roro.stellar.server.communication.CallerContext
 import roro.stellar.server.communication.PermissionEnforcer
 import roro.stellar.server.communication.StellarCommunicationBridge
+import roro.stellar.server.bootstrap.ServerBootstrap
 import roro.stellar.server.ext.FollowStellarStartupExt
 import roro.stellar.server.grant.ManagerGrantHelper
 import roro.stellar.server.ktx.mainHandler
@@ -111,7 +110,7 @@ class StellarService : IStellarService.Stub() {
                     ManagerGrantHelper.grantWriteSecureSettings(managerAppId)
                     ManagerGrantHelper.grantAccessibilityService()
                     FollowStellarStartupExt.schedule(configManager)
-                    FollowCommandExecutor.execute()
+                    notifyManagerServiceStarted()
                     LOGGER.i("Stellar 服务启动完成")
                 } catch (e: Throwable) {
                     LOGGER.e(e, "发送 Binder 失败")
@@ -450,6 +449,16 @@ class StellarService : IStellarService.Stub() {
         val caller = CallerContext.fromBinder()
         permissionEnforcer.enforcePermission(caller, "checkPermission")
         return rikka.hidden.compat.PermissionManagerApis.checkPermission(permission, serviceCore.serviceInfo.getUid())
+    }
+
+    private fun notifyManagerServiceStarted() {
+        clientManager.findClients(managerAppId).forEach { record ->
+            try {
+                record.client?.onServiceStarted()
+            } catch (e: Throwable) {
+                LOGGER.w(e, "通知管理器服务启动失败")
+            }
+        }
     }
 
     companion object {

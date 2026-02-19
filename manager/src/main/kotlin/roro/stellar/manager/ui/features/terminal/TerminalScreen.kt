@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import roro.stellar.manager.compat.ClipboardUtils
@@ -34,13 +35,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.json.JSONArray
-import org.json.JSONObject
 import roro.stellar.manager.R
-import roro.stellar.manager.StellarSettings
-import java.io.File
+import roro.stellar.manager.db.AppDatabase
+import roro.stellar.manager.db.CommandEntity
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
@@ -48,6 +46,7 @@ import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavi
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import java.util.UUID
+import roro.stellar.manager.util.Logger.Companion.LOGGER
 
 enum class CommandMode(val titleRes: Int, val icon: ImageVector, val descriptionRes: Int) {
     CLICK_EXECUTE(R.string.mode_click_execute, Icons.Outlined.PlayArrow, R.string.mode_click_execute_desc),
@@ -61,61 +60,16 @@ data class CommandItem(
     val mode: CommandMode
 )
 
-private const val COMMANDS_KEY = "saved_commands"
-
-private fun loadCommands(): List<CommandItem> {
-    val prefs = StellarSettings.getPreferences()
-    val json = prefs.getString(COMMANDS_KEY, "[]") ?: "[]"
-    return try {
-        val array = JSONArray(json)
-        (0 until array.length()).map { i ->
-            val obj = array.getJSONObject(i)
-            CommandItem(
-                id = obj.getString("id"),
-                title = obj.getString("title"),
-                command = obj.getString("command"),
-                mode = CommandMode.valueOf(obj.getString("mode"))
-            )
-        }
-    } catch (_: Exception) {
-        emptyList()
-    }
-}
-
-private fun saveCommands(commands: List<CommandItem>) {
-    val array = JSONArray()
-    commands.forEach { cmd ->
-        array.put(JSONObject().apply {
-            put("id", cmd.id)
-            put("title", cmd.title)
-            put("command", cmd.command)
-            put("mode", cmd.mode.name)
-        })
-    }
-    StellarSettings.getPreferences().edit {
-        putString(COMMANDS_KEY, array.toString())
+private suspend fun loadCommands(context: android.content.Context): List<CommandItem> =
+    AppDatabase.get(context).commandDao().getAll().map {
+        CommandItem(it.id, it.title, it.command, CommandMode.valueOf(it.mode))
     }
 
-    // 将 FOLLOW_SERVICE 命令保存到文件，供服务端读取执行
-    saveFollowServiceCommandsToFile(commands.filter { it.mode == CommandMode.FOLLOW_SERVICE })
-}
-
-private fun saveFollowServiceCommandsToFile(commands: List<CommandItem>) {
-    try {
-        val file = File("/storage/emulated/0/Android/data/roro.stellar.manager/files/follow_commands.json")
-        file.parentFile?.mkdirs()
-
-        val array = JSONArray()
-        commands.forEach { cmd ->
-            array.put(JSONObject().apply {
-                put("title", cmd.title)
-                put("command", cmd.command)
-            })
-        }
-        file.writeText(array.toString())
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
+private suspend fun saveCommands(context: android.content.Context, commands: List<CommandItem>) {
+    val dao = AppDatabase.get(context).commandDao()
+    dao.deleteAll()
+    dao.insertAll(commands.map { CommandEntity(it.id, it.title, it.command, it.mode.name) })
+    commands.forEach { LOGGER.d("保存命令: title=${it.title}, command=${it.command}, mode=${it.mode.name}") }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,11 +81,17 @@ fun TerminalScreen(
     val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val state by terminalViewModel.state.collectAsState()
     val screenConfig = LocalScreenConfig.current
+    val context = LocalContext.current
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var showQuickExecuteDialog by remember { mutableStateOf(false) }
     var editingCommand by remember { mutableStateOf<CommandItem?>(null) }
-    var commands by remember { mutableStateOf(loadCommands()) }
+    var commands by remember { mutableStateOf(emptyList<CommandItem>()) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        commands = loadCommands(context)
+    }
 
     val gridColumns = if (screenConfig.isLandscape) 4 else 2
 
@@ -173,7 +133,7 @@ fun TerminalScreen(
                     onEdit = { editingCommand = cmd },
                     onDelete = {
                         commands = commands.filter { it.id != cmd.id }
-                        saveCommands(commands)
+                        scope.launch { saveCommands(context, commands) }
                     },
                     isRunning = state.isRunning
                 )
@@ -194,7 +154,7 @@ fun TerminalScreen(
                     mode = mode
                 )
                 commands = commands + newCommand
-                saveCommands(commands)
+                scope.launch { saveCommands(context, commands) }
                 if (mode == CommandMode.CLICK_EXECUTE) {
                     terminalViewModel.executeCommand(command)
                 }
@@ -211,7 +171,7 @@ fun TerminalScreen(
                 commands = commands.map {
                     if (it.id == item.id) it.copy(title = title, command = command) else it
                 }
-                saveCommands(commands)
+                scope.launch { saveCommands(context, commands) }
                 editingCommand = null
             }
         )

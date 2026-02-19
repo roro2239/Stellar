@@ -85,6 +85,7 @@ import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT
 import roro.stellar.manager.StellarSettings.KEEP_START_ON_BOOT_WIRELESS
+import roro.stellar.manager.StellarSettings.SHIZUKU_COMPAT_ENABLED
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
 import roro.stellar.manager.StellarSettings.DROP_PRIVILEGES
@@ -184,7 +185,7 @@ fun SettingsScreen(
     var downloadProgress by remember { mutableIntStateOf(0) }
     var downloadError by remember { mutableStateOf<String?>(null) }
 
-    var shizukuCompatEnabled by remember { mutableStateOf(true) }
+    var shizukuCompatEnabled by remember { mutableStateOf(preferences.getBoolean(SHIZUKU_COMPAT_ENABLED, true)) }
     var isServiceConnected by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -192,9 +193,9 @@ fun SettingsScreen(
         if (isServiceConnected) {
             try {
                 @SuppressLint("RestrictedApi")
-                shizukuCompatEnabled = withContext(Dispatchers.IO) {
-                    Stellar.isShizukuCompatEnabled()
-                }
+                val remote = withContext(Dispatchers.IO) { Stellar.isShizukuCompatEnabled() }
+                shizukuCompatEnabled = remote
+                savePreference(SHIZUKU_COMPAT_ENABLED, remote)
             } catch (_: Exception) {
             }
         }
@@ -301,13 +302,8 @@ fun SettingsScreen(
                                     Stellar.setShizukuCompatEnabled(newValue)
                                 }
                                 shizukuCompatEnabled = newValue
-                                Toast.makeText(
-                                    context,
-                                    if (newValue) context.getString(R.string.shizuku_compat_enabled) else context.getString(R.string.shizuku_compat_disabled),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, context.getString(R.string.setting_failed, e.message), Toast.LENGTH_SHORT).show()
+                                savePreference(SHIZUKU_COMPAT_ENABLED, newValue)
+                            } catch (_: Exception) {
                             }
                         }
                     }

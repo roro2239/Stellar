@@ -6,8 +6,13 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
+import roro.stellar.Stellar
 import roro.stellar.manager.compat.BuildUtils.atLeast30
+import roro.stellar.manager.db.AppDatabase
 import roro.stellar.manager.util.Logger.Companion.LOGGER
 
 lateinit var application: StellarApplication
@@ -40,5 +45,34 @@ class StellarApplication : Application() {
         super.onCreate()
         application = this
         init(this)
+        Stellar.addServiceStartedListener(Stellar.OnServiceStartedListener { executeFollowCommands() })
+    }
+
+    private fun executeFollowCommands() {
+        val context = this
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val commands = AppDatabase.get(context).commandDao().getAll()
+                    .filter { it.mode == "FOLLOW_SERVICE" }
+                commands.forEach { cmd ->
+                    try {
+                        LOGGER.d("执行跟随服务命令: title=${cmd.title}, command=${cmd.command}")
+                        val process = Stellar.newProcess(arrayOf("sh", "-c", cmd.command), null, null)
+                        val stdout = process.inputStream.bufferedReader().readText()
+                        val stderr = process.errorStream.bufferedReader().readText()
+                        val exitCode = process.waitFor()
+                        if (exitCode != 0) {
+                            LOGGER.w("命令执行失败: title=${cmd.title}, 退出码=$exitCode, stdout=$stdout, stderr=$stderr")
+                        } else {
+                            LOGGER.d("命令执行完成: ${cmd.title}, 退出码=$exitCode")
+                        }
+                    } catch (e: Exception) {
+                        LOGGER.e("命令执行失败: ${cmd.title}", e)
+                    }
+                }
+            } catch (e: Exception) {
+                LOGGER.e("读取跟随服务命令失败", e)
+            }
+        }
     }
 }
