@@ -2,34 +2,31 @@ package roro.stellar.server
 
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.AtomicFile
+import android.os.Bundle
+import android.os.IBinder
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import rikka.hidden.compat.ActivityManagerApis
 import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.UserManagerApis
 import roro.stellar.StellarApiConstants.PERMISSIONS
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.StellarConfig.PackageEntry
+import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.ktx.workerHandler
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.UserHandleCompat
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStreamReader
 
 class ConfigManager {
 
-    private val mWriteRunner: Runnable = Runnable { write(config) }
+    private val mWriteRunner: Runnable = Runnable { saveToManager(config) }
 
     private val config: StellarConfig
     val packages: MutableMap<Int, PackageEntry>
         get() = LinkedHashMap(config.packages)
 
     init {
-        this.config = load()
+        this.config = loadFromManager()
 
         var changed = false
 
@@ -304,51 +301,59 @@ class ConfigManager {
         const val FLAG_GRANTED: Int = 1
         const val FLAG_DENIED: Int = 2
 
-        private val GSON_IN: Gson = GsonBuilder()
-            .create()
-
+        private val GSON_IN: Gson = GsonBuilder().create()
         private val GSON_OUT: Gson = GsonBuilder()
             .setVersion(StellarConfig.LATEST_VERSION.toDouble())
             .create()
 
         private const val WRITE_DELAY = 1000L
+        private const val MANAGER_PROVIDER = "${ServerConstants.MANAGER_APPLICATION_ID}.stellar"
 
-        private val FILE = File("/data/user_de/0/com.android.shell/stellar.json")
-        private val ATOMIC_FILE = AtomicFile(FILE)
-
-        fun load(): StellarConfig {
+        private fun callProvider(method: String, extras: Bundle?): Bundle? {
+            val token: IBinder? = null
+            var provider: android.content.IContentProvider? = null
             return try {
-                ATOMIC_FILE.openRead().use { stream ->
-                    GSON_IN.fromJson(InputStreamReader(stream), StellarConfig::class.java)
-                }
-            } catch (_: FileNotFoundException) {
-                LOGGER.i("no existing config file " + ATOMIC_FILE.baseFile + "; starting empty")
-                StellarConfig()
+                provider = ActivityManagerApis.getContentProviderExternal(MANAGER_PROVIDER, 0, token, MANAGER_PROVIDER)
+                    ?: return null
+                IContentProviderUtils.callCompat(provider, null, MANAGER_PROVIDER, method, null, extras ?: Bundle())
             } catch (tr: Throwable) {
-                LOGGER.w(tr, "加载配置失败")
+                LOGGER.e(tr, "ContentProvider 调用失败: %s", method)
+                null
+            } finally {
+                if (provider != null) {
+                    try { ActivityManagerApis.removeContentProviderExternal(MANAGER_PROVIDER, token) } catch (_: Throwable) {}
+                }
+            }
+        }
+
+        fun loadFromManager(): StellarConfig {
+            return try {
+                val reply = callProvider("loadConfig", null)
+                val json = reply?.getString("configJson")
+                if (json != null) {
+                    GSON_IN.fromJson(json, StellarConfig::class.java) ?: StellarConfig()
+                } else {
+                    LOGGER.i("manager 无配置，使用默认值")
+                    StellarConfig()
+                }
+            } catch (tr: Throwable) {
+                LOGGER.w(tr, "从 manager 加载配置失败，使用默认值")
                 StellarConfig()
             }
         }
 
-        fun write(config: StellarConfig) {
-            synchronized(ATOMIC_FILE) {
-                val stream: FileOutputStream
-                try {
-                    stream = ATOMIC_FILE.startWrite()
-                } catch (e: IOException) {
-                    LOGGER.w("写入状态失败: $e")
-                    return
+        fun saveToManager(config: StellarConfig) {
+            try {
+                val json = GSON_OUT.toJson(config)
+                val extras = Bundle().apply { putString("configJson", json) }
+                val result = callProvider("saveConfig", extras)
+                if (result != null) {
+                    LOGGER.v("配置已保存到 manager")
+                } else {
+                    LOGGER.w("保存配置到 manager 失败: 返回 null")
                 }
-                try {
-                    val json = GSON_OUT.toJson(config)
-                    stream.write(json.toByteArray())
-
-                    ATOMIC_FILE.finishWrite(stream)
-                    LOGGER.v("配置已保存")
-                } catch (tr: Throwable) {
-                    LOGGER.w("无法保存配置，正在恢复备份: %s", ATOMIC_FILE.baseFile)
-                    ATOMIC_FILE.failWrite(stream)
-                }
+            } catch (tr: Throwable) {
+                LOGGER.e(tr, "保存配置到 manager 失败")
             }
         }
     }

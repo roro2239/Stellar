@@ -21,6 +21,8 @@ appiconloader = "1.5.0"
 okhttp = "4.12.0"
 capsule = "2.1.0"
 composeMarkdown = "0.5.4"
+room = "2.7.1"
+gson = "2.13.1"
 
 [libraries]
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
@@ -59,6 +61,10 @@ appiconloader = { module = "me.zhanghai.android.appiconloader:appiconloader", ve
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 capsule = { module = "com.github.Kyant0:Capsule", version.ref = "capsule" }
 composeMarkdown = { module = "com.github.jeziellago:compose-markdown", version.ref = "composeMarkdown" }
+roomRuntime = { module = "androidx.room:room-runtime", version.ref = "room" }
+roomKtx = { module = "androidx.room:room-ktx", version.ref = "room" }
+roomCompiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
 [bundles]
 kotlinxCoroutines = ["kotlinxCoroutinesCore", "kotlinxCoroutinesAndroid"]
