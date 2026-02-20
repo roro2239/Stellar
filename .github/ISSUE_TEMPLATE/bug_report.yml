@@ -75,7 +75,7 @@ body:
     id: logs
     attributes:
       label: 日志信息
-      description: 如有相关日志或错误堆栈，请粘贴在此
+      description: 在 Stellar 管理器「授权应用」页面长按目标应用，可自动收集该应用本次运行期间的服务日志并复制到剪贴板。
       render: shell
     validations:
       required: false

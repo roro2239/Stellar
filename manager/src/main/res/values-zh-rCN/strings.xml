@@ -265,6 +265,8 @@
     <string name="adb_key_error">ADB密钥错误</string>
     <string name="adb_connection_failed">ADB连接失败 %1$s:%2$d</string>
 
+    <string name="logs_app_not_running">该应用在本次服务启动期间未运行，无可用日志。</string>
+
     <!-- Update -->
     <string name="new_version_title">发现新版本 v%s</string>
     <string name="go_to_download">浏览器下载</string>

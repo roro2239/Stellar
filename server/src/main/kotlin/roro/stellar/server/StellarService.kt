@@ -281,6 +281,11 @@ class StellarService : IStellarService.Stub() {
         return bridge.handleGetLogs(caller)
     }
 
+    override fun getLogsForUid(uid: Int): List<String>? {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleGetLogsForUid(caller, uid)
+    }
+
     override fun clearLogs() {
         val caller = CallerContext.fromBinder()
         bridge.handleClearLogs(caller)

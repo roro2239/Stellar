@@ -151,6 +151,11 @@ class StellarCommunicationBridge(
         return serviceCore.logManager.getLogs()
     }
 
+    fun handleGetLogsForUid(caller: CallerContext, uid: Int): List<String>? {
+        permissionEnforcer.enforceManager(caller, "getLogsForUid")
+        return serviceCore.logManager.getLogsForUid(uid)
+    }
+
     fun handleClearLogs(caller: CallerContext) {
         permissionEnforcer.enforceManager(caller, "clearLogs")
         serviceCore.logManager.clearLogs()
