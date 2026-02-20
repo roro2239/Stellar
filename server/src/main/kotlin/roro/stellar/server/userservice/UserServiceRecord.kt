@@ -62,15 +62,17 @@ class UserServiceRecord(
     }
 
     private fun onServiceDied() {
+        removed = true
+        deathRecipient?.let { serviceBinder?.unlinkToDeath(it, 0) }
         try {
             callback?.onServiceDisconnected()
         } catch (e: Exception) {
             LOGGER.w(e, "通知服务断开失败")
         }
-        removeSelf()
+        onRemove(this)
     }
 
-    fun removeSelf() {
+    fun removeSelf(silent: Boolean = false) {
         if (removed) {
             LOGGER.d("服务已被移除，跳过: token=%s", token)
             return
@@ -98,10 +100,12 @@ class UserServiceRecord(
             serviceBinder?.unlinkToDeath(recipient, 0)
         }
 
-        try {
-            callback?.onServiceDisconnected()
-        } catch (e: Exception) {
-            LOGGER.w(e, "通知服务断开失败")
+        if (!silent) {
+            try {
+                callback?.onServiceDisconnected()
+            } catch (e: Exception) {
+                LOGGER.w(e, "通知服务断开失败")
+            }
         }
 
         onRemove(this)

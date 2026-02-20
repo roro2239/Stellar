@@ -93,7 +93,6 @@ fun HomeScreen(
                     isRunning = isRunning,
                     isRoot = isRoot,
                     apiVersion = serviceStatus?.apiVersion ?: 0,
-                    patchVersion = serviceStatus?.patchVersion ?: 0,
                     onStopClick = {
                         showStopDialog = true
                     }

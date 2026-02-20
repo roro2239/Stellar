@@ -80,7 +80,7 @@ class UserServiceManager {
                 return existingRecord.token
             } else {
                 LOGGER.i("停止旧服务以升级: %s", key)
-                stopUserService(existingRecord.token)
+                existingRecord.removeSelf(silent = true)
             }
         }
 
