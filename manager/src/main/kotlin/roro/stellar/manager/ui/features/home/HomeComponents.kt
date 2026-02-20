@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,23 +63,20 @@ fun ServerStatusCard(
         isPositive = isRunning,
         action = if (isRunning) {
             {
-                IconButton(onClick = onStopClick) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
-                                shape = AppShape.shapes.iconSmall
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PowerSettingsNew,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(AppShape.shapes.iconSmall)
+                        .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
+                        .clickable(onClick = onStopClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PowerSettingsNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         } else null
