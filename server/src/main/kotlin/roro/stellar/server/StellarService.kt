@@ -64,6 +64,8 @@ class StellarService : IStellarService.Stub() {
             managerAppId = ai.uid
             LOGGER.i("管理器应用 UID: $managerAppId")
 
+            Logger.initProvider()
+
             LOGGER.i("初始化配置管理器...")
             configManager = ConfigManager()
             clientManager = ClientManager(configManager)

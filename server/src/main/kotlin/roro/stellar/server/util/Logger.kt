@@ -1,14 +1,15 @@
 package roro.stellar.server.util
 
+import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
-import java.io.IOException
+import rikka.hidden.compat.ActivityManagerApis
+import roro.stellar.server.api.IContentProviderUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.logging.FileHandler
-import java.util.logging.Logger
-import java.util.logging.SimpleFormatter
+import java.util.concurrent.Executors
 
 data class LogEntry(
     val timestamp: Long,
@@ -31,19 +32,38 @@ data class LogEntry(
     }
 }
 
-class Logger(private val tag: String?, private val fileLogger: Logger? = null) {
-
-    constructor(tag: String, file: String) : this(tag, Logger.getLogger(tag).also { logger ->
-        try {
-            logger.addHandler(FileHandler(file).apply { formatter = SimpleFormatter() })
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-    })
+class Logger(private val tag: String?) {
 
     companion object {
         private const val MAX_LOG_ENTRIES = 500
+        private const val PROVIDER = "roro.stellar.manager.stellar"
         private val logBuffer = CopyOnWriteArrayList<LogEntry>()
+        private val executor = Executors.newSingleThreadExecutor()
+        private var providerReady = false
+
+        fun initProvider() {
+            providerReady = true
+            executor.execute {
+                callProvider("clearLogs", null)
+                logBuffer.forEach { entry -> callProvider("saveLog", entry.format()) }
+            }
+        }
+
+        private fun callProvider(method: String, arg: String?): Bundle? {
+            val token: IBinder? = null
+            var provider: android.content.IContentProvider? = null
+            return try {
+                provider = ActivityManagerApis.getContentProviderExternal(PROVIDER, 0, token, PROVIDER)
+                    ?: return null
+                IContentProviderUtils.callCompat(provider, null, PROVIDER, method, arg, Bundle())
+            } catch (_: Throwable) {
+                null
+            } finally {
+                if (provider != null) {
+                    try { ActivityManagerApis.removeContentProviderExternal(PROVIDER, token) } catch (_: Throwable) {}
+                }
+            }
+        }
 
         @JvmStatic
         fun getLogs(): List<LogEntry> = logBuffer.toList()
@@ -52,14 +72,19 @@ class Logger(private val tag: String?, private val fileLogger: Logger? = null) {
         fun getLogsFormatted(): List<String> = logBuffer.map { it.format() }
 
         @JvmStatic
-        fun clearLogs() = logBuffer.clear()
+        fun clearLogs() {
+            logBuffer.clear()
+            if (!providerReady) return
+            executor.execute { callProvider("clearLogs", null) }
+        }
 
         @JvmStatic
         internal fun addLog(level: Int, tag: String?, message: String) {
-            logBuffer.add(LogEntry(System.currentTimeMillis(), level, tag, message))
-            while (logBuffer.size > MAX_LOG_ENTRIES) {
-                logBuffer.removeAt(0)
-            }
+            val entry = LogEntry(System.currentTimeMillis(), level, tag, message)
+            logBuffer.add(entry)
+            while (logBuffer.size > MAX_LOG_ENTRIES) logBuffer.removeAt(0)
+            if (!providerReady) return
+            executor.execute { callProvider("saveLog", entry.format()) }
         }
     }
 
@@ -86,7 +111,6 @@ class Logger(private val tag: String?, private val fileLogger: Logger? = null) {
     fun e(tr: Throwable?, fmt: String, vararg args: Any?) = println(Log.ERROR, String.format(Locale.ENGLISH, fmt, *args) + '\n' + Log.getStackTraceString(tr))
 
     fun println(priority: Int, msg: String): Int {
-        fileLogger?.info(msg)
         addLog(priority, tag, msg)
         return Log.println(priority, tag, msg)
     }

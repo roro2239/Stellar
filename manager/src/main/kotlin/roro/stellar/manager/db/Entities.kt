@@ -16,3 +16,9 @@ data class ConfigEntity(
     @PrimaryKey val key: String,
     val value: String
 )
+
+@Entity(tableName = "logs")
+data class LogEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val line: String
+)

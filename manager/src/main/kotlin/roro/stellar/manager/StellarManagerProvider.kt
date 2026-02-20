@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken
 import roro.stellar.StellarProvider
 import roro.stellar.manager.db.AppDatabase
 import roro.stellar.manager.db.ConfigEntity
+import roro.stellar.manager.db.LogEntity
 import roro.stellar.server.StellarConfig
 
 class StellarManagerProvider : StellarProvider() {
@@ -38,6 +39,19 @@ class StellarManagerProvider : StellarProvider() {
                 ))
                 return Bundle()
             }
+            METHOD_SAVE_LOG -> {
+                val line = arg ?: return null
+                db.logDao().insert(LogEntity(line = line))
+                return Bundle()
+            }
+            METHOD_GET_LOGS -> {
+                val lines = db.logDao().getAll()
+                return Bundle().apply { putStringArray(KEY_LOGS, lines.toTypedArray()) }
+            }
+            METHOD_CLEAR_LOGS -> {
+                db.logDao().deleteAll()
+                return Bundle()
+            }
         }
         if (extras == null) return null
         return super.call(method, arg, extras)
@@ -51,5 +65,9 @@ class StellarManagerProvider : StellarProvider() {
         const val METHOD_SAVE_CONFIG = "saveConfig"
         const val KEY_CONFIG_JSON = "configJson"
         const val KEY_PACKAGES_JSON = "packagesJson"
+        const val METHOD_SAVE_LOG = "saveLog"
+        const val METHOD_GET_LOGS = "getLogs"
+        const val METHOD_CLEAR_LOGS = "clearLogs"
+        const val KEY_LOGS = "logs"
     }
 }

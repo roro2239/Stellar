@@ -15,6 +15,18 @@ interface CommandDao {
 }
 
 @Dao
+interface LogDao {
+    @Query("SELECT line FROM logs ORDER BY id ASC")
+    fun getAll(): List<String>
+
+    @Insert
+    fun insert(entity: LogEntity)
+
+    @Query("DELETE FROM logs")
+    fun deleteAll()
+}
+
+@Dao
 interface ConfigDao {
     @Query("SELECT value FROM config WHERE `key` = :key")
     fun get(key: String): String?
