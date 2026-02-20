@@ -240,6 +240,11 @@ class StellarService : IStellarService.Stub() {
         return bridge.handleNewProcess(caller, cmd ?: emptyArray(), env, dir)
     }
 
+    override fun newPtyProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): com.stellar.server.IRemotePtyProcess {
+        val caller = CallerContext.fromBinder()
+        return bridge.handleNewPtyProcess(caller, cmd ?: emptyArray(), env, dir)
+    }
+
     override fun getSystemProperty(name: String?, defaultValue: String?): String {
         val caller = CallerContext.fromBinder()
         return bridge.handleGetSystemProperty(caller, name ?: "", defaultValue ?: "")

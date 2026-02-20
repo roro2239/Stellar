@@ -40,6 +40,8 @@ class ShizukuServiceIntercept(
         ShizukuUserServiceAdapter(callback.userServiceManager)
     }
 
+    private val rishService by lazy { RishServiceImpl() }
+
     private val shizukuManagerCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
 
     private inline fun <T> withClearedIdentity(block: () -> T): T {
@@ -144,6 +146,11 @@ class ShizukuServiceIntercept(
             attachApplication(IShizukuApplication.Stub.asInterface(binder), args)
             reply?.writeNoException()
             return true
+        }
+
+        if (code in 30000..30002) {
+            enforceCallingPermission("rish")
+            return withClearedIdentity { rishService.onTransact(code, data, reply, flags) }
         }
 
         return super.onTransact(code, data, reply, flags)

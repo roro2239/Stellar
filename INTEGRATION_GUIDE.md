@@ -219,6 +219,13 @@ Stellar.newProcess(
     env: Array<String?>?,     // 环境变量（可选）
     dir: String?              // 工作目录（可选）
 ): StellarRemoteProcess
+
+// 创建 PTY 特权进程（支持终端特性：颜色、信号、窗口大小调整）
+Stellar.newPtyProcess(
+    cmd: Array<String?>,      // 命令和参数
+    env: Array<String?>?,     // 环境变量（可选）
+    dir: String?              // 工作目录（可选）
+): StellarPtyProcess
 ```
 
 #### 高级功能
@@ -296,6 +303,29 @@ process.destroy()
 process.alive(): Boolean
 process.waitForTimeout(timeout: Long, unit: TimeUnit): Boolean
 ```
+
+### PTY 进程：`StellarPtyProcess`
+
+```kotlin
+val pty = Stellar.newPtyProcess(arrayOf("sh"), null, null)
+
+// 获取 PTY 文件描述符（读写共用同一个 fd）
+pty.ptyFd: ParcelFileDescriptor
+
+// 调整终端窗口大小
+pty.resize(cols: Int, rows: Int)
+
+// 等待进程退出并返回退出码
+pty.waitFor(): Int
+
+// 销毁进程
+pty.destroy()
+```
+
+与 `StellarRemoteProcess` 的区别：
+- PTY 使用单个 fd 进行读写（主从伪终端），而非独立的 stdin/stdout/stderr
+- 支持终端特性：ANSI 颜色、Ctrl+C 信号、窗口大小调整
+- 终端默认开启回显（输入内容会出现在输出流中）
 
 ### Binder 包装器：`StellarBinderWrapper`
 
@@ -763,6 +793,58 @@ fun stopDaemonService() {
     StellarUserService.unbindUserService(args)
 }
 ```
+
+### 示例 10：交互式 PTY Shell
+
+```kotlin
+import android.os.ParcelFileDescriptor
+import roro.stellar.Stellar
+import kotlin.concurrent.thread
+
+class PtyShellSession(
+    private val pty: StellarPtyProcess,
+    private val writer: java.io.OutputStream
+) {
+    fun send(cmd: String) {
+        writer.write("$cmd\n".toByteArray())
+    }
+
+    fun resize(cols: Int, rows: Int) = pty.resize(cols, rows)
+
+    fun destroy() = pty.destroy()
+}
+
+fun startPtyShell(onOutput: (String) -> Unit): PtyShellSession? {
+    if (!Stellar.pingBinder() || !Stellar.checkSelfPermission()) return null
+
+    val pty = try {
+        Stellar.newPtyProcess(arrayOf("sh"), null, null)
+    } catch (_: Exception) { return null }
+
+    val fd = pty.ptyFd
+    val session = PtyShellSession(pty, ParcelFileDescriptor.AutoCloseOutputStream(fd))
+
+    thread {
+        try {
+            val reader = ParcelFileDescriptor.AutoCloseInputStream(fd)
+            val buf = ByteArray(4096)
+            while (true) {
+                val n = reader.read(buf)
+                if (n < 0) break
+                onOutput(String(buf, 0, n))
+            }
+        } catch (_: Exception) {}
+    }
+
+    return session
+}
+```
+
+**注意事项：**
+- `newPtyProcess` 必须在后台线程调用（Binder IPC 不允许在主线程执行）
+- PTY fd 读写共用同一个 `ParcelFileDescriptor`，读写流需分别包装
+- 终端默认开启回显，发送的命令会出现在输出流中；如需过滤，可在 `onOutput` 回调中比对最近发送的命令
+- 调用 `destroy()` 后 fd 会关闭，读取线程会自动退出
 
 ---
 

@@ -3,6 +3,7 @@ package roro.stellar.server.communication
 import android.os.Bundle
 import android.os.IBinder
 import com.stellar.server.IRemoteProcess
+import com.stellar.server.IRemotePtyProcess
 import com.stellar.server.IUserServiceCallback
 import roro.stellar.server.service.StellarServiceCore
 
@@ -100,6 +101,16 @@ class StellarCommunicationBridge(
     ): IRemoteProcess {
         permissionEnforcer.enforcePermission(caller, "newProcess")
         return serviceCore.processManager.newProcess(caller.uid, caller.pid, cmd, env, dir)
+    }
+
+    fun handleNewPtyProcess(
+        caller: CallerContext,
+        cmd: Array<String?>,
+        env: Array<String?>?,
+        dir: String?
+    ): IRemotePtyProcess {
+        permissionEnforcer.enforcePermission(caller, "newProcess")
+        return serviceCore.processManager.newPtyProcess(caller.uid, caller.pid, cmd, env, dir)
     }
 
     fun handleGetSystemProperty(caller: CallerContext, name: String, defaultValue: String): String {

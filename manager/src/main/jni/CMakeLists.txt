@@ -49,3 +49,7 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_custom_command(TARGET libchid.so POST_BUILD
             COMMAND ${CMAKE_STRIP} --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libchid.so")
 endif ()
+
+add_library(rish SHARED rish.cpp)
+
+target_link_libraries(rish log cxx::cxx)
