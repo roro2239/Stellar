@@ -14,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
 import roro.stellar.manager.authorization.AuthorizationManager
+import roro.stellar.manager.authorization.AuthorizationManager.FLAG_DENIED
+import roro.stellar.manager.authorization.AuthorizationManager.FLAG_GRANTED
 import roro.stellar.manager.common.state.Resource
 
 enum class AppType {
@@ -69,6 +71,16 @@ class AppsViewModel(context: Context) : ViewModel() {
                 }
 
                 if (!onlyCount) {
+                    fun sortWeight(uid: Int, isShizuku: Boolean): Int {
+                        val raw = try { Stellar.getFlagForUid(uid, if (isShizuku) "shizuku" else "stellar") } catch (_: Exception) { 0 }
+                        return if (isShizuku) {
+                            when (raw) { 2 -> 0; 4 -> 2; else -> 1 }
+                        } else {
+                            when (raw) { FLAG_GRANTED -> 0; FLAG_DENIED -> 2; else -> 1 }
+                        }
+                    }
+                    stellarList.sortBy { sortWeight(it.packageInfo.applicationInfo!!.uid, false) }
+                    shizukuList.sortBy { sortWeight(it.packageInfo.applicationInfo!!.uid, true) }
                     _stellarApps.postValue(Resource.success(stellarList))
                     _shizukuApps.postValue(Resource.success(shizukuList))
                 }
