@@ -23,17 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import roro.stellar.Stellar
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.ui.components.LocalScreenConfig
-import roro.stellar.manager.ui.components.ModernActionCard
-import roro.stellar.manager.ui.components.StellarConfirmDialog
 import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
+import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.EnvironmentUtils
 import roro.stellar.manager.util.UserHandleCompat
@@ -60,7 +60,7 @@ fun HomeScreen(
     val isPrimaryUser = UserHandleCompat.myUserId() == 0
     val hasRoot = EnvironmentUtils.isRooted()
 
-    var showStopDialog by remember { mutableStateOf(false) }
+    var showPowerDialog by remember { mutableStateOf(false) }
     var showAdbCommandDialog by remember { mutableStateOf(false) }
 
     val gridColumns = screenConfig.gridColumns
@@ -93,9 +93,7 @@ fun HomeScreen(
                     isRunning = isRunning,
                     isRoot = isRoot,
                     apiVersion = serviceStatus?.apiVersion ?: 0,
-                    onStopClick = {
-                        showStopDialog = true
-                    }
+                    onStopClick = { showPowerDialog = true }
                 )
             }
 
@@ -112,10 +110,7 @@ fun HomeScreen(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || EnvironmentUtils.getAdbTcpPort() > 0) {
                     item {
                         StartWirelessAdbCard(
-                            onStartClick = {
-                                // 直接导航到 StarterScreen，由 StarterScreen 检测环境状态
-                                onNavigateToStarter(false, "127.0.0.1", 0, false)
-                            }
+                            onStartClick = { onNavigateToStarter(false, "127.0.0.1", 0, false) }
                         )
                     }
                 }
@@ -140,40 +135,38 @@ fun HomeScreen(
         }
     }
 
-    if (showStopDialog) {
-        StellarConfirmDialog(
-            onDismissRequest = { showStopDialog = false },
+    if (showPowerDialog) {
+        StellarDialog(
+            onDismissRequest = { showPowerDialog = false },
             title = stringResource(R.string.stop_service),
-            message = stringResource(R.string.stop_service_message),
+            confirmText = stringResource(R.string.stop),
+            dismissText = stringResource(R.string.restart),
             onConfirm = {
                 if (Stellar.pingBinder()) {
-                    try {
-                        Stellar.exit()
-                    } catch (_: Throwable) {
-                    }
+                    try { Stellar.exit() } catch (_: Throwable) {}
                 }
-                showStopDialog = false
+                showPowerDialog = false
             },
-            onDismiss = { showStopDialog = false }
-        )
+            onDismiss = {
+                homeViewModel.restartService()
+                showPowerDialog = false
+            }
+        ) {
+            Text(
+                text = stringResource(R.string.stop_service_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 
     if (showAdbCommandDialog) {
         StellarDialog(
             onDismissRequest = { showAdbCommandDialog = false },
             title = stringResource(R.string.view_command),
-            confirmText = stringResource(R.string.copy),
-            onConfirm = {
-                if (ClipboardUtils.put(context, Starter.adbCommand)) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.copied_to_clipboard),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                showAdbCommandDialog = false
-            },
-            onDismiss = { showAdbCommandDialog = false }
+            confirmText = stringResource(R.string.close),
+            onConfirm = { showAdbCommandDialog = false },
+            showDismissButton = false
         ) {
             Text(
                 text = Starter.adbCommand,

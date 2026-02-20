@@ -11,9 +11,9 @@
     <!-- Common -->
     <string name="confirm">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
     <string name="back">Back</string>
     <string name="copy">Copy</string>
-    <string name="close">Close</string>
     <string name="save">Save</string>
     <string name="retry">Retry</string>
     <string name="refresh">Refresh</string>

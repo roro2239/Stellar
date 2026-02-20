@@ -3,7 +3,6 @@ package roro.stellar.manager.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
+import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 
 @Composable
@@ -22,7 +22,7 @@ fun IconContainer(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     iconColor: Color = MaterialTheme.colorScheme.primary,
-    shape: Shape = CircleShape
+    shape: Shape = AppShape.shapes.iconSmall
 ) {
     IconContainerBase(
         modifier = modifier,
@@ -48,7 +48,7 @@ fun IconContainerBase(
     iconSize: Dp = AppSpacing.iconSize,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     iconColor: Color = MaterialTheme.colorScheme.primary,
-    shape: Shape = CircleShape,
+    shape: Shape = AppShape.shapes.iconSmall,
     content: @Composable () -> Unit
 ) {
     Box(

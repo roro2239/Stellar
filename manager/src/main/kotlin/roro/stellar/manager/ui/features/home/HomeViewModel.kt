@@ -1,12 +1,10 @@
 package roro.stellar.manager.ui.features.home
 
 import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -16,7 +14,6 @@ import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.common.state.Resource
 import roro.stellar.manager.model.ServiceStatus
 import roro.stellar.manager.startup.command.Starter
-import roro.stellar.manager.startup.service.SelfStarterService
 
 class HomeViewModel : ViewModel() {
 
@@ -37,7 +34,7 @@ class HomeViewModel : ViewModel() {
                 val prefs = StellarSettings.getPreferences()
                 val lastVersion = prefs.getInt(StellarSettings.LAST_VERSION_CODE, BuildConfig.VERSION_CODE)
                 if (status.isRunning && lastVersion < BuildConfig.VERSION_CODE) {
-                    restartService(context, status.uid == 0)
+                    restartService()
                 }
                 prefs.edit().putInt(StellarSettings.LAST_VERSION_CODE, BuildConfig.VERSION_CODE).apply()
             } catch (e: CancellationException) {
@@ -47,11 +44,10 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    private fun restartService(context: Context, isRoot: Boolean) {
-        if (isRoot) {
-            Shell.cmd(Starter.internalCommand).submit()
-        } else {
-            context.startService(Intent(context, SelfStarterService::class.java))
-        }
+    fun restartService() {
+        if (!Stellar.pingBinder()) return
+        try {
+            Stellar.newProcess(arrayOf("sh", "-c", Starter.internalCommand), null, null)
+        } catch (_: Throwable) {}
     }
 }

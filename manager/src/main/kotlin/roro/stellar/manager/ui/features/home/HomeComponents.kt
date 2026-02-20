@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,14 +22,15 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,21 +61,23 @@ fun ServerStatusCard(
         isPositive = isRunning,
         action = if (isRunning) {
             {
-                Button(
-                    onClick = onStopClick,
-                    colors = ButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                        disabledContainerColor = Color.Unspecified,
-                        disabledContentColor = Color.Unspecified,
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    shape = AppShape.shapes.buttonSmall14
-                ) {
-                    Text(
-                        text = stringResource(R.string.stop),
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                IconButton(onClick = onStopClick) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
+                                shape = AppShape.shapes.iconSmall
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         } else null

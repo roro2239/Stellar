@@ -22,8 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
-import roro.stellar.manager.compat.ClipboardUtils
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -710,23 +708,8 @@ private fun ExecutionResultDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    if (!state.isRunning && result != null) {
-                        OutlinedButton(
-                            onClick = {
-                                val textToCopy = result.output
-                                if (ClipboardUtils.put(context, textToCopy)) {
-                                    Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, context.getString(R.string.copy_failed), Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.copy_all))
-                        }
-                    }
                     if (!state.isRunning) {
                         TextButton(
                             onClick = onDismiss

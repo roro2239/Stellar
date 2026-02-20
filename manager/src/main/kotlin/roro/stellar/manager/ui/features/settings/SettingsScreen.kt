@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -548,7 +547,7 @@ fun SettingsScreen(
                                  .size(40.dp)
                                  .background(
                                      color = MaterialTheme.colorScheme.primaryContainer,
-                                     shape = CircleShape
+                                     shape = AppShape.shapes.iconSmall
                                  ),
                              contentAlignment = Alignment.Center
                          ) {
@@ -791,7 +790,7 @@ private fun UpdateCard(
                         .size(40.dp)
                         .background(
                             color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = CircleShape
+                            shape = AppShape.shapes.iconSmall
                         ),
                     contentAlignment = Alignment.Center
                 ) {
