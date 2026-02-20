@@ -186,18 +186,14 @@ fun SettingsScreen(
     var downloadError by remember { mutableStateOf<String?>(null) }
 
     var shizukuCompatEnabled by remember { mutableStateOf(preferences.getBoolean(SHIZUKU_COMPAT_ENABLED, true)) }
-    var isServiceConnected by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        isServiceConnected = Stellar.pingBinder()
-        if (isServiceConnected) {
-            try {
-                @SuppressLint("RestrictedApi")
-                val remote = withContext(Dispatchers.IO) { Stellar.isShizukuCompatEnabled() }
-                shizukuCompatEnabled = remote
-                savePreference(SHIZUKU_COMPAT_ENABLED, remote)
-            } catch (_: Exception) {
-            }
+        try {
+            @SuppressLint("RestrictedApi")
+            val remote = withContext(Dispatchers.IO) { Stellar.isShizukuCompatEnabled() }
+            shizukuCompatEnabled = remote
+            savePreference(SHIZUKU_COMPAT_ENABLED, remote)
+        } catch (_: Exception) {
         }
     }
 
@@ -293,7 +289,6 @@ fun SettingsScreen(
                     title = stringResource(R.string.shizuku_compat_layer),
                     subtitle = stringResource(R.string.shizuku_compat_layer_subtitle),
                     checked = shizukuCompatEnabled,
-                    enabled = isServiceConnected,
                     onCheckedChange = { newValue ->
                         scope.launch {
                             try {
