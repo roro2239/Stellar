@@ -368,10 +368,6 @@ class StellarService : IStellarService.Stub() {
             StellarApiConstants.BIND_APPLICATION_SERVER_SECONTEXT,
             serviceCore.serviceInfo.getSELinuxContext()
         )
-        reply.putInt(
-            StellarApiConstants.BIND_APPLICATION_SERVER_PATCH_VERSION,
-            StellarApiConstants.SERVER_PATCH_VERSION
-        )
         if (!isManager) {
             val permissionGranted = clientRecord?.allowedMap["stellar"] ?: false
             LOGGER.i("权限状态检查: uid=%d, pid=%d, package=%s, granted=%s, allowedMap=%s",

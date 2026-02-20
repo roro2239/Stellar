@@ -15,6 +15,7 @@ object StellarSettings {
     const val THEME_MODE = "theme_mode"
     const val DROP_PRIVILEGES = "drop_privileges"
     const val SHIZUKU_COMPAT_ENABLED = "shizuku_compat_enabled"
+    const val LAST_VERSION_CODE = "last_version_code"
 
     private var preferences: SharedPreferences? = null
 

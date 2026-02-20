@@ -32,7 +32,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,9 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import roro.stellar.Stellar
 import roro.stellar.manager.R
-import roro.stellar.StellarApiConstants
 import roro.stellar.manager.ui.components.ModernStatusCard
 import roro.stellar.manager.ui.theme.AppShape
 
@@ -52,12 +49,9 @@ fun ServerStatusCard(
     isRunning: Boolean,
     isRoot: Boolean,
     apiVersion: Int,
-    patchVersion: Int,
     onStopClick: () -> Unit
 ) {
     val user = if (isRoot) "Root" else "ADB"
-    val needsUpdate = isRunning && (apiVersion != Stellar.latestServiceVersion ||
-            patchVersion != StellarApiConstants.SERVER_PATCH_VERSION)
 
     ModernStatusCard(
         icon = if (isRunning) Icons.Default.CheckCircle else Icons.Default.Error,
@@ -98,23 +92,8 @@ fun ServerStatusCard(
                 HorizontalDivider(color = contentColor.copy(alpha = 0.2f))
                 Spacer(modifier = Modifier.height(12.dp))
 
-                InfoRow(stringResource(R.string.version), "$apiVersion.$patchVersion", contentColor, Icons.Default.Info)
+                InfoRow(stringResource(R.string.version), "${apiVersion / 100}.${(apiVersion % 100) / 10}.${apiVersion % 10}", contentColor, Icons.Default.Info)
                 InfoRow(stringResource(R.string.run_mode), user, contentColor, if (isRoot) Icons.Default.Security else Icons.Default.Adb)
-
-                if (needsUpdate) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        color = contentColor.copy(alpha = 0.15f),
-                        shape = AppShape.shapes.iconSmall
-                    ) {
-                        Text(
-                            text = stringResource(R.string.upgradable_to_version, Stellar.latestServiceVersion, StellarApiConstants.SERVER_PATCH_VERSION),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = contentColor,
-                            modifier = Modifier.padding(12.dp)
-                        )
-                    }
-                }
             }
         }
     }
