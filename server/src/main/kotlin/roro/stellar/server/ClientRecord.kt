@@ -14,6 +14,7 @@ open class ClientRecord(
     val packageName: String,
     val apiVersion: Int
 ) {
+    val attachTime: Long = System.currentTimeMillis()
     var shizukuApplication: IShizukuApplication? = null
 
     val lastDenyTimeMap: MutableMap<String, Long> = mutableMapOf()

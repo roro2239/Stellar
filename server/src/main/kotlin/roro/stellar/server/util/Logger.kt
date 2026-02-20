@@ -66,6 +66,10 @@ class Logger(private val tag: String?) {
         }
 
         @JvmStatic
+        fun getLogsSince(sinceTimestamp: Long): List<String> =
+            logBuffer.filter { it.timestamp >= sinceTimestamp }.map { it.format() }
+
+        @JvmStatic
         fun getLogs(): List<LogEntry> = logBuffer.toList()
 
         @JvmStatic

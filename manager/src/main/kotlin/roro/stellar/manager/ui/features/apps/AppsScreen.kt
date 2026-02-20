@@ -5,10 +5,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,10 +61,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import roro.stellar.Stellar
 import roro.stellar.manager.R
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.common.state.Status
+import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.domain.apps.AppInfo
 import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.manager.domain.apps.AppsViewModel
@@ -309,6 +316,7 @@ fun AppsScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppListItem(
     appInfo: AppInfo,
@@ -390,7 +398,26 @@ fun AppListItem(
         )
     }
 
+    val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
+
+    fun onLongPress() {
+        scope.launch {
+            val logs = withContext(Dispatchers.IO) {
+                if (!Stellar.pingBinder()) return@withContext null
+                try { Stellar.getLogsForUid(uid) } catch (_: Throwable) { null }
+            }
+            when {
+                logs == null -> Toast.makeText(context, context.getString(R.string.logs_app_not_running), Toast.LENGTH_LONG).show()
+                logs.isEmpty() -> Toast.makeText(context, context.getString(R.string.no_logs_to_copy), Toast.LENGTH_SHORT).show()
+                else -> {
+                    ClipboardUtils.put(context, logs.joinToString("\n"))
+                    Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -404,11 +431,12 @@ fun AppListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-                .run { this }
-                .clickable(
+                .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { expanded = !expanded },
+                    indication = null,
+                    onClick = { expanded = !expanded },
+                    onLongClick = { onLongPress() }
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (iconPainter != null) {

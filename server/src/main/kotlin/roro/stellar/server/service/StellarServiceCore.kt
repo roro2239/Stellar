@@ -29,7 +29,7 @@ class StellarServiceCore(
         permissionManager = PermissionManager(clientManager, configManager)
         processManager = ProcessManager(clientManager)
         systemPropertyManager = SystemPropertyManager()
-        logManager = LogManager()
+        logManager = LogManager(clientManager)
         userServiceCoordinator = UserServiceCoordinator(userServiceManager)
     }
 }

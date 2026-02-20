@@ -164,9 +164,13 @@ fun HomeScreen(
         StellarDialog(
             onDismissRequest = { showAdbCommandDialog = false },
             title = stringResource(R.string.view_command),
-            confirmText = stringResource(R.string.close),
-            onConfirm = { showAdbCommandDialog = false },
-            showDismissButton = false
+            confirmText = stringResource(R.string.copy),
+            dismissText = stringResource(R.string.close),
+            onConfirm = {
+                ClipboardUtils.put(context, Starter.adbCommand)
+                Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showAdbCommandDialog = false }
         ) {
             Text(
                 text = Starter.adbCommand,
