@@ -60,6 +60,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import roro.stellar.manager.R
+import roro.stellar.manager.db.AppDatabase
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
@@ -74,7 +75,8 @@ internal fun LogsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var logs by remember { mutableStateOf<List<String>>(emptyList()) }
+    val db = remember { AppDatabase.get(context) }
+    var logs by remember { mutableStateOf(emptyList<String>()) }
     var isLoading by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val configuration = LocalConfiguration.current
@@ -101,43 +103,34 @@ internal fun LogsScreen(
     }
 
     val loadLogs: () -> Unit = {
-        if (!Stellar.pingBinder()) {
-            Toast.makeText(context, context.getString(R.string.service_not_running_toast), Toast.LENGTH_SHORT).show()
-        } else {
-            scope.launch {
-                isLoading = true
-                try {
-                    val result = withContext(Dispatchers.IO) {
-                        Stellar.getLogs()
-                    }
-                    logs = result.reversed()
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        val errorMessage = context.getString(R.string.load_logs_failed, e.message ?: "")
-                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
-                    }
-                } finally {
-                    isLoading = false
+        scope.launch {
+            isLoading = true
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    db.logDao().getAll().reversed()
                 }
+                logs = result
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, context.getString(R.string.load_logs_failed, e.message ?: ""), Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                isLoading = false
             }
         }
     }
 
     val clearLogs: () -> Unit = {
-        if (!Stellar.pingBinder()) {
-            Toast.makeText(context, context.getString(R.string.service_not_running_toast), Toast.LENGTH_SHORT).show()
-        } else {
-            scope.launch {
-                try {
-                    withContext(Dispatchers.IO) {
-                        Stellar.clearLogs()
-                    }
-                    logs = emptyList()
-                    Toast.makeText(context, context.getString(R.string.logs_cleared), Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    val errorMessage = context.getString(R.string.clear_logs_failed, e.message ?: "")
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    if (Stellar.pingBinder()) try { Stellar.clearLogs() } catch (_: Throwable) {}
+                    db.logDao().deleteAll()
                 }
+                logs = emptyList()
+                Toast.makeText(context, context.getString(R.string.logs_cleared), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.clear_logs_failed, e.message ?: ""), Toast.LENGTH_SHORT).show()
             }
         }
     }
