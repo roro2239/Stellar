@@ -33,6 +33,6 @@ apply from: 'api/manifest.gradle'
  *   - suffix: 可选后缀 (dev=开发版, alpha=内测版, beta=公测版, rc=候选版)
  */
 ext {
-    versionCode = 100109
-    versionName = "1.0.10"
+    versionCode = 100119
+    versionName = "1.0.11"
 }
