@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
@@ -171,15 +174,16 @@ internal fun LogsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .windowInsetsPadding(WindowInsets.displayCutout)
             ) {
                 Column(
                     modifier = Modifier
                         .width(200.dp)
                         .fillMaxHeight()
-                        .padding(start = AppSpacing.screenHorizontalPadding, top = 8.dp, bottom = 8.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(top = 8.dp, bottom = 8.dp)
                 ) {
                     SearchBar(searchQuery = searchQuery, onSearchQueryChange = { searchQuery = it })
-                    Spacer(modifier = Modifier.height(8.dp))
                     LogFilterBarVertical(selectedLevels = selectedLevels, onLevelToggle = onLevelToggle)
                 }
 
@@ -481,8 +485,10 @@ private fun LogFilterBarVertical(
     onLevelToggle: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpacing.screenHorizontalPadding),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         LOG_LEVELS.forEach { (level, name) ->
             LogFilterChip(level, name, level in selectedLevels, onClick = { onLevelToggle(level) }, modifier = Modifier.fillMaxWidth())
