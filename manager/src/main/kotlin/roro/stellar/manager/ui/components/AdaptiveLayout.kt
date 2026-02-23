@@ -5,6 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 data class ScreenConfig(
     val isLandscape: Boolean,
@@ -14,6 +16,9 @@ data class ScreenConfig(
 val LocalScreenConfig = compositionLocalOf {
     ScreenConfig(isLandscape = false, gridColumns = 1)
 }
+
+private const val SMALL_SCREEN_THRESHOLD_DP = 300
+private const val DESIGN_WIDTH_DP = 360f
 
 @Composable
 fun AdaptiveLayoutProvider(
@@ -30,7 +35,23 @@ fun AdaptiveLayoutProvider(
         gridColumns = gridColumns
     )
 
-    CompositionLocalProvider(LocalScreenConfig provides screenConfig) {
+    val screenWidthDp = configuration.screenWidthDp
+    val currentDensity = LocalDensity.current
+
+    val adjustedDensity = if (screenWidthDp < SMALL_SCREEN_THRESHOLD_DP) {
+        val scale = screenWidthDp / DESIGN_WIDTH_DP
+        Density(
+            density = currentDensity.density * scale,
+            fontScale = currentDensity.fontScale * scale
+        )
+    } else {
+        currentDensity
+    }
+
+    CompositionLocalProvider(
+        LocalScreenConfig provides screenConfig,
+        LocalDensity provides adjustedDensity
+    ) {
         content()
     }
 }
