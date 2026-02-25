@@ -115,7 +115,11 @@ internal fun LogsScreen(
             isLoading = true
             try {
                 val result = withContext(Dispatchers.IO) {
-                    db.logDao().getAll()
+                    if (Stellar.pingBinder()) {
+                        try { Stellar.getLogs() } catch (_: Throwable) { db.logDao().getAll() }
+                    } else {
+                        db.logDao().getAll()
+                    }
                 }
                 logs = result
             } catch (e: Exception) {

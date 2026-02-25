@@ -45,7 +45,8 @@ class Logger(private val tag: String?) {
             providerReady = true
             executor.execute {
                 callProvider("clearLogs", null)
-                logBuffer.forEach { entry -> callProvider("saveLog", entry.format()) }
+                logBuffer.filter { it.level == Log.ERROR }
+                    .forEach { entry -> callProvider("saveLog", entry.format()) }
             }
         }
 
@@ -87,7 +88,7 @@ class Logger(private val tag: String?) {
             val entry = LogEntry(System.currentTimeMillis(), level, tag, message)
             logBuffer.add(entry)
             while (logBuffer.size > MAX_LOG_ENTRIES) logBuffer.removeAt(0)
-            if (!providerReady) return
+            if (!providerReady || level != Log.ERROR) return
             executor.execute { callProvider("saveLog", entry.format()) }
         }
     }
