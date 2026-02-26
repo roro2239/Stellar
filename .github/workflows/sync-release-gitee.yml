@@ -83,12 +83,22 @@ jobs:
 
               UPLOAD_URL="https://gitee.com/api/v5/repos/su-su2239/Stellar/releases/${GITEE_RELEASE_ID}/attach_files"
               echo "上传 $name 到: $UPLOAD_URL"
-              UPLOAD_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" \
-                --connect-timeout 30 \
-                --max-time 300 \
-                -X POST "$UPLOAD_URL" \
-                -F "access_token=$GITEE_TOKEN" \
-                -F "file=@assets/$name")
-              echo "上传响应: $UPLOAD_RESPONSE"
+              for attempt in 1 2 3; do
+                echo "上传尝试 $attempt/3..."
+                UPLOAD_RESPONSE=$(curl -w "\nHTTP_CODE:%{http_code}" \
+                  --connect-timeout 60 \
+                  --max-time 300 \
+                  -X POST "$UPLOAD_URL" \
+                  -F "access_token=$GITEE_TOKEN" \
+                  -F "file=@assets/$name")
+                HTTP_CODE=$(echo "$UPLOAD_RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+                echo "上传响应: $UPLOAD_RESPONSE"
+                if [ "$HTTP_CODE" = "201" ] || [ "$HTTP_CODE" = "200" ]; then
+                  echo "上传成功"
+                  break
+                fi
+                echo "上传失败 (HTTP $HTTP_CODE)，等待 10 秒后重试..."
+                sleep 10
+              done
             done
           fi
