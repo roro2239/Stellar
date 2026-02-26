@@ -22,11 +22,14 @@ class ConfigManager {
     private val mWriteRunner: Runnable = Runnable { saveToManager(config) }
 
     private val config: StellarConfig
+    private val configLoadedFromManager: Boolean
     val packages: MutableMap<Int, PackageEntry>
         get() = LinkedHashMap(config.packages)
 
     init {
-        this.config = loadFromManager()
+        val loadResult = loadFromManagerWithStatus()
+        this.config = loadResult.first
+        this.configLoadedFromManager = loadResult.second
 
         var changed = false
 
@@ -118,16 +121,17 @@ class ConfigManager {
             }
             for (permissionKey in permissionsToRemove) {
                 packageEntry.permissions.remove(permissionKey)
+                changed = true
             }
             for (permission in permissions) {
                 if (packageEntry.permissions[permission] == null) {
                     packageEntry.permissions[permission] = FLAG_ASK
+                    changed = true
                 }
             }
-            scheduleWriteLocked()
         }
 
-        if (changed) {
+        if (changed && configLoadedFromManager) {
             scheduleWriteLocked()
         }
     }
@@ -335,20 +339,25 @@ class ConfigManager {
             }
         }
 
-        fun loadFromManager(): StellarConfig {
+        fun loadFromManagerWithStatus(): Pair<StellarConfig, Boolean> {
             return try {
                 val reply = callProvider("loadConfig", null)
                 val json = reply?.getString("configJson")
                 if (json != null) {
-                    GSON_IN.fromJson(json, StellarConfig::class.java) ?: StellarConfig()
+                    val config = GSON_IN.fromJson(json, StellarConfig::class.java) ?: StellarConfig()
+                    Pair(config, true)
                 } else {
                     LOGGER.i("manager 无配置，使用默认值")
-                    StellarConfig()
+                    Pair(StellarConfig(), true)
                 }
             } catch (tr: Throwable) {
-                LOGGER.w(tr, "从 manager 加载配置失败，使用默认值")
-                StellarConfig()
+                LOGGER.w(tr, "从 manager 加载配置失败，使用默认值，跳过初始化写入")
+                Pair(StellarConfig(), false)
             }
+        }
+
+        fun loadFromManager(): StellarConfig {
+            return loadFromManagerWithStatus().first
         }
 
         fun saveToManager(config: StellarConfig) {
