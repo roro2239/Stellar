@@ -87,7 +87,7 @@ jobs:
                 echo "上传尝试 $attempt/3..."
                 UPLOAD_RESPONSE=$(curl -w "\nHTTP_CODE:%{http_code}" \
                   --connect-timeout 60 \
-                  --max-time 600 \
+                  --max-time 1800 \
                   -X POST "$UPLOAD_URL" \
                   -F "access_token=$GITEE_TOKEN" \
                   -F "file=@assets/$name")
