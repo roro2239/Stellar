@@ -228,19 +228,30 @@ class UserServiceManager {
             ServerConstants.MANAGER_APPLICATION_ID, 0, 0
         )?.sourceDir ?: ""
 
-        // 防杀优化：将 Manager APK 复制到安全目录避开国内定制 OEM 查杀（fuck ColorOS）
+        // 防杀优化：将 Manager APK 复制到安全目录避开国内 OEM 查杀（fuck ColorOS！）
         var safeManagerApkPath = managerApkPath
         if (managerApkPath.isNotEmpty()) {
-            val safePath = "/data/local/tmp/stellar_manager_safe.apk"
+            val safeDir = "/data/local/tmp/stellar"
+            val safePath = "$safeDir/manager_safe.apk"
             try {
+                // 确保目录存在，并赋予跨进程遍历（执行）的权限
+                val dirFile = File(safeDir)
+                if (!dirFile.exists()) {
+                    dirFile.mkdirs()
+                    // 755 权限（rwxr-xr-x）
+                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 777 $safeDir")).waitFor()
+                }
+
                 val sourceFile = File(managerApkPath)
                 val destFile = File(safePath)
-                // 仅在文件不存在或 Stellar 有更新时才进行复制，减少 I/O 损耗
+                
+                // 仅在文件不存在或 Stellar 本体有更新时才进行覆盖复制，减少 I/O 损耗
                 if (!destFile.exists() || destFile.lastModified() < sourceFile.lastModified()) {
                     sourceFile.copyTo(destFile, overwrite = true)
-                    // 赋予全局可读权限，确保 UserService 能正常读取类文件
+                    // 赋予文件全局可读权限，确保能被正常加载
                     Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 644 $safePath")).waitFor()
                 }
+                
                 if (destFile.exists()) {
                     safeManagerApkPath = safePath
                     LOGGER.i("防连带查杀机制生效，已使用安全 APK 路径: %s", safeManagerApkPath)
