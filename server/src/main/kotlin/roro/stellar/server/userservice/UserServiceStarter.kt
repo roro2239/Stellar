@@ -181,10 +181,14 @@ object UserServiceStarter {
 
         val userId = 0
         var provider: IContentProvider? = null
+        
+        // 创建一个专属的 Binder Token 作为连接标识
+        val connectionToken = android.os.Binder()
 
         return try {
+            // 传入 connectionToken，让系统精确记录这次连接
             provider = ActivityManagerApis.getContentProviderExternal(
-                providerName, userId, null, providerName
+                providerName, userId, connectionToken, providerName
             )
 
             if (provider == null) {
@@ -225,13 +229,6 @@ object UserServiceStarter {
                     val clientContainer = reply.getParcelable<BinderContainer>(EXTRA_CLIENT_BINDER)
                     if (clientContainer?.binder != null && clientContainer.binder!!.pingBinder()) {
                         clientBinder = clientContainer.binder
-                        if (serviceMode == UserServiceConstants.MODE_ONE_TIME) {
-                            clientBinder!!.linkToDeath({
-                                Log.i(TAG, "客户端 App 已退出，一次性模式，服务退出...")
-                                System.exit(0)
-                            }, 0)
-                            Log.i(TAG, "已设置客户端死亡监听（一次性模式）")
-                        }
                     }
 
                     return true
@@ -245,7 +242,8 @@ object UserServiceStarter {
         } finally {
             provider?.let {
                 try {
-                    ActivityManagerApis.removeContentProviderExternal(providerName, null)
+                    // 使用与获取时完全相同的 connectionToken 注销，彻底切断系统底层的关联牵连
+                    ActivityManagerApis.removeContentProviderExternal(providerName, connectionToken)
                 } catch (e: Exception) {
                     Log.w(TAG, "removeContentProviderExternal 失败", e)
                 }
