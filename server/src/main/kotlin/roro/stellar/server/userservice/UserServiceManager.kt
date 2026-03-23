@@ -228,6 +228,28 @@ class UserServiceManager {
             ServerConstants.MANAGER_APPLICATION_ID, 0, 0
         )?.sourceDir ?: ""
 
+        // 防杀优化：将 Manager APK 复制到安全目录避开国内定制 OEM 查杀（fuck ColorOS）
+        var safeManagerApkPath = managerApkPath
+        if (managerApkPath.isNotEmpty()) {
+            val safePath = "/data/local/tmp/stellar_manager_safe.apk"
+            try {
+                val sourceFile = File(managerApkPath)
+                val destFile = File(safePath)
+                // 仅在文件不存在或 Stellar 有更新时才进行复制，减少 I/O 损耗
+                if (!destFile.exists() || destFile.lastModified() < sourceFile.lastModified()) {
+                    sourceFile.copyTo(destFile, overwrite = true)
+                    // 赋予全局可读权限，确保 UserService 能正常读取类文件
+                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 644 $safePath")).waitFor()
+                }
+                if (destFile.exists()) {
+                    safeManagerApkPath = safePath
+                    LOGGER.i("防连带查杀机制生效，已使用安全 APK 路径: %s", safeManagerApkPath)
+                }
+            } catch (e: Exception) {
+                LOGGER.e(e, "复制安全 APK 失败，回退到原路径")
+            }
+        }
+
         val processName = "${record.packageName}:${record.processNameSuffix}"
         val debugArgs = if (debug) getDebugArgs() else ""
         val debugName = if (debug) " --debug-name=$processName" else ""
@@ -235,7 +257,7 @@ class UserServiceManager {
         return String.format(
             Locale.ENGLISH,
             UserServiceConstants.USER_SERVICE_CMD_FORMAT,
-            managerApkPath,
+            safeManagerApkPath,
             appProcess,
             debugArgs,
             processName,
