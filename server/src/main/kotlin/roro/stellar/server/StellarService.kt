@@ -47,6 +47,12 @@ class StellarService : IStellarService.Stub() {
 
     @Volatile
     private var daemonPid: Int = -1
+    
+    // 防止无限重启死循环的变量
+    @Volatile
+    private var daemonRestartCount: Int = 0
+    @Volatile
+    private var lastDaemonRestartTime: Long = 0L
 
     init {
         try {
@@ -562,7 +568,22 @@ class StellarService : IStellarService.Stub() {
                 try {
                     Thread.sleep(5000)
                     if (daemonPid > 0 && !isProcessAlive(daemonPid)) {
-                        LOGGER.w("检测到守护进程死亡，重新启动")
+                        val now = System.currentTimeMillis()
+                        
+                        if (now - lastDaemonRestartTime < 60_000) {
+                            daemonRestartCount++
+                        } else {
+                            daemonRestartCount = 1
+                        }
+                        lastDaemonRestartTime = now
+
+                        if (daemonRestartCount > 5) {
+                            LOGGER.e("守护进程频繁死亡 (连续 $daemonRestartCount 次)，为防系统判定异常而强杀主进程，已停止自动拉起守护进程。")
+                            daemonPid = -1
+                            break
+                        }
+
+                        LOGGER.w("检测到守护进程死亡，第 $daemonRestartCount 次尝试重新启动...")
                         startDaemon()
                         break
                     }
