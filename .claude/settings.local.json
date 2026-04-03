@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "mcp__fast-context__fast_context_search",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

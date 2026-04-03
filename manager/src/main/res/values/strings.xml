@@ -289,6 +289,21 @@
     <string name="boot_start_success">Stellar service started successfully on boot</string>
     <string name="boot_start_failed">Stellar boot start failed: %s</string>
     <string name="boot_start_root_no_permission">Root access unavailable, boot start failed</string>
+
+    <!-- Boot ADB Start Worker -->
+    <string name="boot_start_channel_name">Boot Start</string>
+    <string name="boot_start_channel_description">Notifications for boot-time service start</string>
+    <string name="boot_start_notification_title">Stellar Boot Start</string>
+    <string name="boot_start_waiting_wifi">Waiting for WiFi connection…</string>
+    <string name="boot_start_enabling_wireless_adb">Enabling wireless debugging…</string>
+    <string name="boot_start_discovering_port">Discovering ADB port…</string>
+    <string name="boot_start_connecting">Connecting to ADB service…</string>
+    <string name="boot_start_waiting_unlock">Waiting for device unlock…</string>
+    <string name="boot_start_retry">Retry Now</string>
+    <string name="boot_start_port_not_found">ADB port not found, retrying…</string>
+    <string name="boot_start_connect_failed">ADB connection failed, retrying…</string>
+    <string name="boot_start_binder_timeout">Service start timed out, retrying…</string>
+
     <string name="boot_script_install_success">Boot script created successfully</string>
     <string name="boot_script_install_failed">Failed to create boot script: %s</string>
     <string name="boot_script_remove_success">Boot script removed successfully</string>

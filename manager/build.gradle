@@ -161,4 +161,5 @@ dependencies {
     implementation managerLibs.roomKtx
     ksp managerLibs.roomCompiler
     implementation managerLibs.gson
+    implementation managerLibs.workRuntimeKtx
 }

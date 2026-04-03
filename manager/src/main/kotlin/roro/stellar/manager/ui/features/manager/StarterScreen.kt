@@ -993,6 +993,10 @@ internal class StarterViewModel(
     @SuppressLint("StringFormatInvalid")
     private fun setSuccess() {
         viewModelScope.launch {
+            StellarSettings.setLastLaunchMethod(
+                if (isRoot) StellarSettings.LaunchMethod.ROOT
+                else StellarSettings.LaunchMethod.ADB
+            )
             val steps = _steps.value
             val lastIndex = steps.lastIndex
             steps.forEachIndexed { index, step ->

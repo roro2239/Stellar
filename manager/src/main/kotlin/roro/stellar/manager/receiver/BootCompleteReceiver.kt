@@ -18,13 +18,11 @@ import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.R
 import roro.stellar.manager.StellarSettings
-import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.startup.command.Starter
-import roro.stellar.manager.startup.service.SelfStarterService
+import roro.stellar.manager.startup.worker.AdbStartWorker
 import roro.stellar.manager.util.UserHandleCompat
 
 class BootCompleteReceiver : BroadcastReceiver() {
-    private val adbWirelessHelper = AdbWirelessHelper()
 
     override fun onReceive(context: Context, intent: Intent) {
         if (Intent.ACTION_LOCKED_BOOT_COMPLETED != intent.action
@@ -38,17 +36,24 @@ class BootCompleteReceiver : BroadcastReceiver() {
         val mode = StellarSettings.getBootMode()
         if (mode == StellarSettings.BootMode.NONE || mode == StellarSettings.BootMode.SCRIPT) return
 
+        val lastLaunch = StellarSettings.getLastLaunchMethod()
+
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val started = if (hasRootPermission()) {
-                    rootStart(context) || adbStart(context)
-                } else {
-                    adbStart(context)
+                // 优先尝试 Root 启动
+                if (hasRootPermission() && rootStart(context)) {
+                    return@launch
                 }
-                if (!started) {
-                    showToast(context, context.getString(R.string.boot_start_failed, "no available startup path"))
+
+                // Root 失败或不可用，且上次是通过 ADB 启动的，使用 WorkManager
+                if (lastLaunch == StellarSettings.LaunchMethod.ADB && canStartViaAdb(context)) {
+                    Log.i(AppConstants.TAG, "上次通过 ADB 启动，使用 WorkManager 进行开机 ADB 自启")
+                    AdbStartWorker.enqueue(context)
+                    return@launch
                 }
+
+                showToast(context, context.getString(R.string.boot_start_failed, "no available startup path"))
             } finally {
                 pending.finish()
             }
@@ -61,6 +66,11 @@ class BootCompleteReceiver : BroadcastReceiver() {
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun canStartViaAdb(context: Context): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && context.checkSelfPermission(WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun rootStart(context: Context): Boolean {
@@ -79,6 +89,7 @@ class BootCompleteReceiver : BroadcastReceiver() {
 
         Thread.sleep(3000)
         if (Stellar.pingBinder()) {
+            StellarSettings.setLastLaunchMethod(StellarSettings.LaunchMethod.ROOT)
             showToast(context, context.getString(R.string.boot_start_success))
             return true
         }
@@ -87,40 +98,9 @@ class BootCompleteReceiver : BroadcastReceiver() {
         return false
     }
 
-    private suspend fun adbStart(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-            || context.checkSelfPermission(WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.w(AppConstants.TAG, "WRITE_SECURE_SETTINGS not granted, skip wireless startup")
-            return false
-        }
-
-        return try {
-            val wirelessAdbStatus = adbWirelessHelper.validateThenEnableWirelessAdbAsync(
-                context.contentResolver, context, 15_000L
-            )
-            if (wirelessAdbStatus) {
-                val intentService = Intent(context, SelfStarterService::class.java)
-                context.startService(intentService)
-                true
-            } else {
-                false
-            }
-        } catch (e: SecurityException) {
-            Log.e(AppConstants.TAG, "Permission denied while starting wireless adb", e)
-            showToast(context, context.getString(R.string.boot_start_failed, e.message ?: ""))
-            false
-        } catch (e: Exception) {
-            Log.e(AppConstants.TAG, "Failed to start wireless adb", e)
-            showToast(context, context.getString(R.string.boot_start_failed, e.message ?: ""))
-            false
-        }
-    }
-
     private fun showToast(context: Context, message: String) {
         Handler(Looper.getMainLooper()).post {
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
         }
     }
 }
-

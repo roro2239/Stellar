@@ -119,6 +119,15 @@
         </receiver>
 
         <receiver
+            android:name=".startup.notification.BootStartActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="roro.stellar.manager.action.BOOT_START_RETRY" />
+                <action android:name="roro.stellar.manager.action.BOOT_START_CANCEL" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".receiver.StellarReceiver"
             android:directBootAware="true"
             android:enabled="true"

@@ -23,6 +23,7 @@ capsule = "2.1.0"
 composeMarkdown = "0.5.4"
 room = "2.7.1"
 gson = "2.13.1"
+work = "2.10.0"
 
 [libraries]
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
@@ -65,6 +66,7 @@ roomRuntime = { module = "androidx.room:room-runtime", version.ref = "room" }
 roomKtx = { module = "androidx.room:room-ktx", version.ref = "room" }
 roomCompiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+workRuntimeKtx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 [bundles]
 kotlinxCoroutines = ["kotlinxCoroutinesCore", "kotlinxCoroutinesAndroid"]

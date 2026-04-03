@@ -22,6 +22,20 @@ object StellarSettings {
     /** 开机启动模式，三选一，默认 NONE */
     enum class BootMode { NONE, BROADCAST, ACCESSIBILITY, SCRIPT }
 
+    /** 记录上次服务的启动方式（Root / ADB），用于开机自启时决定走哪条路径 */
+    enum class LaunchMethod { UNKNOWN, ROOT, ADB }
+    const val LAST_LAUNCH_METHOD = "last_launch_method"
+
+    fun getLastLaunchMethod(): LaunchMethod {
+        val name = getPreferences().getString(LAST_LAUNCH_METHOD, LaunchMethod.UNKNOWN.name)
+            ?: LaunchMethod.UNKNOWN.name
+        return runCatching { LaunchMethod.valueOf(name) }.getOrDefault(LaunchMethod.UNKNOWN)
+    }
+
+    fun setLastLaunchMethod(method: LaunchMethod) {
+        getPreferences().edit().putString(LAST_LAUNCH_METHOD, method.name).apply()
+    }
+
     fun getBootMode(): BootMode {
         val name = getPreferences().getString(BOOT_MODE, BootMode.NONE.name) ?: BootMode.NONE.name
         return runCatching { BootMode.valueOf(name) }.getOrDefault(BootMode.NONE)
