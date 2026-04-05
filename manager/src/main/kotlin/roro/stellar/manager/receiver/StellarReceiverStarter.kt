@@ -1,0 +1,62 @@
+package roro.stellar.manager.receiver
+
+import android.Manifest.permission.WRITE_SECURE_SETTINGS
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import com.topjohnwu.superuser.Shell
+import roro.stellar.Stellar
+import roro.stellar.manager.AppConstants
+import roro.stellar.manager.R
+import roro.stellar.manager.StellarSettings
+import roro.stellar.manager.startup.command.Starter
+import roro.stellar.manager.startup.notification.BootStartNotifications
+import roro.stellar.manager.startup.worker.AdbStartWorker
+import roro.stellar.manager.util.EnvironmentUtils
+import roro.stellar.manager.util.UserHandleCompat
+
+object StellarReceiverStarter {
+
+    fun start(context: Context, forceStart: Boolean = false) {
+        if ((UserHandleCompat.myUserId() > 0 || Stellar.pingBinder()) && !forceStart) return
+
+        when (StellarSettings.getLastLaunchMethod()) {
+            StellarSettings.LaunchMethod.ROOT -> rootStart()
+            StellarSettings.LaunchMethod.ADB -> adbStart(context)
+            StellarSettings.LaunchMethod.UNKNOWN -> Log.w(AppConstants.TAG, "后台启动不受支持：缺少上次启动方式")
+        }
+    }
+
+    private fun adbStart(context: Context) {
+        val adbSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ||
+            EnvironmentUtils.getAdbTcpPort() > 0
+        if (!adbSupported) {
+            Log.w(AppConstants.TAG, "后台启动不受支持：当前设备不支持无线调试自启")
+            return
+        }
+
+        if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
+            BootStartNotifications.showNotification(
+                context,
+                context.getString(R.string.boot_start_failed, "WRITE_SECURE_SETTINGS")
+            )
+            return
+        }
+
+        AdbStartWorker.enqueue(context)
+    }
+
+    private fun rootStart() {
+        if (!Shell.getShell().isRoot) {
+            Shell.getCachedShell()?.close()
+            return
+        }
+
+        try {
+            Shell.cmd(Starter.internalCommand).exec()
+        } catch (e: Exception) {
+            Log.e(AppConstants.TAG, "Root 后台启动失败", e)
+        }
+    }
+}

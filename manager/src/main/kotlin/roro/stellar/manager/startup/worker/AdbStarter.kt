@@ -5,6 +5,7 @@ import kotlinx.coroutines.delay
 import roro.stellar.Stellar
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.StellarSettings
+import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.adb.AdbClient
 import roro.stellar.manager.adb.AdbKey
 import roro.stellar.manager.adb.PreferenceAdbKeyStore
@@ -20,10 +21,33 @@ object AdbStarter {
      */
     suspend fun startAdb(host: String, port: Int, maxRetries: Int = 5): Boolean {
         val key = AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
+        var activePort = port
+        val (shouldChange, newPort) = AdbWirelessHelper().shouldChangePort(activePort)
+
+        if (shouldChange && newPort > 0) {
+            for (attempt in 0 until maxRetries) {
+                try {
+                    AdbClient(host, activePort, key).use { client ->
+                        client.connect()
+                        client.tcpip(newPort) { }
+                    }
+                    activePort = newPort
+                    break
+                } catch (_: java.io.EOFException) {
+                    activePort = newPort
+                    break
+                } catch (e: Exception) {
+                    Log.w(TAG, "ADB 端口切换尝试 ${attempt + 1}/$maxRetries 失败", e)
+                    if (attempt < maxRetries - 1) {
+                        delay(1000L * (1 shl attempt))
+                    }
+                }
+            }
+        }
 
         repeat(maxRetries) { attempt ->
             try {
-                AdbClient(host, port, key).use { client ->
+                AdbClient(host, activePort, key).use { client ->
                     client.connect()
                     client.shellCommand(Starter.internalCommand) { /* consume output */ }
                 }
