@@ -22,18 +22,21 @@ object StellarReceiverStarter {
         if ((UserHandleCompat.myUserId() > 0 || Stellar.pingBinder()) && !forceStart) return
 
         when (StellarSettings.getLastLaunchMethod()) {
-            StellarSettings.LaunchMethod.ROOT -> rootStart()
+            StellarSettings.LaunchMethod.ROOT -> rootStart() || adbStart(context)
             StellarSettings.LaunchMethod.ADB -> adbStart(context)
-            StellarSettings.LaunchMethod.UNKNOWN -> Log.w(AppConstants.TAG, "后台启动不受支持：缺少上次启动方式")
+            StellarSettings.LaunchMethod.UNKNOWN -> {
+                Log.i(AppConstants.TAG, "缺少上次启动方式，使用兼容回退路径")
+                rootStart() || adbStart(context)
+            }
         }
     }
 
-    private fun adbStart(context: Context) {
-        val adbSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ||
-            EnvironmentUtils.getAdbTcpPort() > 0
-        if (!adbSupported) {
+    private fun adbStart(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
+            EnvironmentUtils.getAdbTcpPort() <= 0
+        ) {
             Log.w(AppConstants.TAG, "后台启动不受支持：当前设备不支持无线调试自启")
-            return
+            return false
         }
 
         if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
@@ -41,22 +44,24 @@ object StellarReceiverStarter {
                 context,
                 context.getString(R.string.boot_start_failed, "WRITE_SECURE_SETTINGS")
             )
-            return
+            return false
         }
 
         AdbStartWorker.enqueue(context)
+        return true
     }
 
-    private fun rootStart() {
+    private fun rootStart(): Boolean {
         if (!Shell.getShell().isRoot) {
             Shell.getCachedShell()?.close()
-            return
+            return false
         }
 
         try {
-            Shell.cmd(Starter.internalCommand).exec()
+            return Shell.cmd(Starter.internalCommand).exec().code == 0
         } catch (e: Exception) {
             Log.e(AppConstants.TAG, "Root 后台启动失败", e)
+            return false
         }
     }
 }

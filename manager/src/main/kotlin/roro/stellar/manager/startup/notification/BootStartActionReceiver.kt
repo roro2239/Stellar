@@ -1,19 +1,28 @@
 package roro.stellar.manager.startup.notification
 
-import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import roro.stellar.manager.receiver.StellarReceiverStarter
 import roro.stellar.manager.startup.worker.AdbStartWorker
 
 class BootStartActionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            ACTION_RETRY -> AdbStartWorker.enqueue(context)
-            ACTION_CANCEL -> {
-                AdbStartWorker.cancel(context)
-                BootStartNotifications.dismiss(context)
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                when (intent.action) {
+                    ACTION_RETRY -> StellarReceiverStarter.start(context)
+                    ACTION_CANCEL -> {
+                        AdbStartWorker.cancel(context)
+                    }
+                }
+            } finally {
+                pending.finish()
             }
         }
     }
