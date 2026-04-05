@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import roro.stellar.manager.R
 
 object BootStartNotifications {
@@ -14,6 +16,8 @@ object BootStartNotifications {
     const val NOTIFICATION_ID = 1447
 
     fun createChannel(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
         val channel = NotificationChannel(
             CHANNEL_ID,
             context.getString(R.string.boot_start_channel_name),
@@ -43,24 +47,20 @@ object BootStartNotifications {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return Notification.Builder(context, CHANNEL_ID)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stellar)
             .setContentTitle(context.getString(R.string.boot_start_notification_title))
             .setContentText(message ?: context.getString(R.string.boot_start_enabling_wireless_adb))
             .setOngoing(true)
             .addAction(
-                Notification.Action.Builder(
-                    null,
-                    context.getString(R.string.boot_start_retry),
-                    retryPendingIntent
-                ).build()
+                0,
+                context.getString(R.string.boot_start_retry),
+                retryPendingIntent
             )
             .addAction(
-                Notification.Action.Builder(
-                    null,
-                    context.getString(R.string.cancel),
-                    cancelPendingIntent
-                ).build()
+                0,
+                context.getString(R.string.cancel),
+                cancelPendingIntent
             )
             .build()
     }
