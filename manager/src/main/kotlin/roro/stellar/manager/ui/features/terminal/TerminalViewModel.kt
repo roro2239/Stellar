@@ -54,29 +54,58 @@ class TerminalViewModel : ViewModel() {
                     null
                 )
 
-                val outputBuilder = StringBuilder()
+                val outputLines = mutableListOf<String>()
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
 
+                val maxStoredLines = 5000
+                val maxDisplayLines = 200
+                val updateInterval = 500L
+                var lastUpdateTime = System.currentTimeMillis()
+
                 reader.lineSequence().forEach { line ->
-                    outputBuilder.appendLine(line)
-                    _state.value = _state.value.copy(currentOutput = outputBuilder.toString())
+                    outputLines.add(line)
+
+                    if (outputLines.size > maxStoredLines) {
+                        outputLines.removeAt(0)
+                    }
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastUpdateTime >= updateInterval) {
+                        val displayLines = outputLines.takeLast(maxDisplayLines)
+                        val displayText = if (outputLines.size > maxDisplayLines) {
+                            "... (${outputLines.size} lines total, showing last $maxDisplayLines)\n" + displayLines.joinToString("\n")
+                        } else {
+                            displayLines.joinToString("\n")
+                        }
+                        _state.value = _state.value.copy(currentOutput = displayText)
+                        lastUpdateTime = now
+                    }
                 }
 
                 errorReader.lineSequence().forEach { line ->
-                    outputBuilder.appendLine(line)
-                    _state.value = _state.value.copy(currentOutput = outputBuilder.toString())
+                    outputLines.add(line)
+
+                    if (outputLines.size > maxStoredLines) {
+                        outputLines.removeAt(0)
+                    }
                 }
 
                 val exitCode = process.waitFor()
                 process.destroy()
                 val executionTime = System.currentTimeMillis() - startTime
 
+                val finalOutput = if (outputLines.size > maxStoredLines) {
+                    "... (${outputLines.size} lines total, showing last $maxStoredLines)\n" + outputLines.takeLast(maxStoredLines).joinToString("\n")
+                } else {
+                    outputLines.joinToString("\n")
+                }
+
                 _state.value = _state.value.copy(
                     isRunning = false,
                     result = ExecutionResult(
                         command = command,
-                        output = outputBuilder.toString(),
+                        output = finalOutput,
                         exitCode = exitCode,
                         executionTimeMs = executionTime,
                         isError = exitCode != 0
