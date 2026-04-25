@@ -14,7 +14,9 @@ import roro.stellar.StellarApiConstants.PERMISSION_KEY
 import roro.stellar.server.StellarConfig.PackageEntry
 import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.ktx.workerHandler
+import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.ProviderDiscovery
 import roro.stellar.server.util.UserHandleCompat
 
 class ConfigManager {
@@ -70,15 +72,19 @@ class ConfigManager {
 
         for (userId in UserManagerApis.getUserIdsNoThrow()) {
             for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                PackageManager.GET_META_DATA.toLong(),
+                (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
                 userId
             )) {
                 if (
                     pi == null ||
                     pi.applicationInfo == null ||
-                    pi.applicationInfo!!.metaData == null ||
-                    !pi.applicationInfo!!.metaData.getString(PERMISSION_KEY, "").split(",")
-                        .contains("stellar") ||
+                    (
+                        pi.applicationInfo!!.metaData
+                            ?.getString(PERMISSION_KEY, "")
+                            ?.split(",")
+                            ?.contains("stellar") != true &&
+                            !ProviderDiscovery.hasStellarProvider(pi)
+                    ) ||
                     pi.packageName == ServerConstants.MANAGER_APPLICATION_ID
                 ) {
                     continue
@@ -108,7 +114,15 @@ class ConfigManager {
                         permissions.add(permission)
                     }
                 }
-                if (applicationInfo.metaData?.getBoolean("moe.shizuku.client.V3_SUPPORT", false) == true) {
+                val packageInfo = PackageManagerApis.getPackageInfoNoThrow(
+                    packageName,
+                    (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
+                    UserHandleCompat.getUserId(entry.key)
+                )
+                if (
+                    applicationInfo.metaData?.getBoolean(ShizukuApiConstants.META_DATA_KEY, false) == true ||
+                    packageInfo?.let { ProviderDiscovery.hasShizukuProvider(it) } == true
+                ) {
                     permissions.add("shizuku")
                 }
             }

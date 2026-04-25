@@ -113,6 +113,7 @@ class StellarService : IStellarService.Stub() {
             mainHandler.post {
                 try {
                     BinderDistributor.sendBinderToAllClients(this)
+                    BinderDistributor.sendShizukuBinderToAllClients(shizukuServiceIntercept)
                     BinderDistributor.sendBinderToManager(this)
                     ManagerGrantHelper.grantWriteSecureSettings(managerAppId)
                     if (configManager.isAccessibilityAutoStartEnabled()) {

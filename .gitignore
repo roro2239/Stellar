@@ -38,3 +38,8 @@ google-services.json
 /out
 /.kotlin
 /nul
+
+# Local AI/tooling context
+.project_context/
+.claude/
+.code-graph/
