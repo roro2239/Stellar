@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -61,11 +62,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.snapshotFlow
 import roro.stellar.manager.R
+import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.db.AppDatabase
 import roro.stellar.Stellar
 import roro.stellar.manager.compat.ClipboardUtils
@@ -82,7 +85,7 @@ internal fun LogsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val db = remember { AppDatabase.get(context) }
-    var logs by remember { mutableStateOf(emptyList<String>()) }
+    var logs by remember { mutableStateOf(emptyList<LogRow>()) }
     var isLoading by remember { mutableStateOf(false) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var hasMore by remember { mutableStateOf(true) }
@@ -91,15 +94,28 @@ internal fun LogsScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    var selectedLevels by remember { mutableStateOf(setOf("V", "D", "I", "W", "E")) }
-    var searchQuery by remember { mutableStateOf("") }
+    val preferences = remember { StellarSettings.getPreferences() }
+    var selectedLevels by remember {
+        mutableStateOf(
+            preferences.getString(LOG_LEVEL_FILTER_KEY, null)
+                ?.split(',')
+                ?.filter { it.isNotEmpty() }
+                ?.toSet()
+                ?: DEFAULT_LOG_LEVELS
+        )
+    }
+    var searchQuery by remember {
+        mutableStateOf(preferences.getString(LOG_SEARCH_QUERY_KEY, "") ?: "")
+    }
 
     val onLevelToggle: (String) -> Unit = { level ->
         selectedLevels = if (level in selectedLevels) selectedLevels - level else selectedLevels + level
+        preferences.edit().putString(LOG_LEVEL_FILTER_KEY, selectedLevels.joinToString(",")).apply()
     }
 
     val filteredLogs = remember(logs, selectedLevels, searchQuery) {
-        logs.filter { log ->
+        logs.filter { row ->
+            val log = row.line
             val level = when {
                 log.contains(" E/") -> "E"
                 log.contains(" W/") -> "W"
@@ -115,7 +131,7 @@ internal fun LogsScreen(
         }
     }
 
-    var allServiceLogs by remember { mutableStateOf<List<String>?>(null) }
+    var allServiceLogs by remember { mutableStateOf<List<LogRow>?>(null) }
 
     val loadLogs: () -> Unit = {
         scope.launch {
@@ -126,13 +142,13 @@ internal fun LogsScreen(
                 val (page, cached) = withContext(Dispatchers.IO) {
                     if (Stellar.pingBinder()) {
                         try {
-                            val all = Stellar.getLogs()
+                            val all = Stellar.getLogs().toServiceLogRows()
                             all.take(pageSize) to all
                         } catch (_: Throwable) {
-                            db.logDao().getPage(pageSize, 0) to null
+                            db.logDao().getPage(pageSize, 0).toDatabaseLogRows(0) to null
                         }
                     } else {
-                        db.logDao().getPage(pageSize, 0) to null
+                        db.logDao().getPage(pageSize, 0).toDatabaseLogRows(0) to null
                     }
                 }
                 allServiceLogs = cached
@@ -156,7 +172,8 @@ internal fun LogsScreen(
                     val offset = logs.size
                     val more = withContext(Dispatchers.IO) {
                         val cached = allServiceLogs
-                        cached?.drop(offset)?.take(pageSize) ?: db.logDao().getPage(pageSize, offset)
+                        cached?.drop(offset)?.take(pageSize)
+                            ?: db.logDao().getPage(pageSize, offset).toDatabaseLogRows(offset)
                     }
                     if (more.isEmpty()) {
                         hasMore = false
@@ -193,7 +210,7 @@ internal fun LogsScreen(
         if (logs.isEmpty()) {
             Toast.makeText(context, context.getString(R.string.no_logs_to_copy), Toast.LENGTH_SHORT).show()
         } else {
-            val logsText = logs.joinToString("\n")
+            val logsText = logs.joinToString("\n") { it.line }
             if (ClipboardUtils.put(context, logsText)) {
                 Toast.makeText(context, context.getString(R.string.logs_copied), Toast.LENGTH_SHORT).show()
             }
@@ -202,6 +219,33 @@ internal fun LogsScreen(
 
     LaunchedEffect(Unit) {
         loadLogs()
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1_000)
+            if (!isLoading && Stellar.pingBinder()) {
+                val latest = runCatching {
+                    withContext(Dispatchers.IO) { Stellar.getLogs().toServiceLogRows() }
+                }.getOrNull() ?: continue
+                val previous = allServiceLogs
+                val addedCount = previous?.firstOrNull()?.key?.let { previousFirstKey ->
+                    latest.indexOfFirst { it.key == previousFirstKey }.coerceAtLeast(0)
+                } ?: (latest.size - logs.size).coerceAtLeast(0)
+                val visibleCount = (logs.size + addedCount).coerceAtLeast(pageSize)
+                allServiceLogs = latest
+                logs = latest.take(visibleCount)
+                hasMore = logs.size < latest.size
+                if (addedCount > 0 && logs.isNotEmpty()) {
+                    listState.scrollToItem(addedCount.coerceAtMost(logs.lastIndex))
+                    listState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(selectedLevels, searchQuery) {
+        listState.animateScrollToItem(0)
     }
 
     LaunchedEffect(listState, hasMore) {
@@ -222,8 +266,7 @@ internal fun LogsScreen(
             LogsTopBar(
                 onBackClick = onBackClick,
                 onCopyLogs = { copyLogs() },
-                onClearLogs = { clearLogs() },
-                onRefresh = { loadLogs() }
+                onClearLogs = { clearLogs() }
             )
         }
     ) { paddingValues ->
@@ -241,7 +284,10 @@ internal fun LogsScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(top = 8.dp, bottom = 8.dp)
                 ) {
-                    SearchBar(searchQuery = searchQuery, onSearchQueryChange = { searchQuery = it })
+                    SearchBar(searchQuery = searchQuery, onSearchQueryChange = {
+                        searchQuery = it
+                        preferences.edit().putString(LOG_SEARCH_QUERY_KEY, it).apply()
+                    })
                     LogFilterBarVertical(selectedLevels = selectedLevels, onLevelToggle = onLevelToggle)
                 }
 
@@ -255,7 +301,9 @@ internal fun LogsScreen(
                         isLoading -> LoadingView()
                         filteredLogs.isEmpty() -> EmptyLogsView()
                         else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                            itemsIndexed(filteredLogs) { _, log -> LogItem(log = log) }
+                            itemsIndexed(filteredLogs, key = { _, row -> row.key }) { _, row ->
+                                LogItem(log = row.line, modifier = Modifier.animateItem())
+                            }
                             if (isLoadingMore) {
                                 item { LoadingMoreView() }
                             }
@@ -267,7 +315,10 @@ internal fun LogsScreen(
             LogsContent(
                 paddingValues = paddingValues,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = {
+                    searchQuery = it
+                    preferences.edit().putString(LOG_SEARCH_QUERY_KEY, it).apply()
+                },
                 selectedLevels = selectedLevels,
                 onLevelToggle = onLevelToggle,
                 filteredLogs = filteredLogs,
@@ -284,8 +335,7 @@ internal fun LogsScreen(
 private fun LogsTopBar(
     onBackClick: () -> Unit,
     onCopyLogs: () -> Unit,
-    onClearLogs: () -> Unit,
-    onRefresh: () -> Unit
+    onClearLogs: () -> Unit
 ) {
     FixedTopAppBar(
         title = stringResource(R.string.service_logs),
@@ -298,7 +348,7 @@ private fun LogsTopBar(
             }
         },
         actions = {
-            LogsTopBarActions(onCopyLogs, onClearLogs, onRefresh)
+            LogsTopBarActions(onCopyLogs, onClearLogs)
         }
     )
 }
@@ -306,8 +356,7 @@ private fun LogsTopBar(
 @Composable
 private fun LogsTopBarActions(
     onCopyLogs: () -> Unit,
-    onClearLogs: () -> Unit,
-    onRefresh: () -> Unit
+    onClearLogs: () -> Unit
 ) {
     Row {
         Surface(
@@ -336,19 +385,6 @@ private fun LogsTopBarActions(
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Surface(
-            onClick = onRefresh,
-            shape = AppShape.shapes.iconSmall,
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = stringResource(R.string.refresh),
-                modifier = Modifier.padding(8.dp).size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
     }
 }
 
@@ -359,7 +395,7 @@ private fun LogsContent(
     onSearchQueryChange: (String) -> Unit,
     selectedLevels: Set<String>,
     onLevelToggle: (String) -> Unit,
-    filteredLogs: List<String>,
+    filteredLogs: List<LogRow>,
     isLoading: Boolean,
     isLoadingMore: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState
@@ -377,7 +413,9 @@ private fun LogsContent(
             isLoading -> LoadingView()
             filteredLogs.isEmpty() -> EmptyLogsView()
             else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(filteredLogs) { _, log -> LogItem(log = log) }
+                itemsIndexed(filteredLogs, key = { _, row -> row.key }) { _, row ->
+                    LogItem(log = row.line, modifier = Modifier.animateItem())
+                }
                 if (isLoadingMore) {
                     item { LoadingMoreView() }
                 }
@@ -513,9 +551,10 @@ private fun LogFilterChip(
     Surface(
         onClick = onClick,
         shape = AppShape.shapes.buttonSmall14,
-        color = if (isSelected) levelColor.copy(alpha = 0.12f)
+        color = if (isSelected) levelColor.copy(alpha = 0.22f)
                else MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier
+        border = if (isSelected) BorderStroke(1.dp, levelColor) else null,
+        modifier = modifier.alpha(if (isSelected) 1f else 0.45f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -538,6 +577,9 @@ private fun LogFilterChip(
 }
 
 private val LOG_LEVELS = listOf("V" to "Verbose", "D" to "Debug", "I" to "Info", "W" to "Warn", "E" to "Error")
+private val DEFAULT_LOG_LEVELS = LOG_LEVELS.mapTo(mutableSetOf()) { it.first }
+private const val LOG_LEVEL_FILTER_KEY = "logs_selected_levels"
+private const val LOG_SEARCH_QUERY_KEY = "logs_search_query"
 
 @Composable
 private fun LogFilterBar(
@@ -575,13 +617,13 @@ private fun LogFilterBarVertical(
 }
 
 @Composable
-private fun LogItem(log: String) {
+private fun LogItem(log: String, modifier: Modifier = Modifier) {
     val level = parseLogLevel(log)
     val parts = parseLogEntry(log)
     val levelColor = getLevelColor(level)
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = AppSpacing.screenHorizontalPadding, vertical = 4.dp),
         shape = AppShape.shapes.cardMedium,
@@ -660,6 +702,20 @@ private fun getLevelColor(level: String): Color = when (level) {
 }
 
 private val LOG_ENTRY_REGEX = Regex("""^(\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) [VDIWEA]/([^:]+): (.*)$""")
+
+private data class LogRow(val key: String, val line: String)
+
+private fun List<String>.toServiceLogRows(): List<LogRow> {
+    val occurrences = mutableMapOf<String, Int>()
+    return map { line ->
+        val occurrence = occurrences.getOrDefault(line, 0)
+        occurrences[line] = occurrence + 1
+        LogRow("service:$occurrence:$line", line)
+    }.asReversed()
+}
+
+private fun List<String>.toDatabaseLogRows(offset: Int): List<LogRow> =
+    mapIndexed { index, line -> LogRow("database:${offset + index}", line) }
 
 private fun parseLogEntry(log: String): LogParts {
     val regex = LOG_ENTRY_REGEX
