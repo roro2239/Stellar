@@ -30,7 +30,6 @@ import roro.stellar.server.shizuku.ShizukuServiceIntercept
 import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
 import roro.stellar.server.daemon.DaemonManager
-import roro.stellar.server.daemon.DaemonManager.stopDaemon
 import kotlin.system.exitProcess
 
 class StellarService : IStellarService.Stub() {
@@ -350,7 +349,7 @@ class StellarService : IStellarService.Stub() {
         LOGGER.i("进程守护已%s", if (enabled) "启用" else "禁用")
     }
 
-    override fun getSystemService(name: String?): android.os.IBinder? {
+    override fun getSystemService(name: String?): IBinder? {
         val caller = CallerContext.fromBinder()
         permissionEnforcer.enforcePermission(caller, "getSystemService")
 
@@ -358,7 +357,7 @@ class StellarService : IStellarService.Stub() {
 
         return Class.forName("android.os.ServiceManager")
             .getMethod("getService", String::class.java)
-            .invoke(null, name) as? android.os.IBinder
+            .invoke(null, name) as? IBinder
     }
 
     private fun stopDaemon() {
@@ -449,7 +448,8 @@ class StellarService : IStellarService.Stub() {
             val permissionGranted = clientRecord.allowedMap["stellar"] ?: false
             LOGGER.i("权限状态检查: uid=%d, pid=%d, package=%s, granted=%s, allowedMap=%s",
                 callingUid, callingPid, requestPackageName, permissionGranted,
-                clientRecord.allowedMap.toString() ?: "null")
+                clientRecord.allowedMap.toString()
+            )
             reply.putBoolean(
                 StellarApiConstants.BIND_APPLICATION_PERMISSION_GRANTED,
                 permissionGranted
@@ -573,7 +573,7 @@ class StellarService : IStellarService.Stub() {
     private fun isProcessAlive(pid: Int): Boolean {
         return try {
             java.io.File("/proc/$pid").exists()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
