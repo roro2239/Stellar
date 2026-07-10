@@ -117,29 +117,37 @@ object UserServiceStarter {
                 Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY,
                 userHandle
             )
-            val mPackageInfo = context::class.java.getDeclaredField("mPackageInfo")
-            mPackageInfo.isAccessible = true
-            val loadedApk = mPackageInfo.get(context)
+            var application: Application?
+            try {
+                val mPackageInfo = context::class.java.getDeclaredField("mPackageInfo")
+                mPackageInfo.isAccessible = true
+                val loadedApk = mPackageInfo.get(context)
 
-            val makeApplication = loadedApk.javaClass.getDeclaredMethod(
-                "makeApplication",
-                Boolean::class.javaPrimitiveType,
-                Instrumentation::class.java
-            )
-            val application = makeApplication.invoke(loadedApk, true, null) as Application
+                val makeApplication = loadedApk.javaClass.getDeclaredMethod(
+                    "makeApplication",
+                    Boolean::class.javaPrimitiveType,
+                    Instrumentation::class.java
+                )
+                application = makeApplication.invoke(loadedApk, true, null) as Application
 
-            val mInitialApplication = activityThread.javaClass.getDeclaredField("mInitialApplication")
-            mInitialApplication.isAccessible = true
-            mInitialApplication.set(activityThread, application)
+                val mInitialApplication = activityThread.javaClass.getDeclaredField("mInitialApplication")
+                mInitialApplication.isAccessible = true
+                mInitialApplication.set(activityThread, application)
+                Log.i(TAG, "Application 创建成功: ${application.javaClass.name}")
+            } catch (e: Exception) {
+                // Application 初始化失败时回退到旧的 Context 方案
+                // 主要用于解决部分联发科设备上的兼容性问题
+                // 参见 RikkaApps/Shizuku Issue #1171 和 RikkaApps/Shizuku-API PR #299
+                Log.w(TAG, "无法初始化 Application，已回退到 Context", e);
+                application = null;
+            }
 
-            Log.i(TAG, "Application 创建成功: ${application.javaClass.name}")
-
-            val classLoader = application.classLoader
+            val classLoader = (if (application != null) application.classLoader else context.classLoader)
             val serviceClass = classLoader.loadClass(className)
 
             val instance = try {
                 val constructorWithContext = serviceClass.getConstructor(Context::class.java)
-                constructorWithContext.newInstance(application)
+                constructorWithContext.newInstance(application ?: context)
             } catch (e: NoSuchMethodException) {
                 val constructor = serviceClass.getDeclaredConstructor()
                 constructor.isAccessible = true
