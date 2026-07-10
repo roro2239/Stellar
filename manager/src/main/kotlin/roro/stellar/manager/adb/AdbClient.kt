@@ -194,7 +194,7 @@ class AdbClient(private val host: String, private val port: Int, private val key
     }
 
     private fun read(): AdbMessage {
-        val buffer = ByteBuffer.allocate(AdbMessage.Companion.HEADER_LENGTH).order(ByteOrder.LITTLE_ENDIAN)
+        val buffer = ByteBuffer.allocate(AdbMessage.HEADER_LENGTH).order(ByteOrder.LITTLE_ENDIAN)
 
         inputStream.readFully(buffer.array(), 0, 24)
 

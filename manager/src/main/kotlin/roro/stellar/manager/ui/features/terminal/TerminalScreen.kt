@@ -615,7 +615,7 @@ private fun ExecutionResultDialog(
     terminalViewModel: TerminalViewModel
 ) {
     val result = state.result
-    val context = LocalContext.current
+    LocalContext.current
 
     BasicAlertDialog(
         onDismissRequest = { if (!state.isRunning) onDismiss() }

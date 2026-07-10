@@ -213,7 +213,7 @@ class AdbMdns(
             it.bind(InetSocketAddress("127.0.0.1", port), 1)
             false
         }
-    } catch (e: IOException) {
+    } catch (_: IOException) {
         true
     }
 

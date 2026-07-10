@@ -1,20 +1,11 @@
 package roro.stellar.manager.adb
 
-import android.content.ContentResolver
-import android.content.Context
-import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.provider.Settings
 import android.util.Log
-import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import roro.stellar.manager.AppConstants
 import roro.stellar.manager.StellarSettings
-
 import roro.stellar.manager.StellarSettings.TCPIP_PORT
 import roro.stellar.manager.StellarSettings.TCPIP_PORT_ENABLED
 import roro.stellar.manager.startup.command.Starter
@@ -22,13 +13,12 @@ import java.net.Socket
 import javax.net.ssl.SSLException
 
 class AdbWirelessHelper {
-
-    suspend fun hasAdbPermission(host: String, port: Int): Boolean {
+    fun hasAdbPermission(host: String, port: Int): Boolean {
         if (port !in 1..65535) return false
 
         val key = try {
             AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             return false
         }
 
@@ -37,104 +27,12 @@ class AdbWirelessHelper {
                 client.connect()
             }
             true
-        } catch (e: SSLException) {
+        } catch (_: SSLException) {
             false
-        } catch (e: java.net.ConnectException) {
+        } catch (_: java.net.ConnectException) {
             false
-        } catch (e: Throwable) {
+        } catch (_: Throwable) {
             false
-        }
-    }
-
-    suspend fun checkAdbConnection(host: String, port: Int): Throwable? {
-        val key = try {
-            AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
-        } catch (e: Throwable) {
-            return AdbKeyException(e)
-        }
-
-        return try {
-            AdbClient(host, port, key).use { client ->
-                client.connect()
-            }
-            null
-        } catch (e: SSLException) {
-            e
-        } catch (e: java.net.ConnectException) {
-            e
-        } catch (e: Throwable) {
-            null
-        }
-    }
-
-    fun validateThenEnableWirelessAdb(
-        contentResolver: ContentResolver,
-        context: Context
-    ): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val networkCapabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-            enableWirelessADB(contentResolver, context)
-            return true
-        } else {
-            Log.w(AppConstants.TAG, "无线ADB自动启动条件不满足：未连接Wi-Fi")
-        }
-        return false
-    }
-
-    suspend fun validateThenEnableWirelessAdbAsync(
-        contentResolver: ContentResolver,
-        context: Context,
-        timeoutMs: Long = 15_000L
-    ): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        
-        val intervalMs = 500L
-        var elapsed = 0L
-
-        while (elapsed < timeoutMs) {
-            val networkCapabilities =
-                connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-            if (networkCapabilities != null && networkCapabilities.hasTransport(
-                    NetworkCapabilities.TRANSPORT_WIFI
-                )
-            ) {
-                enableWirelessADB(contentResolver, context)
-                return true
-            }
-            delay(intervalMs)
-            elapsed += intervalMs
-        }
-        
-        Log.w(AppConstants.TAG, "等待WiFi连接超时，无法启用无线ADB")
-        return false
-    }
-
-    private fun enableWirelessADB(contentResolver: ContentResolver, context: Context) {
-        try {
-            val isAlreadyEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1 &&
-                                  Settings.Global.getInt(contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
-
-            if (isAlreadyEnabled) {
-                Log.i(AppConstants.TAG, "无线调试已经启用，跳过重复操作")
-                return
-            }
-
-            Settings.Global.putInt(contentResolver, "adb_wifi_enabled", 1)
-            Settings.Global.putInt(contentResolver, Settings.Global.ADB_ENABLED, 1)
-            Settings.Global.putLong(contentResolver, "adb_allowed_connection_time", 0L)
-
-            Log.i(AppConstants.TAG, "通过安全设置启用无线调试")
-        } catch (se: SecurityException) {
-            Log.e(AppConstants.TAG, "启用无线调试时权限被拒绝", se)
-            throw se
-        } catch (e: Exception) {
-            Log.e(AppConstants.TAG, "启用无线调试时出错", e)
-            throw e
         }
     }
 
@@ -212,7 +110,7 @@ class AdbWirelessHelper {
                     return true
                 }
             } catch (e: Exception) {
-                Log.v(AppConstants.TAG, "端口 ${port} 尚未就绪 (已等待 ${elapsed}ms): ${e.message}")
+                Log.v(AppConstants.TAG, "端口 $port 尚未就绪 (已等待 ${elapsed}ms): ${e.message}")
                 Thread.sleep(intervalMs)
                 elapsed += intervalMs
             }
@@ -260,7 +158,7 @@ class AdbWirelessHelper {
                             Log.d(AppConstants.TAG, "Stellar启动输出片段: $outputString")
                         }
                     }
-                } catch (e: java.io.EOFException) {
+                } catch (_: java.io.EOFException) {
                     Log.i(AppConstants.TAG, "ADB shell 流已关闭（服务进程已 fork，这是正常的）")
                 } catch (e: Throwable) {
                     Log.e(AppConstants.TAG, "ADB连接/命令执行失败", e)
@@ -335,4 +233,3 @@ class AdbWirelessHelper {
         }
     }
 }
-

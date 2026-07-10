@@ -29,7 +29,7 @@ object BinderDistributor {
         }
     }
 
-    fun sendBinderToClients(binder: Binder?, userId: Int) {
+    private fun sendBinderToClients(binder: Binder?, userId: Int) {
         try {
             for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
                 (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
@@ -57,7 +57,7 @@ object BinderDistributor {
         }
     }
 
-    fun sendShizukuBinderToClients(shizukuIntercept: ShizukuServiceIntercept?, userId: Int) {
+    private fun sendShizukuBinderToClients(shizukuIntercept: ShizukuServiceIntercept?, userId: Int) {
         if (shizukuIntercept == null) return
 
         try {

@@ -5,7 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast30
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -1021,7 +1021,7 @@ private fun isBootAdbStartAvailable(): Boolean {
     if (!Stellar.pingBinder()) return true
     val writeSecureSettings = hasRemotePermission("android.permission.WRITE_SECURE_SETTINGS")
     val grantRuntimePermission = hasRemotePermission("android.permission.GRANT_RUNTIME_PERMISSIONS")
-    val bootAdbPortAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ||
+    val bootAdbPortAvailable = atLeast30 ||
         EnvironmentUtils.getAdbTcpPort() > 0
     val commandAvailable = canExecuteCommand("id") &&
         canExecuteCommand("getprop ro.build.version.sdk")

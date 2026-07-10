@@ -46,4 +46,3 @@ enum class MainScreen(
         iconFilled = Icons.Filled.Settings
     )
 }
-

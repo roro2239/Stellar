@@ -9,6 +9,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast28
+import roro.stellar.manager.compat.BuildUtils.atLeast30
+import roro.stellar.manager.compat.BuildUtils.atLeast33
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -325,7 +328,7 @@ private fun StepActionContent(
                 if (!hasNotificationPermission) {
                     Button(
                         onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (atLeast33) {
                                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             } else {
                                 try {
@@ -697,7 +700,7 @@ private fun TimelineLogCard(
                             } catch (_: Exception) { null }
                             val unknownStr = context.getString(R.string.unknown)
                             val versionName = packageInfo?.versionName ?: unknownStr
-                            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            val versionCode = if (atLeast28) {
                                 packageInfo?.longVersionCode?.toString() ?: unknownStr
                             } else {
                                 @Suppress("DEPRECATION")
@@ -859,7 +862,7 @@ internal class StarterViewModel(
     val command: StateFlow<String> = _command.asStateFlow()
 
     private val _hasNotificationPermission = MutableStateFlow(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (atLeast33) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         } else {
             context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
@@ -934,7 +937,7 @@ internal class StarterViewModel(
     }
 
     private fun addOutputLine(line: String) {
-        viewModelScope.launch { _outputLines.value = _outputLines.value + line }
+        viewModelScope.launch { _outputLines.value += line }
     }
 
     fun setNotificationPermission(granted: Boolean) {
@@ -949,7 +952,7 @@ internal class StarterViewModel(
                     updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
                 }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) startPairingService()
+            if (atLeast30) startPairingService()
         }
     }
 
@@ -1092,7 +1095,7 @@ internal class StarterViewModel(
                 }
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (atLeast30) {
                 launch(Dispatchers.Main) {
                     startMdnsDetection(hasValidCustomPort, customPort ?: -1)
                 }
@@ -1185,7 +1188,7 @@ internal class StarterViewModel(
 
         _currentStepIndex.value = if (hasPermission) 2 else 1
 
-        if (hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (hasPermission && atLeast30) {
             startPairingService()
         }
     }

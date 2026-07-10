@@ -27,9 +27,7 @@ fun IconContainer(
     IconContainerBase(
         modifier = modifier,
         containerSize = AppSpacing.iconContainerSize,
-        iconSize = AppSpacing.iconSize,
         containerColor = containerColor,
-        iconColor = iconColor,
         shape = shape
     ) {
         Icon(
@@ -42,12 +40,10 @@ fun IconContainer(
 }
 
 @Composable
-fun IconContainerBase(
+private fun IconContainerBase(
     modifier: Modifier = Modifier,
     containerSize: Dp = AppSpacing.iconContainerSize,
-    iconSize: Dp = AppSpacing.iconSize,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    iconColor: Color = MaterialTheme.colorScheme.primary,
     shape: Shape = AppShape.shapes.iconSmall,
     content: @Composable () -> Unit
 ) {

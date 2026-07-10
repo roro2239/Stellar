@@ -47,7 +47,7 @@ class StellarApplication : Application() {
         application = this
         init(this)
         BootStartNotifications.createChannel(this)
-        Stellar.addServiceStartedListener(Stellar.OnServiceStartedListener { executeFollowCommands() })
+        Stellar.addServiceStartedListener({ executeFollowCommands() })
     }
 
     private fun executeFollowCommands() {

@@ -1,6 +1,5 @@
 package roro.stellar.manager.domain.apps
 
-import android.content.Context
 import android.content.pm.PackageInfo
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
@@ -33,12 +32,12 @@ fun ComponentActivity.appsViewModel() = viewModels<AppsViewModel> {
     object : androidx.lifecycle.ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return AppsViewModel(this@appsViewModel) as T
+            return AppsViewModel() as T
         }
     }
 }
 
-class AppsViewModel(context: Context) : ViewModel() {
+class AppsViewModel : ViewModel() {
 
     private val _stellarApps = MutableLiveData<Resource<List<AppInfo>>>()
     val stellarApps = _stellarApps as LiveData<Resource<List<AppInfo>>>
@@ -65,7 +64,7 @@ class AppsViewModel(context: Context) : ViewModel() {
                         AppType.SHIZUKU -> shizukuList.add(appInfo)
                     }
 
-                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == AuthorizationManager.FLAG_GRANTED) {
+                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == FLAG_GRANTED) {
                         count++
                     }
                 }

@@ -2,7 +2,7 @@ package roro.stellar.manager.startup.service
 
 import android.app.Service
 import android.content.Intent
-import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast30
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
@@ -71,7 +71,7 @@ class SelfStarterService : Service(), LifecycleOwner {
         val wirelessEnabled = Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1
         Log.d(AppConstants.TAG, "无线调试启用设置: $wirelessEnabled")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wirelessEnabled) {
+        if (atLeast30 && wirelessEnabled) {
             Log.i(AppConstants.TAG, "开始mDNS发现无线ADB端口")
 
             portLive.removeObserver(portObserver)
@@ -171,7 +171,7 @@ class SelfStarterService : Service(), LifecycleOwner {
     }
 
     override fun onDestroy() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (atLeast30) {
             Log.i(AppConstants.TAG, "自启动服务正在销毁")
             adbMdns?.stop()
         }

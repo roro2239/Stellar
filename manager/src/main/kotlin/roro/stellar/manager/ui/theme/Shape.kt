@@ -24,4 +24,3 @@ data class AppShapes(
 object AppShape {
     val shapes = AppShapes()
 }
-

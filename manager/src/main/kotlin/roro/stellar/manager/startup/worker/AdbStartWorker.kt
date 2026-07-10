@@ -9,6 +9,9 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.database.ContentObserver
 import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast29
+import roro.stellar.manager.compat.BuildUtils.atLeast31
+import roro.stellar.manager.compat.BuildUtils.atLeast34
 import android.provider.Settings
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -121,7 +124,7 @@ class AdbStartWorker(
             )
         } catch (e: CancellationException) {
             when {
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> {
+                !atLeast31 -> {
                     BootStartNotifications.showNotification(
                         applicationContext,
                         applicationContext.getString(R.string.boot_start_connect_failed)
@@ -258,13 +261,13 @@ class AdbStartWorker(
 
     private fun createForegroundInfo(message: String): ForegroundInfo {
         val notification = BootStartNotifications.buildStartingNotification(applicationContext, message)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        return if (atLeast34) {
             ForegroundInfo(
                 BootStartNotifications.NOTIFICATION_ID,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        } else if (atLeast29) {
             ForegroundInfo(
                 BootStartNotifications.NOTIFICATION_ID,
                 notification,

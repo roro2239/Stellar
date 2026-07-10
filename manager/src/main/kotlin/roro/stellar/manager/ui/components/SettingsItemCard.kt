@@ -102,58 +102,6 @@ fun SettingsSwitchCard(
 }
 
 @Composable
-fun SettingsContentCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-    iconContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    iconColor: Color = MaterialTheme.colorScheme.primary,
-    content: @Composable () -> Unit
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        shape = AppShape.shapes.cardMedium
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(AppSpacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.cardSpacing)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconContainer(
-                    icon = icon,
-                    containerColor = iconContainerColor,
-                    iconColor = iconColor
-                )
-
-                Spacer(modifier = Modifier.width(AppSpacing.iconTextSpacing))
-
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(AppSpacing.titleSubtitleSpacing))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            content()
-        }
-    }
-}
-
-@Composable
 fun SettingsClickableCard(
     icon: ImageVector,
     title: String,

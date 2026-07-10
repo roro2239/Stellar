@@ -11,6 +11,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast31
+import roro.stellar.manager.compat.BuildUtils.atLeast34
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -79,7 +81,7 @@ class AdbPairingService : Service() {
 
         val notification = createInputNotification(port)
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (atLeast34) {
                 startForeground(notificationId, notification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
@@ -155,7 +157,7 @@ class AdbPairingService : Service() {
             }
         }
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (atLeast34) {
                 startForeground(notificationId, notification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
@@ -164,7 +166,7 @@ class AdbPairingService : Service() {
         } catch (e: Throwable) {
             Log.e(tag, "启动前台服务失败", e)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            if (atLeast31
                 && e is ForegroundServiceStartNotAllowedException) {
                 getSystemService(NotificationManager::class.java).notify(notificationId, notification)
             }
@@ -231,7 +233,7 @@ class AdbPairingService : Service() {
         stopSearch()
         val notification = createMaxRefreshNotification()
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (atLeast34) {
                 startForeground(notificationId, notification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
@@ -262,9 +264,9 @@ class AdbPairingService : Service() {
             AdbPairingClient(host, port, code, key).runCatching {
                 start()
             }.onFailure {
-                handleResult(false, it)
+                handleResult(false)
             }.onSuccess {
-                handleResult(it, null)
+                handleResult(it)
             }
         }
 
@@ -273,7 +275,7 @@ class AdbPairingService : Service() {
 
     private var connectMdns: AdbMdns? = null
 
-    private fun handleResult(success: Boolean, exception: Throwable?) {
+    private fun handleResult(success: Boolean) {
         retryHandler.post {
             if (success) {
                 Log.i(tag, "配对成功，开始搜索连接服务")
@@ -287,7 +289,7 @@ class AdbPairingService : Service() {
                     .build()
 
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    if (atLeast34) {
                         startForeground(notificationId, successNotification,
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                     } else {
@@ -312,7 +314,7 @@ class AdbPairingService : Service() {
                     .build()
 
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    if (atLeast34) {
                         startForeground(notificationId, failureNotification,
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                     } else {
@@ -325,7 +327,7 @@ class AdbPairingService : Service() {
                 retryHandler.postDelayed({
                     val retryNotification = createManualInputNotification(discoveredPort)
                     try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        if (atLeast34) {
                             startForeground(notificationId, retryNotification,
                                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
                         } else {
@@ -461,7 +463,7 @@ class AdbPairingService : Service() {
             this,
             stopRequestId,
             stopIntent(this),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (atLeast31)
                 PendingIntent.FLAG_IMMUTABLE
             else
                 0
@@ -480,7 +482,7 @@ class AdbPairingService : Service() {
             this,
             retryRequestId,
             startIntent(this),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (atLeast31)
                 PendingIntent.FLAG_IMMUTABLE
             else
                 0
@@ -499,7 +501,7 @@ class AdbPairingService : Service() {
             this,
             stopAndRetryRequestId,
             stopAndRetryIntent(this),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (atLeast31)
                 PendingIntent.FLAG_IMMUTABLE
             else
                 0
@@ -523,7 +525,7 @@ class AdbPairingService : Service() {
             this,
             replyRequestId,
             replyIntent(this, -1),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (atLeast31)
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             else
                 PendingIntent.FLAG_UPDATE_CURRENT
@@ -545,7 +547,7 @@ class AdbPairingService : Service() {
             this,
             replyRequestId,
             replyIntent(this, port),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (atLeast31)
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             else
                 PendingIntent.FLAG_UPDATE_CURRENT

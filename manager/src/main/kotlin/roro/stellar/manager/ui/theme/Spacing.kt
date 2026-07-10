@@ -22,4 +22,3 @@ object AppSpacing {
     val titleSubtitleSpacing = 4.dp
     val iconTextSpacing = 12.dp
 }
-

@@ -19,4 +19,3 @@ fun PackageManager.isComponentEnabled(componentName: ComponentName, defaultValue
         PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> defaultValue
         else -> false
     }
-

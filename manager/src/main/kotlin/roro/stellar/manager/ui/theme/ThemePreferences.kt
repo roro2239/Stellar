@@ -78,4 +78,3 @@ object ThemePreferences {
         StartPage.TERMINAL -> R.string.nav_terminal
     }
 }
-

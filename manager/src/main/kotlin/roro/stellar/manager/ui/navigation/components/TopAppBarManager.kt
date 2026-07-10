@@ -39,8 +39,8 @@ fun createTopAppBarScrollBehavior(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StandardLargeTopAppBar(
+    modifier: Modifier = Modifier,
     title: String,
-    titleModifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable () -> Unit = {},
     titleContent: @Composable (() -> Unit)? = null,
@@ -66,7 +66,7 @@ fun StandardLargeTopAppBar(
                 Text(
                     text = title,
                     fontWeight = FontWeight.Bold,
-                    modifier = titleModifier
+                    modifier = modifier
                 )
             }
         },

@@ -6,7 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast26
 import androidx.core.app.NotificationCompat
 import roro.stellar.manager.R
 
@@ -16,7 +16,7 @@ object BootStartNotifications {
     const val NOTIFICATION_ID = 1447
 
     fun createChannel(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (!atLeast26) return
 
         val channel = NotificationChannel(
             CHANNEL_ID,

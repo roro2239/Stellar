@@ -8,7 +8,6 @@ import roro.stellar.manager.util.PortBlacklistUtils
 
 object StellarSettings {
     const val NAME = "settings"
-    const val BOOT_SCRIPT_ENABLED = "boot_script_enabled"
     const val BOOT_MODE = "boot_mode"
     const val TCPIP_PORT = "tcpip_port"
     const val TCPIP_PORT_ENABLED = "tcpip_port_enabled"

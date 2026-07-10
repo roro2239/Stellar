@@ -78,4 +78,3 @@ fun StandardNavigationRail(
         }
     }
 }
-

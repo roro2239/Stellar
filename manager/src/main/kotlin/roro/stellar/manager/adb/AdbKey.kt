@@ -154,7 +154,7 @@ class AdbKey(private val adbKeyStore: AdbKeyStore, name: String) {
 
                 val keyFactory = KeyFactory.getInstance("RSA")
                 privateKey = keyFactory.generatePrivate(PKCS8EncodedKeySpec(plaintext)) as RSAPrivateKey
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
         

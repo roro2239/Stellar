@@ -2,8 +2,7 @@ package roro.stellar.manager.common.state
 
 enum class Status {
     SUCCESS,
-    ERROR,
-    LOADING
+    ERROR
 }
 
 data class Resource<out T>(

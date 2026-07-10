@@ -95,7 +95,7 @@ private class PairingPacketHeader(
             val type = buffer.get()
             val payload = buffer.int
 
-            if (version < kMinSupportedKeyHeaderVersion || version > kMaxSupportedKeyHeaderVersion) {
+            if (version !in kMinSupportedKeyHeaderVersion..kMaxSupportedKeyHeaderVersion) {
                 Log.e(TAG, "配对包头版本不匹配 (我们=$kCurrentKeyHeaderVersion 对方=${version})")
                 return null
             }
@@ -103,7 +103,7 @@ private class PairingPacketHeader(
                 Log.e(TAG, "未知配对包类型=${type}")
                 return null
             }
-            if (payload <= 0 || payload > kMaxPayloadSize) {
+            if (payload !in 1..kMaxPayloadSize) {
                 Log.e(TAG, "头部载荷不在安全载荷大小范围内 (大小=${payload})")
                 return null
             }
@@ -250,8 +250,7 @@ class AdbPairingClient(private val host: String, private val port: Int, private 
         val theirMessage = ByteArray(theirHeader.payload)
         inputStream.readFully(theirMessage)
 
-        if (!pairingContext.initCipher(theirMessage)) return false
-        return true
+        return pairingContext.initCipher(theirMessage)
     }
 
     private fun doExchangePeerInfo(): Boolean {

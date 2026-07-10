@@ -54,4 +54,3 @@ object AuthorizationManager {
         return AppType.STELLAR
     }
 }
-

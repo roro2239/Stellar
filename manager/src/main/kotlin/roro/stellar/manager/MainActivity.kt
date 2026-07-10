@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkServerStatus() {
-        homeModel.reload(this)
+        homeModel.reload()
     }
 
     override fun onDestroy() {

@@ -156,11 +156,7 @@ internal fun LogsScreen(
                     val offset = logs.size
                     val more = withContext(Dispatchers.IO) {
                         val cached = allServiceLogs
-                        if (cached != null) {
-                            cached.drop(offset).take(pageSize)
-                        } else {
-                            db.logDao().getPage(pageSize, offset)
-                        }
+                        cached?.drop(offset)?.take(pageSize) ?: db.logDao().getPage(pageSize, offset)
                     }
                     if (more.isEmpty()) {
                         hasMore = false

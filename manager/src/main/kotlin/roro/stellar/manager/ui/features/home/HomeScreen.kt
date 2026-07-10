@@ -1,6 +1,7 @@
 package roro.stellar.manager.ui.features.home
 
-import android.os.Build
+import android.annotation.SuppressLint
+import roro.stellar.manager.compat.BuildUtils.atLeast30
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import roro.stellar.Stellar
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.ClipboardUtils
@@ -32,11 +32,11 @@ import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
 import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
 import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
-import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.EnvironmentUtils
 import roro.stellar.manager.util.UserHandleCompat
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -94,7 +94,7 @@ fun HomeScreen(
                 )
             }
 
-            if (isRunning && serviceStatus?.permission != true) {
+            if (isRunning && !serviceStatus.permission) {
                 item(span = { GridItemSpan(gridColumns) }) {
                     AdbRestrictedHintCard(
                         onViewClick = { showAdbRestrictedFeaturesDialog = true }
@@ -112,7 +112,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R || EnvironmentUtils.getAdbTcpPort() > 0) {
+                if (atLeast30 || EnvironmentUtils.getAdbTcpPort() > 0) {
                     item {
                         StartWirelessAdbCard(
                             onStartClick = { onNavigateToStarter(false, "127.0.0.1", 0, false) }

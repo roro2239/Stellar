@@ -1,8 +1,7 @@
 package roro.stellar.manager.ui.features.home
 
 import android.content.pm.PackageManager
-import android.content.Context
-import android.os.Build
+import roro.stellar.manager.compat.BuildUtils.atLeast30
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -55,7 +54,7 @@ class HomeViewModel : ViewModel() {
         )
         val terminalCommand = commandStates.all { it.available }
         val bootReceiverStart = UserHandleCompat.myUserId() == 0
-        val bootAdbPortDiscovery = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ||
+        val bootAdbPortDiscovery = atLeast30 ||
             EnvironmentUtils.getAdbTcpPort() > 0
         val bootAdbConnectCommand = shellIdCommand && propertyReadCommand
         val bootAdbStart = writeSecureSettings &&
@@ -99,7 +98,7 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun reload(context: Context) {
+    fun reload() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val status = load()
@@ -111,7 +110,7 @@ class HomeViewModel : ViewModel() {
                     restartService()
                 }
                 prefs.edit().putInt(StellarSettings.LAST_VERSION_CODE, BuildConfig.VERSION_CODE).apply()
-            } catch (e: CancellationException) {
+            } catch (_: CancellationException) {
             } catch (e: Throwable) {
                 _serviceStatus.postValue(Resource.error(e, ServiceStatus()))
             }
