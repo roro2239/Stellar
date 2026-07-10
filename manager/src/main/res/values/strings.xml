@@ -284,6 +284,9 @@
     <string name="permission_use_generic"> to use %s?</string>
     <string name="always_allow">Always Allow</string>
     <string name="allow_once">Allow Once</string>
+    <string name="allow_and_return_to_source_app">Allow and return to %1$s</string>
+    <string name="allow_once_and_return_to_source_app">Allow once and return to %1$s</string>
+    <string name="cannot_open_source_app">Unable to open the source app</string>
     <string name="deny">Deny</string>
     <string name="deny_and_dont_ask">Deny and Don\'t Ask Again</string>
 

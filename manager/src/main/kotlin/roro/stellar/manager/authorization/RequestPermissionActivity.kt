@@ -1,7 +1,11 @@
 package roro.stellar.manager.authorization
 
+import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -49,6 +53,25 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class RequestPermissionActivity : ComponentActivity() {
+
+    companion object {
+        private const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
+
+        fun createSourceAuthorizationIntent(
+            context: Context,
+            packageInfo: PackageInfo,
+            permission: String
+        ): Intent = Intent(context, RequestPermissionActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
+            putExtra("uid", packageInfo.applicationInfo?.uid ?: -1)
+            putExtra("pid", -1)
+            putExtra("denyOnce", true)
+            putExtra("requestCode", -1)
+            putExtra("permission", permission)
+            putExtra("applicationInfo", packageInfo.applicationInfo)
+            putExtra(EXTRA_SOURCE_PACKAGE, packageInfo.packageName)
+        }
+    }
 
     private fun setResult(
         requestUid: Int,
@@ -104,10 +127,11 @@ class RequestPermissionActivity : ComponentActivity() {
         val denyOnce = intent.getBooleanExtra("denyOnce", true)
         val requestCode = intent.getIntExtra("requestCode", -1)
         val permission = intent.getStringExtra("permission") ?: "stellar"
+        val sourcePackage = intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
 
         @Suppress("DEPRECATION")
         val ai = intent.getParcelableExtra<ApplicationInfo>("applicationInfo")
-        if (uid == -1 || pid == -1 || ai == null) {
+        if (uid == -1 || ai == null || (pid == -1 && sourcePackage == null)) {
             finish()
             return
         }
@@ -126,8 +150,36 @@ class RequestPermissionActivity : ComponentActivity() {
                     onResult = { allowed, onetime ->
                         setResult(uid, pid, requestCode, allowed = allowed, onetime = onetime, permission)
                         finish()
+                        if (allowed && sourcePackage != null) {
+                            val launchIntent = packageManager.getLaunchIntentForPackage(sourcePackage)
+                            if (launchIntent != null) {
+                                runCatching {
+                                    startActivity(
+                                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                                    )
+                                }.onFailure {
+                                    Toast.makeText(
+                                        this@RequestPermissionActivity,
+                                        R.string.cannot_open_source_app,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            } else {
+                                Toast.makeText(
+                                    this@RequestPermissionActivity,
+                                    R.string.cannot_open_source_app,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     },
-                    permission = permission
+                    permission = permission,
+                    alwaysAllowText = sourcePackage?.let {
+                        getString(R.string.allow_and_return_to_source_app, label)
+                    },
+                    allowOnceText = sourcePackage?.let {
+                        getString(R.string.allow_once_and_return_to_source_app, label)
+                    }
                 )
             }
         }
@@ -139,7 +191,10 @@ fun PermissionRequestDialog(
     appName: String,
     denyOnce: Boolean,
     onResult: (allowed: Boolean, onetime: Boolean) -> Unit,
-    permission: String = "stellar"
+    permission: String = "stellar",
+    alwaysAllowText: String? = null,
+    showAllowOnce: Boolean = true,
+    allowOnceText: String? = null
 ) {
     Dialog(
         onDismissRequest = {
@@ -236,7 +291,7 @@ fun PermissionRequestDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = stringResource(R.string.always_allow),
+                                text = alwaysAllowText ?: stringResource(R.string.always_allow),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold
@@ -244,7 +299,7 @@ fun PermissionRequestDialog(
                         }
                     }
 
-                    if (StellarApiConstants.isRuntimePermission(permission)) {
+                    if (showAllowOnce && StellarApiConstants.isRuntimePermission(permission)) {
                         Card(
                             onClick = {
                                 onResult(true, true)
@@ -263,7 +318,7 @@ fun PermissionRequestDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = stringResource(R.string.allow_once),
+                                    text = allowOnceText ?: stringResource(R.string.allow_once),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Bold

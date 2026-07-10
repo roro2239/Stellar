@@ -1,5 +1,6 @@
 package roro.stellar.manager
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
@@ -35,6 +36,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import roro.stellar.Stellar
+import roro.stellar.manager.authorization.AuthorizationManager
+import roro.stellar.manager.authorization.RequestPermissionActivity
+import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.domain.apps.appsViewModel
 import roro.stellar.manager.ui.components.AdaptiveLayoutProvider
@@ -58,8 +62,16 @@ import roro.stellar.manager.ui.theme.StartPage
 
 class MainActivity : ComponentActivity() {
 
+    private companion object {
+        const val STATE_SOURCE_PACKAGE = "source_package"
+    }
+
+    private var pendingSourcePackage: String? = null
+    private var sourceAuthorizationStarted = false
+
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
         checkServerStatus()
+        handlePendingSourceApp()
         try {
             appsModel.load()
         } catch (e: Exception) {
@@ -77,6 +89,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        pendingSourcePackage = savedInstanceState?.getString(STATE_SOURCE_PACKAGE)
+        rememberSourceApp()
         
         enableEdgeToEdge()
         
@@ -101,6 +116,19 @@ class MainActivity : ComponentActivity() {
         if (Stellar.pingBinder() && appsModel.stellarApps.value == null) {
             appsModel.load()
         }
+        handlePendingSourceApp()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        rememberSourceApp()
+        handlePendingSourceApp()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        pendingSourcePackage?.let { outState.putString(STATE_SOURCE_PACKAGE, it) }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -113,6 +141,58 @@ class MainActivity : ComponentActivity() {
 
     private fun checkServerStatus() {
         homeModel.reload()
+    }
+
+    private fun rememberSourceApp() {
+        val sourcePackage = referrer?.host?.takeIf {
+            it.isNotBlank() && it != packageName
+        } ?: return
+
+        pendingSourcePackage = sourcePackage
+        sourceAuthorizationStarted = false
+    }
+
+    private fun handlePendingSourceApp() {
+        val sourcePackage = pendingSourcePackage ?: return
+        if (!Stellar.pingBinder() || sourceAuthorizationStarted) return
+
+        val packages = runCatching { AuthorizationManager.getPackages() }.getOrElse { return }
+        val packageInfo = packages.firstOrNull { it.packageName == sourcePackage }
+        if (packageInfo == null) {
+            clearSourceApp()
+            return
+        }
+        val appType = AuthorizationManager.getAppType(packageInfo)
+        val permission = if (appType == AppType.SHIZUKU) "shizuku" else "stellar"
+        val grantedFlag = if (appType == AppType.SHIZUKU) 2 else AuthorizationManager.FLAG_GRANTED
+        val uid = packageInfo.applicationInfo?.uid ?: run {
+            clearSourceApp()
+            return
+        }
+        val currentFlag = runCatching { Stellar.getFlagForUid(uid, permission) }.getOrElse { return }
+        val isGranted = currentFlag == grantedFlag
+
+        if (isGranted) {
+            clearSourceApp()
+        } else {
+            sourceAuthorizationStarted = true
+            runCatching {
+                startActivity(
+                    RequestPermissionActivity.createSourceAuthorizationIntent(
+                        this,
+                        packageInfo,
+                        permission
+                    )
+                )
+            }.onFailure {
+                sourceAuthorizationStarted = false
+            }
+        }
+    }
+
+    private fun clearSourceApp() {
+        pendingSourcePackage = null
+        sourceAuthorizationStarted = false
     }
 
     override fun onDestroy() {

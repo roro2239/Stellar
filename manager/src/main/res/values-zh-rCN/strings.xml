@@ -282,6 +282,9 @@
     <string name="permission_use_generic"> 使用 %s 吗？</string>
     <string name="always_allow">始终允许</string>
     <string name="allow_once">仅此一次</string>
+    <string name="allow_and_return_to_source_app">允许并返回%1$s</string>
+    <string name="allow_once_and_return_to_source_app">仅此一次并返回%1$s</string>
+    <string name="cannot_open_source_app">无法打开来源应用</string>
     <string name="deny">拒绝</string>
     <string name="deny_and_dont_ask">拒绝且不再询问</string>
 
