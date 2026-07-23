@@ -285,10 +285,10 @@
 
     <!-- Permission Request -->
     <string name="permission_request">Solicitação de permissão</string>
-    <string name="permission_allow_prefix">Permitir </string>
-    <string name="permission_use_stellar"> usar o Stellar?</string>
-    <string name="permission_follow_startup"> iniciar com o Stellar sempre?</string>
-    <string name="permission_use_generic"> usar %s?</string>
+    <string name="permission_allow_prefix">Permitir que\u0020</string>
+    <string name="permission_use_stellar">\u0020use o Stellar?</string>
+    <string name="permission_follow_startup">\u0020inicie com o Stellar sempre?</string>
+    <string name="permission_use_generic">\u0020use %s?</string>
     <string name="always_allow">Sempre permitir</string>
     <string name="allow_once">Permitir uma vez</string>
     <string name="allow_and_return_to_source_app">Permitir e voltar para %1$s</string>

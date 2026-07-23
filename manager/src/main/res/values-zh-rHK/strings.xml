@@ -285,10 +285,10 @@
 
     <!-- Permission Request -->
     <string name="permission_request">授權請求</string>
-    <string name="permission_allow_prefix">要允許 </string>
-    <string name="permission_use_stellar"> 使用 Stellar 嗎？</string>
-    <string name="permission_follow_startup"> 每次都跟隨 Stellar 一起啟動嗎？</string>
-    <string name="permission_use_generic"> 使用 %s 嗎？</string>
+    <string name="permission_allow_prefix">要允許\u0020</string>
+    <string name="permission_use_stellar">\u0020使用 Stellar 嗎？</string>
+    <string name="permission_follow_startup">\u0020每次都跟隨 Stellar 一起啟動嗎？</string>
+    <string name="permission_use_generic">\u0020使用 %s 嗎？</string>
     <string name="always_allow">始終允許</string>
     <string name="allow_once">僅此一次</string>
     <string name="allow_and_return_to_source_app">允許並返回%1$s</string>
