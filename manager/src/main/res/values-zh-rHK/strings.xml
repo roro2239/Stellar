@@ -1,5 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name" translatable="false">Stellar</string>
+    <!-- ADB Restricted -->
+    <string name="adb_restricted_hint_title">ADB 權限受限</string>
+    <string name="adb_restricted_hint_message">目前的 ADB 環境受到系統限制，部分 API 功能可能無法正常運作。</string>
+    <string name="adb_restricted_features_title">受限功能</string>
+    <string name="adb_restricted_features_message">這些結果來自目前服務環境中的非破壞性探測。</string>
+    <string name="no_restricted_features">未偵測到受限功能</string>
+    <string name="feature_status_available">可用</string>
+    <string name="feature_status_restricted">受限</string>
+    <string name="feature_follow_service_command">跟隨服務命令</string>
+    <string name="feature_terminal_command">終端命令</string>
+    <string name="feature_shell_id_command">指令：id</string>
+    <string name="feature_property_read_command">指令：getprop</string>
+    <string name="feature_settings_read_command">指令：settings get</string>
+    <string name="feature_package_list_command">指令：cmd package</string>
+    <string name="feature_service_list_command">指令：service list</string>
+    <string name="feature_process_list_command">指令：ps -A</string>
+    <string name="feature_filesystem_read_command">指令：ls /system/bin</string>
+    <string name="feature_selinux_status_command">指令：getenforce</string>
+    <string name="feature_appops_manage">AppOps 管理</string>
+    <string name="feature_runtime_permission_manage">權限授予／撤銷</string>
+    <string name="feature_secure_settings_write">安全設定寫入</string>
+    <string name="feature_boot_adb_start">開機啟動 ADB</string>
     <!-- Navigation -->
     <string name="nav_home">啟動</string>
     <string name="nav_apps">授權應用</string>
@@ -116,6 +139,13 @@
     <string name="drop_privileges_subtitle">Root 啟動後降權到 Shell 用戶運行</string>
     <string name="daemon_enabled">進程守護</string>
     <string name="daemon_enabled_subtitle">雙進程互守，自動重啟</string>
+    <string name="add_to_home_screen">加入主畫面</string>
+    <string name="add_to_home_screen_and_save">加入主畫面並儲存</string>
+    <string name="shortcut_not_supported">目前桌面不支援固定捷徑</string>
+    <string name="shortcut_command_not_found">已儲存的指令已不存在</string>
+    <string name="shortcut_command_started">指令已開始執行</string>
+    <string name="hide_background">隱藏後台</string>
+    <string name="hide_background_subtitle">從最近任務中隱藏 Stellar</string>
     <string name="tcpip_port">TCP/IP 端口</string>
     <string name="tcpip_port_subtitle">透過無線調試啟動後，將 adbd 的 TCP/IP 端口切換到指定端口</string>
     <string name="cannot_generate_safe_port">無法生成安全端口，請手動設定</string>
@@ -261,6 +291,9 @@
     <string name="permission_use_generic"> 使用 %s 嗎？</string>
     <string name="always_allow">始終允許</string>
     <string name="allow_once">僅此一次</string>
+    <string name="allow_and_return_to_source_app">允許並返回%1$s</string>
+    <string name="allow_once_and_return_to_source_app">僅此一次並返回%1$s</string>
+    <string name="cannot_open_source_app">無法開啟來源應用</string>
     <string name="deny">拒絕</string>
     <string name="deny_and_dont_ask">拒絕且不再詢問</string>
 

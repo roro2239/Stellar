@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="main_layout_manager" translatable="false">androidx.recyclerview.widget.LinearLayoutManager</string>
+    <string name="accessibility_service_description">起動時の自動開始に使用します</string>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

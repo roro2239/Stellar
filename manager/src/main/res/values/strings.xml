@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Stellar</string>
+    <string name="app_name">Stellar</string>
 
     <!-- Navigation -->
     <string name="nav_home">Start</string>

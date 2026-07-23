@@ -1,5 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name" translatable="false">Stellar</string>
+    <!-- ADB Restricted -->
+    <string name="adb_restricted_hint_title">تقييد صلاحيات ADB</string>
+    <string name="adb_restricted_hint_message">بيئة ADB الحالية مقيّدة من النظام. قد لا تعمل بعض ميزات API بشكل صحيح.</string>
+    <string name="adb_restricted_features_title">الميزات المحدودة</string>
+    <string name="adb_restricted_features_message">هذه النتائج ناتجة عن فحوصات غير مؤذية في بيئة الخدمة الحالية.</string>
+    <string name="no_restricted_features">لم تُرصد ميزات مقيدة</string>
+    <string name="feature_status_available">متاح</string>
+    <string name="feature_status_restricted">مقيد</string>
+    <string name="feature_follow_service_command">أوامر متابعة الخدمة</string>
+    <string name="feature_terminal_command">أوامر الطرفية</string>
+    <string name="feature_shell_id_command">الأمر: id</string>
+    <string name="feature_property_read_command">الأمر: getprop</string>
+    <string name="feature_settings_read_command">الأمر: settings get</string>
+    <string name="feature_package_list_command">الأمر: cmd package</string>
+    <string name="feature_service_list_command">الأمر: service list</string>
+    <string name="feature_process_list_command">الأمر: ps -A</string>
+    <string name="feature_filesystem_read_command">الأمر: ls /system/bin</string>
+    <string name="feature_selinux_status_command">الأمر: getenforce</string>
+    <string name="feature_appops_manage">إدارة AppOps</string>
+    <string name="feature_runtime_permission_manage">منح/سحب الأذونات</string>
+    <string name="feature_secure_settings_write">الكتابة في الإعدادات الآمنة</string>
+    <string name="feature_boot_adb_start">تشغيل ADB عند الإقلاع</string>
     <!-- Navigation -->
     <string name="nav_home">تشغيل</string>
     <string name="nav_apps">التطبيقات</string>
@@ -116,6 +139,13 @@
     <string name="drop_privileges_subtitle">التشغيل كمستخدم Shell بعد تشغيل Root</string>
     <string name="daemon_enabled">حارس العملية</string>
     <string name="daemon_enabled_subtitle">مراقبة متبادلة لإعادة التشغيل التلقائي</string>
+    <string name="add_to_home_screen">إضافة إلى الشاشة الرئيسية</string>
+    <string name="add_to_home_screen_and_save">إضافة إلى الشاشة الرئيسية والحفظ</string>
+    <string name="shortcut_not_supported">المشغّل الحالي لا يدعم الاختصارات المثبّتة</string>
+    <string name="shortcut_command_not_found">الأمر المحفوظ لم يعد موجوداً</string>
+    <string name="shortcut_command_started">بدأ تنفيذ الأمر</string>
+    <string name="hide_background">الإخفاء في الخلفية</string>
+    <string name="hide_background_subtitle">إخفاء Stellar من التطبيقات الحديثة</string>
     <string name="tcpip_port">منفذ TCP/IP</string>
     <string name="tcpip_port_subtitle">تغيير منفذ TCP/IP لـ adbd بعد التشغيل عبر التصحيح اللاسلكي</string>
     <string name="cannot_generate_safe_port">تعذّر إنشاء منفذ آمن، يرجى تعيينه يدوياً</string>
@@ -261,6 +291,9 @@
     <string name="permission_use_generic"> باستخدام %s؟</string>
     <string name="always_allow">السماح دائماً</string>
     <string name="allow_once">السماح مرة واحدة</string>
+    <string name="allow_and_return_to_source_app">السماح والعودة إلى %1$s</string>
+    <string name="allow_once_and_return_to_source_app">السماح مرة واحدة والعودة إلى %1$s</string>
+    <string name="cannot_open_source_app">تعذّر فتح التطبيق المصدر</string>
     <string name="deny">رفض</string>
     <string name="deny_and_dont_ask">رفض وعدم السؤال مجدداً</string>
 
