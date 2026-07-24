@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import roro.stellar.manager.compat.BuildUtils.atLeast28
 import roro.stellar.manager.compat.BuildUtils.atLeast30
@@ -292,25 +294,37 @@ private fun StepActionContent(
 
         when (step.title) {
             stringResource(R.string.enable_wireless_debugging) -> {
-                Button(
-                    onClick = {
-                        try {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
-                                }
-                            )
-                        } catch (_: ActivityNotFoundException) {
-                            Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AppShape.shapes.cardMedium
-                ) {
-                    Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.open_dev_options), Modifier.padding(vertical = 4.dp))
+                if (viewModel.canEnableWirelessDebuggingDirectly()) {
+                    Button(
+                        onClick = { viewModel.enableWirelessDebugging() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShape.shapes.cardMedium
+                    ) {
+                        Icon(Icons.Filled.Wifi, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.enable_wireless_debugging), Modifier.padding(vertical = 4.dp))
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            try {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                                    }
+                                )
+                            } catch (_: ActivityNotFoundException) {
+                                Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = AppShape.shapes.cardMedium
+                    ) {
+                        Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.open_dev_options), Modifier.padding(vertical = 4.dp))
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -846,6 +860,26 @@ internal class StarterViewModel(
     private val hasSecureSettings: Boolean = false
 ) : ViewModel() {
 
+    val canWriteSecureSettings: Boolean =
+        hasSecureSettings ||
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.WRITE_SECURE_SETTINGS
+        ) == PackageManager.PERMISSION_GRANTED
+
+    fun canEnableWirelessDebuggingDirectly(): Boolean =
+        canWriteSecureSettings && isWifiConnected()
+
+    private fun isWifiConnected(): Boolean {
+        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+            ?: return false
+
+        return connectivityManager.allNetworks.any { network ->
+            connectivityManager.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        }
+    }
+
     private val _steps = MutableStateFlow<List<StepData>>(emptyList())
     val steps: StateFlow<List<StepData>> = _steps.asStateFlow()
 
@@ -963,6 +997,32 @@ internal class StarterViewModel(
             context.startForegroundService(intent)
         } catch (e: Throwable) {
             Log.e(AppConstants.TAG, "启动前台服务失败", e)
+        }
+    }
+
+    fun enableWirelessDebugging() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val stepIndex = _steps.value.indexOfFirst {
+                it.title == context.getString(R.string.enable_wireless_debugging)
+            }.let { if (it >= 0) it else _currentStepIndex.value }
+
+            try {
+                val cr = context.contentResolver
+                Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
+                Settings.Global.putLong(cr, "adb_allowed_connection_time", 0L)
+                Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
+
+                launch(Dispatchers.Main) {
+                    updateStep(stepIndex, StepStatus.COMPLETED, context.getString(R.string.already_enabled_continue))
+                    delay(1000L)
+                    continueAfterSetup()
+                }
+            } catch (e: Throwable) {
+                Log.e(AppConstants.TAG, "Enable wireless debugging failed", e)
+                launch(Dispatchers.Main) {
+                    setError(e, stepIndex)
+                }
+            }
         }
     }
 
@@ -1487,4 +1547,3 @@ internal class StarterViewModelFactory(
         return StarterViewModel(context, isRoot, host, port, hasSecureSettings) as T
     }
 }
-
