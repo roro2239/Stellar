@@ -8,6 +8,7 @@ import android.os.Build
 import rikka.hidden.compat.ActivityManagerApis
 import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.UserManagerApis
+import roro.stellar.StellarApiConstants
 import roro.stellar.server.ClientRecord
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
@@ -24,7 +25,7 @@ class PermissionConfirmation {
         callingUid: Int,
         callingPid: Int,
         userId: Int,
-        permission: String = "stellar"
+        permission: String = StellarApiConstants.PERMISSION_STELLAR
     ) {
         val ai = PackageManagerApis.getApplicationInfoNoThrow(clientRecord.packageName, 0, userId)
             ?: return
@@ -42,7 +43,8 @@ class PermissionConfirmation {
             clientRecord.dispatchRequestPermissionResult(
                 requestCode,
                 allowed = false,
-                onetime = false
+                onetime = false,
+                permission = permission
             )
             return
         }

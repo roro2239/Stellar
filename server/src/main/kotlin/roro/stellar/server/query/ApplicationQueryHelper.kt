@@ -36,7 +36,7 @@ object ApplicationQueryHelper {
 
                 configManager.find(uid)?.let {
                     if (!it.packages.contains(pi.packageName)) return@let
-                    it.permissions["stellar"]?.let { configFlag ->
+                    it.permissions.values.firstOrNull()?.let { configFlag ->
                         flag = configFlag
                     }
                 }
@@ -48,7 +48,10 @@ object ApplicationQueryHelper {
                         StellarApiConstants.PERMISSION_KEY,
                         ""
                     )
-                    if (stellarPermission.split(",").contains("stellar")) {
+                    if (stellarPermission.split(",").map { it.trim() }
+                            .any { StellarApiConstants.PERMISSIONS.contains(it) } ||
+                        ProviderDiscovery.hasStellarProvider(pi)
+                    ) {
                         list.add(pi)
                     } else if (
                         applicationInfo.metaData.getBoolean(ShizukuApiConstants.META_DATA_KEY, false) ||

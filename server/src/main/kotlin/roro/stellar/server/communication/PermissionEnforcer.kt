@@ -22,7 +22,10 @@ class PermissionEnforcer(
 
     fun isSelf(caller: CallerContext): Boolean = caller.uid == OsUtils.uid || caller.pid == Os.getpid()
 
-    fun hasPermission(caller: CallerContext, permission: String = "stellar"): Boolean {
+    fun hasPermission(
+        caller: CallerContext,
+        permission: String = StellarApiConstants.PERMISSION_STELLAR
+    ): Boolean {
         if (isSelf(caller) || isManager(caller)) return true
 
         val clientRecord = clientManager.findClient(caller.uid, caller.pid) ?: return false
@@ -42,7 +45,11 @@ class PermissionEnforcer(
         throw SecurityException(msg)
     }
 
-    fun enforcePermission(caller: CallerContext, func: String, permission: String = "stellar") {
+    fun enforcePermission(
+        caller: CallerContext,
+        func: String,
+        permission: String = StellarApiConstants.PERMISSION_STELLAR
+    ) {
         if (isSelf(caller) || isManager(caller)) return
 
         val clientRecord = clientManager.findClient(caller.uid, caller.pid)

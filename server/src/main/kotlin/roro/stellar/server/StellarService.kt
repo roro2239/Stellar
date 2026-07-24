@@ -111,19 +111,18 @@ class StellarService : IStellarService.Stub() {
             LOGGER.i("发送 Binder 到客户端...")
             mainHandler.post {
                 try {
-                    BinderDistributor.sendBinderToAllClients(this)
-                    BinderDistributor.sendShizukuBinderToAllClients(shizukuServiceIntercept)
                     BinderDistributor.sendBinderToManager(this)
+                    BinderSender.sendBinderToAuthorizedRunningClients(configManager)
                     ManagerGrantHelper.grantWriteSecureSettings(managerAppId)
                     if (configManager.isAccessibilityAutoStartEnabled()) {
                         ManagerGrantHelper.grantAccessibilityService()
                     }
-                    FollowStellarStartupExt.schedule(configManager)
+                    FollowStellarStartupExt.schedule(this, configManager)
                     if (configManager.isDaemonEnabled()) {
                         startDaemon()
                         LOGGER.i("已启动进程守护")
                     }
-                    notifyManagerServiceStarted()
+                    notifyClientsServiceStarted()
                     LOGGER.i("Stellar 服务启动完成")
                 } catch (e: Throwable) {
                     LOGGER.e(e, "发送 Binder 失败")
@@ -188,7 +187,10 @@ class StellarService : IStellarService.Stub() {
     ) {
         if (data == null) return
 
-        val permission = data.getString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, "stellar")
+        val permission = data.getString(
+            StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION,
+            StellarApiConstants.PERMISSION_STELLAR
+        )
         if (permission == ShizukuApiConstants.PERMISSION_NAME) {
             val allowed = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, false)
             val onetime = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, false)
@@ -445,7 +447,8 @@ class StellarService : IStellarService.Stub() {
             serviceCore.serviceInfo.getSELinuxContext()
         )
         if (!isManager) {
-            val permissionGranted = clientRecord.allowedMap["stellar"] ?: false
+            val permissionGranted =
+                clientRecord.allowedMap[StellarApiConstants.PERMISSION_STELLAR] ?: false
             LOGGER.i("权限状态检查: uid=%d, pid=%d, package=%s, granted=%s, allowedMap=%s",
                 callingUid, callingPid, requestPackageName, permissionGranted,
                 clientRecord.allowedMap.toString()
@@ -529,12 +532,12 @@ class StellarService : IStellarService.Stub() {
         return rikka.hidden.compat.PermissionManagerApis.checkPermission(permission, serviceCore.serviceInfo.getUid())
     }
 
-    private fun notifyManagerServiceStarted() {
-        clientManager.findClients(managerAppId).forEach { record ->
+    private fun notifyClientsServiceStarted() {
+        clientManager.allClients().forEach { record ->
             try {
                 record.client?.onServiceStarted()
             } catch (e: Throwable) {
-                LOGGER.w(e, "通知管理器服务启动失败")
+                LOGGER.w(e, "通知客户端服务启动失败: uid=%d, pid=%d, package=%s", record.uid, record.pid, record.packageName)
             }
         }
     }

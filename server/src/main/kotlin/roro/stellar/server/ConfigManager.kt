@@ -11,6 +11,7 @@ import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.UserManagerApis
 import roro.stellar.StellarApiConstants.PERMISSIONS
 import roro.stellar.StellarApiConstants.PERMISSION_KEY
+import roro.stellar.StellarApiConstants.PERMISSION_STELLAR
 import roro.stellar.server.StellarConfig.PackageEntry
 import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.ktx.workerHandler
@@ -82,7 +83,8 @@ class ConfigManager {
                         pi.applicationInfo!!.metaData
                             ?.getString(PERMISSION_KEY, "")
                             ?.split(",")
-                            ?.contains("stellar") != true &&
+                            ?.map { it.trim() }
+                            ?.any { PERMISSIONS.contains(it) } != true &&
                             !ProviderDiscovery.hasStellarProvider(pi)
                     ) ||
                     pi.packageName == ServerConstants.MANAGER_APPLICATION_ID
@@ -109,7 +111,7 @@ class ConfigManager {
                     UserHandleCompat.getUserId(entry.key)
                 ) ?: continue
                 for (permission in (applicationInfo.metaData?.getString(PERMISSION_KEY, "")
-                    ?: "").split(",")) {
+                    ?: "").split(",").map { it.trim() }) {
                     if (PERMISSIONS.contains(permission)) {
                         permissions.add(permission)
                     }
@@ -209,7 +211,7 @@ class ConfigManager {
 
             val declaredPermissions = LinkedHashSet<String>()
             val metaDataPermissions = applicationInfo.metaData?.getString(PERMISSION_KEY, "") ?: ""
-            for (permission in metaDataPermissions.split(",")) {
+            for (permission in metaDataPermissions.split(",").map { it.trim() }) {
                 if (PERMISSIONS.contains(permission)) {
                     declaredPermissions.add(permission)
                 }
@@ -225,7 +227,7 @@ class ConfigManager {
             }
 
             if (entry.permissions.isEmpty()) {
-                entry.permissions["stellar"] = FLAG_ASK
+                entry.permissions[PERMISSION_STELLAR] = FLAG_ASK
             }
 
             config.packages[uid] = entry
@@ -243,7 +245,7 @@ class ConfigManager {
         var entry = findLocked(uid)
         if (entry == null) {
             entry = PackageEntry()
-            entry.permissions["stellar"] = FLAG_ASK
+            entry.permissions[PERMISSION_STELLAR] = FLAG_ASK
             config.packages[uid] = entry
         }
         if (packages != null) {
@@ -274,6 +276,9 @@ class ConfigManager {
             entry.packages.addAll(packages)
             config.packages[uid] = entry
             LOGGER.i("为 uid=%d 创建新配置以保存权限 %s", uid, permission)
+        } else if (entry.packages.isEmpty()) {
+            entry.packages.addAll(PackageManagerApis.getPackagesForUidNoThrow(uid))
+            LOGGER.i("为 uid=%d 的权限配置补全包名: %s", uid, entry.packages.toString())
         }
         entry.permissions[permission] = newFlag
         scheduleWriteLocked()

@@ -1,7 +1,6 @@
 package roro.stellar.server.binder
 
 import android.content.IContentProvider
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
@@ -9,81 +8,30 @@ import android.os.Parcelable
 import com.stellar.api.BinderContainer
 import rikka.hidden.compat.ActivityManagerApis
 import rikka.hidden.compat.DeviceIdleControllerApis
-import rikka.hidden.compat.PackageManagerApis
-import rikka.hidden.compat.UserManagerApis
-import roro.stellar.StellarApiConstants
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.shizuku.ShizukuServiceIntercept
 import roro.stellar.server.util.Logger
-import roro.stellar.server.util.ProviderDiscovery
 
 object BinderDistributor {
     private val LOGGER = Logger("BinderDistributor")
-    private const val SHIZUKU_MANAGER_PERMISSION = "moe.shizuku.manager.permission.MANAGER"
-
-    fun sendBinderToAllClients(binder: Binder?) {
-        for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendBinderToClients(binder, userId)
-        }
-    }
-
-    private fun sendBinderToClients(binder: Binder?, userId: Int) {
-        try {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
-                userId
-            )) {
-                if (pi == null || pi.applicationInfo == null) continue
-
-                val declaredStellar = pi.applicationInfo!!.metaData
-                    ?.getString(StellarApiConstants.PERMISSION_KEY, "")
-                    ?.split(",")
-                    ?.contains("stellar") == true
-
-                if (declaredStellar || ProviderDiscovery.hasStellarProvider(pi)) {
-                    sendBinderToUserApp(binder, pi.packageName, userId)
-                }
-            }
-        } catch (tr: Throwable) {
-            LOGGER.e("调用 getInstalledPackages 时发生异常", tr = tr)
-        }
-    }
-
-    fun sendShizukuBinderToAllClients(shizukuIntercept: ShizukuServiceIntercept?) {
-        for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendShizukuBinderToClients(shizukuIntercept, userId)
-        }
-    }
-
-    private fun sendShizukuBinderToClients(shizukuIntercept: ShizukuServiceIntercept?, userId: Int) {
-        if (shizukuIntercept == null) return
-
-        try {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                (PackageManager.GET_PROVIDERS or PackageManager.GET_PERMISSIONS).toLong(),
-                userId
-            )) {
-                if (pi == null || pi.applicationInfo == null) continue
-                if (!ProviderDiscovery.hasShizukuProvider(pi)) continue
-                if (pi.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true) continue
-
-                sendShizukuBinderToUserApp(shizukuIntercept, pi.packageName, userId)
-            }
-        } catch (tr: Throwable) {
-            LOGGER.e("调用 getInstalledPackages 发送 Shizuku binder 时发生异常", tr = tr)
-        }
-    }
 
     fun sendBinderToManager(binder: Binder?) {
-        for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            sendBinderToManager(binder, userId)
-        }
+        sendBinderToManager(binder, 0)
     }
 
     fun sendBinderToManager(binder: Binder?, userId: Int) {
-        sendBinderToManager(binder, userId, retry = true)
+        sendBinderInternal(
+            packageName = MANAGER_APPLICATION_ID,
+            userId = userId,
+            providerSuffix = ".stellar",
+            extraKey = "roro.stellar.manager.intent.extra.BINDER",
+            binderContainer = BinderContainer(binder),
+            logPrefix = "",
+            retry = true,
+            onRetry = { sendBinderToManager(binder, userId, retry = false) }
+        )
     }
 
     private fun sendBinderToManager(binder: Binder?, userId: Int, retry: Boolean): Boolean {
@@ -95,8 +43,7 @@ object BinderDistributor {
             binderContainer = BinderContainer(binder),
             logPrefix = "",
             retry = retry,
-            onRetry = { sendBinderToManager(binder, userId, retry = false) },
-            skipForceStopOnRetry = true
+            onRetry = { sendBinderToManager(binder, userId, retry = false) }
         )
     }
 
@@ -146,8 +93,7 @@ object BinderDistributor {
         binderContainer: Parcelable,
         logPrefix: String,
         retry: Boolean,
-        onRetry: (() -> Unit)?,
-        skipForceStopOnRetry: Boolean = false
+        onRetry: (() -> Unit)?
     ): Boolean {
         if (packageName == null) return false
 
@@ -155,9 +101,9 @@ object BinderDistributor {
             DeviceIdleControllerApis.addPowerSaveTempWhitelistApp(
                 packageName, 30_000L, userId, 316, "shell"
             )
-            LOGGER.v("将 %d:%s 添加到省电临时白名单 30 秒", userId, packageName)
+            LOGGER.v("已将用户 %d 的 %s 加入省电临时白名单 30 秒", userId, packageName)
         } catch (tr: Throwable) {
-            LOGGER.e(tr, "添加 %d:%s 到省电临时白名单失败", userId, packageName)
+            LOGGER.e(tr, "将用户 %d 的 %s 加入省电临时白名单失败", userId, packageName)
         }
 
         val name = "$packageName$providerSuffix"
@@ -167,17 +113,14 @@ object BinderDistributor {
         try {
             provider = ActivityManagerApis.getContentProviderExternal(name, userId, token, name)
             if (provider == null) {
-                LOGGER.e("${logPrefix}provider 为 null %s %d", name, userId)
+                LOGGER.e("%sProvider 为 null：%s，userId=%d", logPrefix, name, userId)
                 return false
             }
             if (!provider.asBinder().pingBinder()) {
-                LOGGER.e("${logPrefix}provider 已失效 %s %d", name, userId)
+                LOGGER.e("%sProvider 已失效：%s，userId=%d", logPrefix, name, userId)
                 if (retry && onRetry != null) {
-                    if (!skipForceStopOnRetry) {
-                        ActivityManagerApis.forceStopPackageNoThrow(packageName, userId)
-                        LOGGER.e("终止用户 %d 中的 %s 并重试", userId, packageName)
-                    }
-                    Thread.sleep(1000)
+                    LOGGER.w("准备重试向用户 %d 的 %s 发送 %sBinder", userId, packageName, logPrefix)
+                    Thread.sleep(300)
                     onRetry()
                 }
                 return false
@@ -188,26 +131,26 @@ object BinderDistributor {
 
             val reply = IContentProviderUtils.callCompat(provider, null, name, "sendBinder", null, extra)
             if (reply != null) {
-                LOGGER.i("已向用户 %d 中的应用 %s 发送 ${logPrefix}binder", userId, packageName)
+                LOGGER.i("已向用户 %d 的应用 %s 发送 %sBinder", userId, packageName, logPrefix)
                 return true
-            } else {
-                LOGGER.w("向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
-                if (retry && onRetry != null) {
-                    LOGGER.w("准备重试向用户 %d 中的应用 %s 发送 ${logPrefix}binder", userId, packageName)
-                    Thread.sleep(300)
-                    onRetry()
-                }
-                return false
             }
+
+            LOGGER.w("向用户 %d 的应用 %s 发送 %sBinder 失败：Provider 返回 null", userId, packageName, logPrefix)
+            if (retry && onRetry != null) {
+                LOGGER.w("准备重试向用户 %d 的应用 %s 发送 %sBinder", userId, packageName, logPrefix)
+                Thread.sleep(300)
+                onRetry()
+            }
+            return false
         } catch (tr: Throwable) {
-            LOGGER.e(tr, "向用户 %d 中的应用 %s 发送 ${logPrefix}binder 失败", userId, packageName)
+            LOGGER.e(tr, "向用户 %d 的应用 %s 发送 %sBinder 失败", userId, packageName, logPrefix)
             return false
         } finally {
             if (provider != null) {
                 try {
                     ActivityManagerApis.removeContentProviderExternal(name, token)
                 } catch (tr: Throwable) {
-                    LOGGER.w(tr, "移除 ContentProvider 失败")
+                    LOGGER.w(tr, "移除 ContentProvider 失败：%s", name)
                 }
             }
         }

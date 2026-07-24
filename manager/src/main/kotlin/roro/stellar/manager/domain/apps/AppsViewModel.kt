@@ -12,6 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import roro.stellar.Stellar
+import roro.stellar.StellarApiConstants
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.authorization.AuthorizationManager.FLAG_DENIED
 import roro.stellar.manager.authorization.AuthorizationManager.FLAG_GRANTED
@@ -64,14 +65,23 @@ class AppsViewModel : ViewModel() {
                         AppType.SHIZUKU -> shizukuList.add(appInfo)
                     }
 
-                    if (Stellar.getFlagForUid(pi.applicationInfo!!.uid, "stellar") == FLAG_GRANTED) {
+                    if (Stellar.getFlagForUid(
+                            pi.applicationInfo!!.uid,
+                            StellarApiConstants.PERMISSION_STELLAR
+                        ) == FLAG_GRANTED
+                    ) {
                         count++
                     }
                 }
 
                 if (!onlyCount) {
                     fun sortWeight(uid: Int, isShizuku: Boolean): Int {
-                        val raw = try { Stellar.getFlagForUid(uid, if (isShizuku) "shizuku" else "stellar") } catch (_: Exception) { 0 }
+                        val raw = try {
+                            Stellar.getFlagForUid(
+                                uid,
+                                if (isShizuku) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
+                            )
+                        } catch (_: Exception) { 0 }
                         return if (isShizuku) {
                             when (raw) { 2 -> 0; 4 -> 2; else -> 1 }
                         } else {

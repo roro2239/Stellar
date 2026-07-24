@@ -88,6 +88,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import roro.stellar.Stellar
+import roro.stellar.StellarApiConstants
 import roro.stellar.manager.R
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.common.state.Status
@@ -493,7 +494,8 @@ fun AppsScreen(
                                             try {
                                                 val uid = it.packageInfo.applicationInfo?.uid ?: return@forEach
                                                 val isShizuku = it.appType == AppType.SHIZUKU
-                                                val type = if (isShizuku) "shizuku" else "stellar"
+                                                val type =
+                                                    if (isShizuku) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
                                                 val flag = if (isShizuku) 0 else AuthorizationManager.FLAG_ASK
                                                 Stellar.updateFlagForUid(uid, type, flag)
                                             } catch (_: Exception) {}
@@ -517,7 +519,8 @@ fun AppsScreen(
                                             try {
                                                 val uid = it.packageInfo.applicationInfo?.uid ?: return@forEach
                                                 val isShizuku = it.appType == AppType.SHIZUKU
-                                                val type = if (isShizuku) "shizuku" else "stellar"
+                                                val type =
+                                                    if (isShizuku) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
                                                 val flag = if (isShizuku) 2 else AuthorizationManager.FLAG_GRANTED
                                                 Stellar.updateFlagForUid(uid, type, flag)
                                             } catch (_: Exception) {}
@@ -541,7 +544,8 @@ fun AppsScreen(
                                             try {
                                                 val uid = it.packageInfo.applicationInfo?.uid ?: return@forEach
                                                 val isShizuku = it.appType == AppType.SHIZUKU
-                                                val type = if (isShizuku) "shizuku" else "stellar"
+                                                val type =
+                                                    if (isShizuku) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
                                                 val flag = if (isShizuku) 4 else AuthorizationManager.FLAG_DENIED
                                                 Stellar.updateFlagForUid(uid, type, flag)
                                             } catch (_: Exception) {}
@@ -637,7 +641,8 @@ fun AppListItem(
         }
     }
 
-    val permissionType = if (isShizukuApp) "shizuku" else "stellar"
+    val permissionType =
+        if (isShizukuApp) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
 
     fun shizukuToStellarFlag(shizukuFlag: Int): Int {
         return when (shizukuFlag) {
@@ -672,7 +677,7 @@ fun AppListItem(
     var followStartupFlag by remember(refreshTrigger) {
         mutableIntStateOf(
             try {
-                Stellar.getFlagForUid(uid, "follow_stellar_startup")
+                Stellar.getFlagForUid(uid, StellarApiConstants.PERMISSION_FOLLOW_STARTUP)
             } catch (e: Exception) {
                 LOGGER.w("获取跟随启动权限状态异常", tr = e)
                 AuthorizationManager.FLAG_ASK
@@ -860,7 +865,11 @@ fun AppListItem(
                             onFlagChange = { newFlag ->
                                 try {
                                     followStartupFlag = newFlag
-                                    Stellar.updateFlagForUid(uid, "follow_stellar_startup", newFlag)
+                                    Stellar.updateFlagForUid(
+                                        uid,
+                                        StellarApiConstants.PERMISSION_FOLLOW_STARTUP,
+                                        newFlag
+                                    )
                                 } catch (e: Exception) {
                                     LOGGER.e("更新跟随启动权限失败", tr = e)
                                 }

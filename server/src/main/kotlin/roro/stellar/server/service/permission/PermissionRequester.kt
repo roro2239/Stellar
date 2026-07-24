@@ -1,6 +1,7 @@
 package roro.stellar.server.service.permission
 
 import android.os.Bundle
+import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.StellarApiConstants
 import roro.stellar.server.ClientManager
 import roro.stellar.server.ClientRecord
@@ -73,7 +74,7 @@ class PermissionRequester(
         val onetime = data.getBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME)
         val permission = data.getString(
             StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION,
-            "stellar"
+            StellarApiConstants.PERMISSION_STELLAR
         )
 
         LOGGER.i(
@@ -86,6 +87,7 @@ class PermissionRequester(
 
         if (records.isEmpty()) {
             LOGGER.w("dispatchPermissionResult: 未找到 uid $requestUid 的客户端")
+            packages.addAll(PackageManagerApis.getPackagesForUidNoThrow(requestUid))
         } else {
             for (record in records) {
                 packages.add(record.packageName)

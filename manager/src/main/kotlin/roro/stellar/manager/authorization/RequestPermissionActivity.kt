@@ -126,7 +126,8 @@ class RequestPermissionActivity : ComponentActivity() {
         val pid = intent.getIntExtra("pid", -1)
         val denyOnce = intent.getBooleanExtra("denyOnce", true)
         val requestCode = intent.getIntExtra("requestCode", -1)
-        val permission = intent.getStringExtra("permission") ?: "stellar"
+        val permission = intent.getStringExtra("permission")
+            ?: StellarApiConstants.PERMISSION_STELLAR
         val sourcePackage = intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
 
         @Suppress("DEPRECATION")
@@ -191,7 +192,7 @@ fun PermissionRequestDialog(
     appName: String,
     denyOnce: Boolean,
     onResult: (allowed: Boolean, onetime: Boolean) -> Unit,
-    permission: String = "stellar",
+    permission: String = StellarApiConstants.PERMISSION_STELLAR,
     alwaysAllowText: String? = null,
     showAllowOnce: Boolean = true,
     allowOnceText: String? = null
@@ -245,8 +246,10 @@ fun PermissionRequestDialog(
                     )
 
                     val permissionSuffix = when (permission) {
-                        "stellar" -> stringResource(R.string.permission_use_stellar)
-                        "follow_stellar_startup" -> stringResource(R.string.permission_follow_startup)
+                        StellarApiConstants.PERMISSION_STELLAR ->
+                            stringResource(R.string.permission_use_stellar)
+                        StellarApiConstants.PERMISSION_FOLLOW_STARTUP ->
+                            stringResource(R.string.permission_follow_startup)
                         else -> stringResource(R.string.permission_use_generic, permission)
                     }
                     val text = buildAnnotatedString {

@@ -36,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import roro.stellar.Stellar
+import roro.stellar.StellarApiConstants
 import roro.stellar.manager.authorization.AuthorizationManager
 import roro.stellar.manager.authorization.RequestPermissionActivity
 import roro.stellar.manager.domain.apps.AppType
@@ -168,7 +169,8 @@ class MainActivity : ComponentActivity() {
             return
         }
         val appType = AuthorizationManager.getAppType(packageInfo)
-        val permission = if (appType == AppType.SHIZUKU) "shizuku" else "stellar"
+        val permission =
+            if (appType == AppType.SHIZUKU) "shizuku" else StellarApiConstants.PERMISSION_STELLAR
         val grantedFlag = if (appType == AppType.SHIZUKU) 2 else AuthorizationManager.FLAG_GRANTED
         val uid = packageInfo.applicationInfo?.uid ?: run {
             clearSourceApp()

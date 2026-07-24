@@ -6,12 +6,12 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import roro.stellar.manager.model.ServiceStatus
+import roro.stellar.Stellar
 
 class StellarReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (ServiceStatus().isRunning) return
+        if (Stellar.pingBinder()) return
 
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {

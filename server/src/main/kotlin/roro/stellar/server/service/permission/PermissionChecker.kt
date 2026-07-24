@@ -30,5 +30,6 @@ class PermissionChecker(
     }
 
     fun shouldShowRequestPermissionRationale(uid: Int): Boolean =
-        configManager.find(uid)?.permissions?.get("stellar") == ConfigManager.FLAG_DENIED
+        configManager.find(uid)?.permissions?.get(StellarApiConstants.PERMISSION_STELLAR) ==
+            ConfigManager.FLAG_DENIED
 }

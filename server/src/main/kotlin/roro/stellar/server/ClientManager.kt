@@ -4,6 +4,7 @@ import android.os.IBinder.DeathRecipient
 import android.os.RemoteException
 import com.stellar.server.IStellarApplication
 import moe.shizuku.server.IShizukuApplication
+import roro.stellar.StellarApiConstants.PERMISSION_STELLAR
 import roro.stellar.server.util.Logger
 import java.util.concurrent.ConcurrentHashMap
 
@@ -16,6 +17,8 @@ open class ClientManager(
     private fun makeKey(uid: Int, pid: Int): Long = (uid.toLong() shl 32) or (pid.toLong() and 0xFFFFFFFFL)
 
     fun findClients(uid: Int): List<ClientRecord> = clientsByUid[uid]?.toList() ?: emptyList()
+
+    fun allClients(): List<ClientRecord> = clientsByKey.values.toList()
 
     fun findClient(uid: Int, pid: Int): ClientRecord? = clientsByKey[makeKey(uid, pid)]
 
@@ -75,7 +78,7 @@ open class ClientManager(
             ?: throw IllegalStateException("非已连接的客户端").also {
                 LOGGER.w("Caller (uid %d, pid %d) is not an attached client", callingUid, callingPid)
             }
-        if (requiresPermission && clientRecord.allowedMap["stellar"] != true) {
+        if (requiresPermission && clientRecord.allowedMap[PERMISSION_STELLAR] != true) {
             throw SecurityException("调用者没有权限")
         }
         return clientRecord
@@ -88,16 +91,6 @@ open class ClientManager(
         packageName: String,
         apiVersion: Int
     ): ClientRecord? {
-        val oldClients = findClients(uid)
-        if (oldClients.isNotEmpty()) {
-            LOGGER.w("发现 uid=%d 存在 %d 个旧客户端记录，正在清理", uid, oldClients.size)
-            for (oldClient in oldClients) {
-                LOGGER.i("清理旧客户端: uid=%d, pid=%d, package=%s",
-                    oldClient.uid, oldClient.pid, oldClient.packageName)
-                removeFromMaps(oldClient)
-            }
-        }
-
         val clientRecord = ClientRecord(uid, pid, client, packageName, apiVersion)
 
         val oldConfig = configManager.findOldConfigByPackageName(uid, packageName)

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,6 +59,7 @@ class TerminalViewModel : ViewModel() {
                 currentProcess = process
 
                 val outputLines = mutableListOf<String>()
+                val outputLock = Any()
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
 
@@ -66,51 +69,62 @@ class TerminalViewModel : ViewModel() {
                 var lastUpdateTime = System.currentTimeMillis()
                 var isHighFrequency = false
 
-                reader.lineSequence().forEach { line ->
-                    outputLines.add(line)
+                fun appendOutputLine(line: String) {
+                    val displayText = synchronized(outputLock) {
+                        outputLines.add(line)
 
-                    if (outputLines.size > maxStoredLines) {
-                        outputLines.removeAt(0)
-                    }
-
-                    if (!isHighFrequency && outputLines.size >= 100) {
-                        val elapsed = System.currentTimeMillis() - startTime
-                        if (elapsed < 1000) {
-                            isHighFrequency = true
-                            updateInterval = 500L
+                        if (outputLines.size > maxStoredLines) {
+                            outputLines.removeAt(0)
                         }
-                    }
 
-                    val now = System.currentTimeMillis()
-                    if (now - lastUpdateTime >= updateInterval) {
-                        val displayLines = outputLines.takeLast(maxDisplayLines)
-                        val displayText = if (outputLines.size > maxDisplayLines) {
-                            "... (${outputLines.size} lines total, showing last $maxDisplayLines)\n" + displayLines.joinToString("\n")
+                        if (!isHighFrequency && outputLines.size >= 100) {
+                            val elapsed = System.currentTimeMillis() - startTime
+                            if (elapsed < 1000) {
+                                isHighFrequency = true
+                                updateInterval = 500L
+                            }
+                        }
+
+                        val now = System.currentTimeMillis()
+                        if (now - lastUpdateTime >= updateInterval) {
+                            val displayLines = outputLines.takeLast(maxDisplayLines)
+                            lastUpdateTime = now
+                            if (outputLines.size > maxDisplayLines) {
+                                "... (${outputLines.size} lines total, showing last $maxDisplayLines)\n" + displayLines.joinToString("\n")
+                            } else {
+                                displayLines.joinToString("\n")
+                            }
                         } else {
-                            displayLines.joinToString("\n")
+                            null
                         }
+                    }
+                    if (displayText != null) {
                         _state.value = _state.value.copy(currentOutput = displayText)
-                        lastUpdateTime = now
                     }
                 }
 
-                errorReader.lineSequence().forEach { line ->
-                    outputLines.add(line)
-
-                    if (outputLines.size > maxStoredLines) {
-                        outputLines.removeAt(0)
+                val exitCode = coroutineScope {
+                    val stdoutJob = async(Dispatchers.IO) {
+                        reader.lineSequence().forEach(::appendOutputLine)
                     }
+                    val stderrJob = async(Dispatchers.IO) {
+                        errorReader.lineSequence().forEach(::appendOutputLine)
+                    }
+                    val code = process.waitFor()
+                    stdoutJob.await()
+                    stderrJob.await()
+                    code
                 }
-
-                val exitCode = process.waitFor()
                 process.destroy()
                 currentProcess = null
                 val executionTime = System.currentTimeMillis() - startTime
 
-                val finalOutput = if (outputLines.size > maxStoredLines) {
-                    "... (${outputLines.size} lines total, showing last $maxStoredLines)\n" + outputLines.takeLast(maxStoredLines).joinToString("\n")
-                } else {
-                    outputLines.joinToString("\n")
+                val finalOutput = synchronized(outputLock) {
+                    if (outputLines.size > maxStoredLines) {
+                        "... (${outputLines.size} lines total, showing last $maxStoredLines)\n" + outputLines.takeLast(maxStoredLines).joinToString("\n")
+                    } else {
+                        outputLines.joinToString("\n")
+                    }
                 }
 
                 _state.value = _state.value.copy(

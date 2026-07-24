@@ -23,12 +23,18 @@ open class ClientRecord(
 
     val onetimeMap: MutableMap<String, Boolean> = mutableMapOf()
 
-    fun dispatchRequestPermissionResult(requestCode: Int, allowed: Boolean, onetime: Boolean, permission: String = "stellar") {
+    fun dispatchRequestPermissionResult(
+        requestCode: Int,
+        allowed: Boolean,
+        onetime: Boolean,
+        permission: String = StellarApiConstants.PERMISSION_STELLAR
+    ) {
         if (!allowed) lastDenyTimeMap[permission] = System.currentTimeMillis()
 
         val reply = Bundle().apply {
             putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED, allowed)
             putBoolean(StellarApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime)
+            putString(StellarApiConstants.REQUEST_PERMISSION_REPLY_PERMISSION, permission)
         }
 
         try {
