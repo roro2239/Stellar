@@ -1,0 +1,77 @@
+name: Manager Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-release:
+    name: Build Manager Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "build-tools;36.0.0"
+          sdkmanager "platforms;android-36"
+          sdkmanager "ndk;29.0.13113456"
+
+      - name: Restore signing config
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::Missing Android signing secrets"
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/keystore"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keystore/key.bin"
+
+          {
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/keystore/key.bin"
+            echo "KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+            echo "KEYSTORE_ALIAS=$ANDROID_KEY_ALIAS"
+            echo "KEYSTORE_ALIAS_PASSWORD=$ANDROID_KEY_PASSWORD"
+          } > signing.properties
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build Manager release APK
+        run: ./gradlew :manager:assembleRelease --stacktrace --no-daemon
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stellar-manager-release
+          path: |
+            out/apk/*.apk
+            out/mapping/*.txt
+            manager/build/outputs/apk/release/*.apk
+          if-no-files-found: error

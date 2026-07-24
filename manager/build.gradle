@@ -1,6 +1,7 @@
 import com.android.build.gradle.internal.tasks.CompileArtProfileTask
 
 import java.nio.file.Paths
+import java.util.Properties
 
 plugins {
     id('com.android.application')
@@ -35,14 +36,35 @@ android {
         compose true
     }
 
+    def signingPropsFile = rootProject.file("signing.properties")
+    def signingProps = new Properties()
+    if (signingPropsFile.exists()) {
+        signingPropsFile.withInputStream { signingProps.load(it) }
+    }
+    def hasReleaseSigning = [
+            "KEYSTORE_FILE",
+            "KEYSTORE_PASSWORD",
+            "KEYSTORE_ALIAS",
+            "KEYSTORE_ALIAS_PASSWORD"
+    ].every { signingProps.getProperty(it)?.trim() } &&
+            rootProject.file(signingProps.getProperty("KEYSTORE_FILE", "")).exists()
+
     signingConfigs {
-        sign
+        sign {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(signingProps.getProperty("KEYSTORE_FILE"))
+                storePassword signingProps.getProperty("KEYSTORE_PASSWORD")
+                keyAlias signingProps.getProperty("KEYSTORE_ALIAS")
+                keyPassword signingProps.getProperty("KEYSTORE_ALIAS_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         debug {
         }
         release {
+            signingConfig hasReleaseSigning ? signingConfigs.sign : signingConfigs.debug
             minifyEnabled true
             shrinkResources true
             proguardFiles 'proguard-rules.pro'
