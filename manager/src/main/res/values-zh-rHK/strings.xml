@@ -134,6 +134,7 @@
     <string name="shizuku_compat_layer_subtitle">允許 Shizuku 應用透過 Stellar 服務運行</string>
     <string name="shizuku_compat_enabled">Shizuku 兼容層已啟用</string>
     <string name="shizuku_compat_disabled">Shizuku 兼容層已停用</string>
+    <string name="shizuku_compat_disabled_badge">兼容層未啟用</string>
     <string name="setting_failed">設定失敗: %s</string>
     <string name="drop_privileges">降權啟動</string>
     <string name="drop_privileges_subtitle">Root 啟動後降權到 Shell 用戶運行</string>

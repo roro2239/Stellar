@@ -133,6 +133,7 @@
     <string name="shizuku_compat_layer_subtitle">允许 Shizuku 应用通过 Stellar 服务运行</string>
     <string name="shizuku_compat_enabled">Shizuku 兼容层已启用</string>
     <string name="shizuku_compat_disabled">Shizuku 兼容层已禁用</string>
+    <string name="shizuku_compat_disabled_badge">兼容层关闭</string>
     <string name="setting_failed">设置失败: %s</string>
     <string name="drop_privileges">降权激活</string>
     <string name="drop_privileges_subtitle">Root 启动后降权到 Shell 用户运行</string>

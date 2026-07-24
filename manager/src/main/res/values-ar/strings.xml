@@ -134,6 +134,7 @@
     <string name="shizuku_compat_layer_subtitle">السماح لتطبيقات Shizuku بالعمل عبر Stellar</string>
     <string name="shizuku_compat_enabled">تم تفعيل توافق Shizuku</string>
     <string name="shizuku_compat_disabled">تم تعطيل توافق Shizuku</string>
+    <string name="shizuku_compat_disabled_badge">غير مفعّل</string>
     <string name="setting_failed">فشل الإعداد: %s</string>
     <string name="drop_privileges">تخفيض الصلاحيات</string>
     <string name="drop_privileges_subtitle">التشغيل كمستخدم Shell بعد تشغيل Root</string>

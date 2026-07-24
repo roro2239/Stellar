@@ -134,6 +134,7 @@
     <string name="shizuku_compat_layer_subtitle">Allow Shizuku apps to run through Stellar</string>
     <string name="shizuku_compat_enabled">Shizuku compatibility enabled</string>
     <string name="shizuku_compat_disabled">Shizuku compatibility disabled</string>
+    <string name="shizuku_compat_disabled_badge">Disabled</string>
     <string name="setting_failed">Setting failed: %s</string>
     <string name="drop_privileges">Drop Privileges</string>
     <string name="drop_privileges_subtitle">Run as shell user after root start</string>

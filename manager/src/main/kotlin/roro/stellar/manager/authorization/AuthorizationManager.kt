@@ -7,6 +7,7 @@ import roro.stellar.Stellar
 import roro.stellar.StellarApiConstants
 import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.server.ServerConstants
+import roro.stellar.server.util.ProviderDiscovery
 
 object AuthorizationManager {
 
@@ -38,18 +39,20 @@ object AuthorizationManager {
     fun getPackages(): List<PackageInfo> = getApplications(-1).toMutableList()
 
     fun getAppType(packageInfo: PackageInfo): AppType {
-        val metaData = packageInfo.applicationInfo?.metaData ?: return AppType.SHIZUKU
+        val metaData = packageInfo.applicationInfo?.metaData
 
-        val stellarPermission = metaData.getString(StellarApiConstants.PERMISSION_KEY, "")
-        if (stellarPermission.split(",").map { it.trim() }
-                .any { StellarApiConstants.PERMISSIONS.contains(it) }
-        ) {
-            return AppType.STELLAR
+        val shizukuSupport = metaData?.getBoolean(SHIZUKU_META_DATA_KEY, false) == true ||
+            metaData?.getString(SHIZUKU_META_DATA_KEY, "false") == "true"
+        if (shizukuSupport || ProviderDiscovery.hasShizukuProvider(packageInfo)) {
+            return AppType.SHIZUKU
         }
 
-        val shizukuSupport = metaData.get(SHIZUKU_META_DATA_KEY)
-        if (shizukuSupport == true || shizukuSupport == "true") {
-            return AppType.SHIZUKU
+        val stellarPermission = metaData?.getString(StellarApiConstants.PERMISSION_KEY, "").orEmpty()
+        if (stellarPermission.split(",").map { it.trim() }
+                .any { it in StellarApiConstants.PERMISSIONS } ||
+            ProviderDiscovery.hasStellarProvider(packageInfo)
+        ) {
+            return AppType.STELLAR
         }
 
         return AppType.STELLAR

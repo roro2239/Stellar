@@ -134,6 +134,7 @@
     <string name="shizuku_compat_layer_subtitle">Autoriser les applications Shizuku à fonctionner via Stellar</string>
     <string name="shizuku_compat_enabled">Compatibilité Shizuku activée</string>
     <string name="shizuku_compat_disabled">Compatibilité Shizuku désactivée</string>
+    <string name="shizuku_compat_disabled_badge">Désactivée</string>
     <string name="setting_failed">Échec du paramétrage : %s</string>
     <string name="drop_privileges">Réduction des privilèges</string>
     <string name="drop_privileges_subtitle">Exécuter en tant qu\'utilisateur Shell après le démarrage Root</string>

@@ -134,6 +134,7 @@
     <string name="shizuku_compat_layer_subtitle">Shizuku アプリを Stellar 経由で実行できるようにします</string>
     <string name="shizuku_compat_enabled">Shizuku 互換性が有効です</string>
     <string name="shizuku_compat_disabled">Shizuku 互換性が無効です</string>
+    <string name="shizuku_compat_disabled_badge">無効</string>
     <string name="setting_failed">設定に失敗しました: %s</string>
     <string name="drop_privileges">権限を下げる</string>
     <string name="drop_privileges_subtitle">Root 起動後に shell ユーザーとして実行します</string>
