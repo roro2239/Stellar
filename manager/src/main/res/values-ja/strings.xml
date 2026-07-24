@@ -109,12 +109,20 @@
     <string name="default_start_page">既定の開始ページ</string>
     <string name="boot_startup_options">起動時の自動開始</string>
     <string name="boot_startup_options_subtitle">起動時の自動開始モードを設定します</string>
+    <string name="boot_start_mode">起動モード</string>
+    <string name="boot_start_mode_off_label">オフ</string>
+    <string name="boot_start_mode_broadcast_label">起動ブロードキャスト</string>
+    <string name="boot_start_mode_prewarm_label">準備</string>
+    <string name="boot_start_mode_script_label">Root</string>
+    <string name="boot_start_none_subtitle">起動時に何も実行しません</string>
     <string name="boot_start_wireless">ワイヤレスデバッグ</string>
     <string name="boot_start_wireless_subtitle">起動時にワイヤレスデバッグで開始します</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">起動時に Root で開始します</string>
     <string name="boot_start_callback_mode">起動ブロードキャスト</string>
     <string name="boot_start_callback_mode_subtitle">システムブロードキャストで起動時に自動開始します</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">起動後にWiFiを待機し、ADB TCP/IPポートを準備してからStellarを起動せずに切断し、WiFiなしでも後でStellarを起動できるようにします</string>
+    <string name="boot_start_adb_unavailable">現在の権限またはユーザープロファイルでは起動時のADB操作を利用できません</string>
     <string name="boot_start_script_mode">起動スクリプト</string>
     <string name="boot_start_script_mode_subtitle">Root スクリプトで起動時に自動開始します</string>
     <string name="boot_start_script_mode_subtitle_no_root">Root 権限が必要です</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">Stellar 起動時開始</string>
     <string name="boot_start_waiting_wifi">WiFi 接続を待機中...</string>
     <string name="boot_start_enabling_wireless_adb">ワイヤレスデバッグを有効化中...</string>
+    <string name="boot_start_preparing_tcpip">ADB TCP/IPを準備中...</string>
     <string name="boot_start_discovering_port">ADB ポートを検出中...</string>
     <string name="boot_start_connecting">ADB サービスに接続中...</string>
     <string name="boot_start_waiting_unlock">端末のロック解除を待機中...</string>
     <string name="boot_start_retry">今すぐ再試行</string>
     <string name="boot_start_port_not_found">ADB ポートが見つかりません。再試行中...</string>
     <string name="boot_start_connect_failed">ADB 接続に失敗しました。再試行中...</string>
+    <string name="boot_start_prepare_tcpip_failed">ADB TCP/IPの準備に失敗しました。再試行中...</string>
     <string name="boot_start_binder_timeout">サービス起動がタイムアウトしました。再試行中...</string>
 
     <string name="boot_script_install_success">起動スクリプトを作成しました</string>

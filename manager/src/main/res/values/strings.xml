@@ -109,12 +109,20 @@
     <string name="default_start_page">Default start page</string>
     <string name="boot_startup_options">Boot Startup</string>
     <string name="boot_startup_options_subtitle">Configure auto-start mode on boot</string>
+    <string name="boot_start_mode">Startup mode</string>
+    <string name="boot_start_mode_off_label">Off</string>
+    <string name="boot_start_mode_broadcast_label">Broadcast</string>
+    <string name="boot_start_mode_prewarm_label">Prewarm</string>
+    <string name="boot_start_mode_script_label">Root</string>
+    <string name="boot_start_none_subtitle">Do not run any boot action</string>
     <string name="boot_start_wireless">Wireless Debugging</string>
     <string name="boot_start_wireless_subtitle">Start via wireless debugging on boot</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">Start via root on boot</string>
     <string name="boot_start_callback_mode">Boot Broadcast</string>
     <string name="boot_start_callback_mode_subtitle">Auto-start on boot via system broadcast</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">Wait for WiFi on boot, prepare the ADB TCP/IP port, then disconnect without starting Stellar, so Stellar can start later without WiFi</string>
+    <string name="boot_start_adb_unavailable">ADB boot actions are unavailable with the current permissions or user profile</string>
     <string name="boot_start_script_mode">Boot Script</string>
     <string name="boot_start_script_mode_subtitle">Auto-start on boot via root script</string>
     <string name="boot_start_script_mode_subtitle_no_root">Requires root access</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">Stellar Boot Start</string>
     <string name="boot_start_waiting_wifi">Waiting for WiFi connection…</string>
     <string name="boot_start_enabling_wireless_adb">Enabling wireless debugging…</string>
+    <string name="boot_start_preparing_tcpip">Preparing ADB TCP/IP…</string>
     <string name="boot_start_discovering_port">Discovering ADB port…</string>
     <string name="boot_start_connecting">Connecting to ADB service…</string>
     <string name="boot_start_waiting_unlock">Waiting for device unlock…</string>
     <string name="boot_start_retry">Retry Now</string>
     <string name="boot_start_port_not_found">ADB port not found, retrying…</string>
     <string name="boot_start_connect_failed">ADB connection failed, retrying…</string>
+    <string name="boot_start_prepare_tcpip_failed">ADB TCP/IP preparation failed, retrying…</string>
     <string name="boot_start_binder_timeout">Service start timed out, retrying…</string>
 
     <string name="boot_script_install_success">Boot script created successfully</string>

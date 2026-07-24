@@ -2,7 +2,6 @@ package roro.stellar.manager.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import roro.stellar.manager.AppConstants
@@ -14,7 +13,9 @@ class StellarAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        if (StellarSettings.getBootMode() != StellarSettings.BootMode.ACCESSIBILITY) return
+        val accessibilityEnabled = StellarSettings.getPreferences()
+            .getBoolean(StellarSettings.BOOT_BROADCAST_ACCESSIBILITY_ENABLED, false)
+        if (StellarSettings.getBootMode() != StellarSettings.BootMode.BROADCAST || !accessibilityEnabled) return
         try {
             val componentName = ComponentName(this, BootCompleteReceiver::class.java)
             packageManager.setComponentEnabled(componentName, true)

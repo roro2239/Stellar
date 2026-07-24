@@ -109,12 +109,20 @@
     <string name="default_start_page">預設啟動頁</string>
     <string name="boot_startup_options">開機啟動</string>
     <string name="boot_startup_options_subtitle">設定開機自啟動模式</string>
+    <string name="boot_start_mode">啟動模式</string>
+    <string name="boot_start_mode_off_label">關閉</string>
+    <string name="boot_start_mode_broadcast_label">開機廣播</string>
+    <string name="boot_start_mode_prewarm_label">預熱</string>
+    <string name="boot_start_mode_script_label">Root腳本</string>
+    <string name="boot_start_none_subtitle">開機時不執行任何操作</string>
     <string name="boot_start_wireless">無線調試</string>
     <string name="boot_start_wireless_subtitle">透過無線調試開機啟動</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">透過 Root 權限開機啟動</string>
     <string name="boot_start_callback_mode">開機廣播</string>
     <string name="boot_start_callback_mode_subtitle">通過系統廣播在開機時自動啟動</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">開機後等待 WiFi，初始化 ADB TCP/IP 端口後斷開，不啟動 Stellar，以便無 WiFi 時啟動 Stellar</string>
+    <string name="boot_start_adb_unavailable">目前權限或用戶設定不支援開機 ADB 操作</string>
     <string name="boot_start_script_mode">開機腳本</string>
     <string name="boot_start_script_mode_subtitle">通過 Root 腳本在開機時自動啟動</string>
     <string name="boot_start_script_mode_subtitle_no_root">需要 Root 權限</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">Stellar 開機啟動</string>
     <string name="boot_start_waiting_wifi">等待 WiFi 連接…</string>
     <string name="boot_start_enabling_wireless_adb">啟用無線調試…</string>
+    <string name="boot_start_preparing_tcpip">正在準備 ADB TCP/IP…</string>
     <string name="boot_start_discovering_port">發現 ADB 端口…</string>
     <string name="boot_start_connecting">連接到 ADB 服務…</string>
     <string name="boot_start_waiting_unlock">等待裝置解鎖…</string>
     <string name="boot_start_retry">立即重試</string>
     <string name="boot_start_port_not_found">未找到 ADB 端口，重試中…</string>
     <string name="boot_start_connect_failed">ADB 連接失敗，重試中…</string>
+    <string name="boot_start_prepare_tcpip_failed">ADB TCP/IP 準備失敗，正在重試…</string>
     <string name="boot_start_binder_timeout">服務啟動超時，重試中…</string>
 
     <string name="boot_script_install_success">開機腳本創建成功</string>

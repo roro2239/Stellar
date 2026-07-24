@@ -6,6 +6,7 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.receiver.StellarReceiverStarter
 import roro.stellar.manager.startup.worker.AdbStartWorker
 
@@ -16,7 +17,14 @@ class BootStartActionReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 when (intent.action) {
-                    ACTION_RETRY -> StellarReceiverStarter.start(context)
+                    ACTION_RETRY -> {
+                        when (StellarSettings.getBootMode()) {
+                            StellarSettings.BootMode.BROADCAST -> StellarReceiverStarter.start(context)
+                            StellarSettings.BootMode.TCPIP_PREWARM -> AdbStartWorker.enqueuePrepareTcpip(context)
+                            StellarSettings.BootMode.NONE,
+                            StellarSettings.BootMode.SCRIPT -> Unit
+                        }
+                    }
                     ACTION_CANCEL -> {
                         AdbStartWorker.cancel(context)
                     }

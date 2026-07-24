@@ -11,6 +11,7 @@ object StellarSettings {
     const val BOOT_MODE = "boot_mode"
     const val TCPIP_PORT = "tcpip_port"
     const val TCPIP_PORT_ENABLED = "tcpip_port_enabled"
+    const val BOOT_BROADCAST_ACCESSIBILITY_ENABLED = "boot_broadcast_accessibility_enabled"
     const val THEME_MODE = "theme_mode"
     const val START_PAGE = "start_page"
     const val DROP_PRIVILEGES = "drop_privileges"
@@ -20,10 +21,8 @@ object StellarSettings {
     const val DAEMON_ENABLED = "daemon_enabled"
     const val HIDE_BACKGROUND = "hide_background"
 
-    /** 开机启动模式，三选一，默认 NONE */
-    enum class BootMode { NONE, BROADCAST, ACCESSIBILITY, SCRIPT }
+    enum class BootMode { NONE, BROADCAST, TCPIP_PREWARM, SCRIPT }
 
-    /** 记录上次服务的启动方式（Root / ADB），用于开机自启时决定走哪条路径 */
     enum class LaunchMethod { UNKNOWN, ROOT, ADB }
     const val LAST_LAUNCH_METHOD = "last_launch_method"
 
@@ -69,6 +68,12 @@ object StellarSettings {
                 .getSharedPreferences(NAME, Context.MODE_PRIVATE)
 
             preferences?.let { prefs ->
+                if (prefs.getString(BOOT_MODE, null) == "ACCESSIBILITY") {
+                    prefs.edit()
+                        .putString(BOOT_MODE, BootMode.BROADCAST.name)
+                        .putBoolean(BOOT_BROADCAST_ACCESSIBILITY_ENABLED, true)
+                        .apply()
+                }
                 if (!prefs.contains(TCPIP_PORT_ENABLED)) {
                     prefs.edit().putBoolean(TCPIP_PORT_ENABLED, true).apply()
                 }

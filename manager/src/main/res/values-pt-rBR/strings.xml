@@ -109,12 +109,20 @@
     <string name="default_start_page">Página inicial padrão</string>
     <string name="boot_startup_options">Inicialização no boot</string>
     <string name="boot_startup_options_subtitle">Configurar o modo de inicialização automática no boot</string>
+    <string name="boot_start_mode">Modo de inicialização</string>
+    <string name="boot_start_mode_off_label">Desligado</string>
+    <string name="boot_start_mode_broadcast_label">Broadcast</string>
+    <string name="boot_start_mode_prewarm_label">Preparar</string>
+    <string name="boot_start_mode_script_label">Root</string>
+    <string name="boot_start_none_subtitle">Não executar nenhuma ação no boot</string>
     <string name="boot_start_wireless">Depuração sem fio</string>
     <string name="boot_start_wireless_subtitle">Iniciar via depuração sem fio no boot</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">Iniciar via Root no boot</string>
     <string name="boot_start_callback_mode">Broadcast de boot</string>
     <string name="boot_start_callback_mode_subtitle">Iniciar automaticamente no boot via broadcast do sistema</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">Aguardar WiFi no boot, preparar a porta ADB TCP/IP e desconectar sem iniciar o Stellar para permitir iniciar o Stellar depois sem WiFi</string>
+    <string name="boot_start_adb_unavailable">As ações ADB no boot não estão disponíveis com as permissões ou o perfil de usuário atuais</string>
     <string name="boot_start_script_mode">Script de boot</string>
     <string name="boot_start_script_mode_subtitle">Iniciar automaticamente no boot via script Root</string>
     <string name="boot_start_script_mode_subtitle_no_root">Requer acesso Root</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">Inicialização no boot do Stellar</string>
     <string name="boot_start_waiting_wifi">Aguardando conexão WiFi...</string>
     <string name="boot_start_enabling_wireless_adb">Ativando depuração sem fio...</string>
+    <string name="boot_start_preparing_tcpip">Preparando ADB TCP/IP...</string>
     <string name="boot_start_discovering_port">Descobrindo porta ADB...</string>
     <string name="boot_start_connecting">Conectando ao serviço ADB...</string>
     <string name="boot_start_waiting_unlock">Aguardando desbloqueio do dispositivo...</string>
     <string name="boot_start_retry">Tentar agora</string>
     <string name="boot_start_port_not_found">Porta ADB não encontrada, tentando novamente...</string>
     <string name="boot_start_connect_failed">Falha na conexão ADB, tentando novamente...</string>
+    <string name="boot_start_prepare_tcpip_failed">Falha ao preparar ADB TCP/IP, tentando novamente...</string>
     <string name="boot_start_binder_timeout">Tempo limite de início do serviço, tentando novamente...</string>
 
     <string name="boot_script_install_success">Script de boot criado com sucesso</string>

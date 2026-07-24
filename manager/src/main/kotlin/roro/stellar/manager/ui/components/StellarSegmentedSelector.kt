@@ -40,11 +40,13 @@ fun <T> StellarSegmentedSelector(
     onItemSelected: (T) -> Unit,
     itemLabel: (T) -> String,
     modifier: Modifier = Modifier,
+    itemEnabled: (T) -> Boolean = { true },
     itemHeight: Dp = AppSpacing.selectorItemHeight
 ) {
     val density = LocalDensity.current
     val itemCount = items.size
     val currentIndex = items.indexOf(selectedItem).coerceIn(0, items.lastIndex)
+    val selectedEnabled = itemEnabled(selectedItem)
 
     var innerWidth by remember { mutableIntStateOf(0) }
     val spacing = AppSpacing.selectorItemSpacing
@@ -86,7 +88,11 @@ fun <T> StellarSegmentedSelector(
                     .width(with(density) { itemWidth.toDp() })
                     .height(itemHeight)
                     .background(
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (selectedEnabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
                         shape = AppShape.shapes.iconSmall
                     )
             )
@@ -100,11 +106,13 @@ fun <T> StellarSegmentedSelector(
         ) {
             items.forEachIndexed { index, item ->
                 val isSelected = currentIndex == index
+                val enabled = itemEnabled(item)
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
                         .clickable(
+                            enabled = enabled,
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) { onItemSelected(item) },
@@ -114,10 +122,11 @@ fun <T> StellarSegmentedSelector(
                         text = itemLabel(item),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
+                        color = when {
+                            isSelected && enabled -> MaterialTheme.colorScheme.onPrimary
+                            isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
+                            enabled -> MaterialTheme.colorScheme.onSurface
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
                         }
                     )
                 }

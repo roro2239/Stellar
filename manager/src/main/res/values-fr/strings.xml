@@ -109,12 +109,20 @@
     <string name="default_start_page">Page de démarrage par défaut</string>
     <string name="boot_startup_options">Démarrage au boot</string>
     <string name="boot_startup_options_subtitle">Configurer le mode de démarrage automatique au boot</string>
+    <string name="boot_start_mode">Mode de démarrage</string>
+    <string name="boot_start_mode_off_label">Arrêt</string>
+    <string name="boot_start_mode_broadcast_label">Broadcast</string>
+    <string name="boot_start_mode_prewarm_label">Préparer</string>
+    <string name="boot_start_mode_script_label">Root</string>
+    <string name="boot_start_none_subtitle">Aucune action au démarrage</string>
     <string name="boot_start_wireless">Débogage sans fil</string>
     <string name="boot_start_wireless_subtitle">Démarrer via le débogage sans fil au boot</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">Démarrer via Root au boot</string>
     <string name="boot_start_callback_mode">Diffusion au démarrage</string>
     <string name="boot_start_callback_mode_subtitle">Démarrage automatique au boot via diffusion système</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">Attendre le WiFi au démarrage, préparer le port ADB TCP/IP, puis se déconnecter sans démarrer Stellar afin de pouvoir démarrer Stellar plus tard sans WiFi</string>
+    <string name="boot_start_adb_unavailable">Les actions ADB au démarrage ne sont pas disponibles avec les autorisations ou le profil utilisateur actuels</string>
     <string name="boot_start_script_mode">Script de démarrage</string>
     <string name="boot_start_script_mode_subtitle">Démarrage automatique au boot via script Root</string>
     <string name="boot_start_script_mode_subtitle_no_root">Nécessite un accès Root</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">Démarrage au boot de Stellar</string>
     <string name="boot_start_waiting_wifi">En attente de connexion WiFi…</string>
     <string name="boot_start_enabling_wireless_adb">Activation du débogage sans fil…</string>
+    <string name="boot_start_preparing_tcpip">Préparation de ADB TCP/IP…</string>
     <string name="boot_start_discovering_port">Découverte du port ADB…</string>
     <string name="boot_start_connecting">Connexion au service ADB…</string>
     <string name="boot_start_waiting_unlock">En attente du déverrouillage de l\'appareil…</string>
     <string name="boot_start_retry">Réessayer maintenant</string>
     <string name="boot_start_port_not_found">Port ADB introuvable, nouvelle tentative…</string>
     <string name="boot_start_connect_failed">Échec de connexion ADB, nouvelle tentative…</string>
+    <string name="boot_start_prepare_tcpip_failed">Échec de la préparation de ADB TCP/IP, nouvelle tentative…</string>
     <string name="boot_start_binder_timeout">Délai de démarrage du service dépassé, nouvelle tentative…</string>
 
     <string name="boot_script_install_success">Script de démarrage créé avec succès</string>

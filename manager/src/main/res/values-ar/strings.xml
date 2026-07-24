@@ -109,12 +109,20 @@
     <string name="default_start_page">صفحة البداية الافتراضية</string>
     <string name="boot_startup_options">التشغيل عند الإقلاع</string>
     <string name="boot_startup_options_subtitle">تكوين وضع التشغيل التلقائي عند الإقلاع</string>
+    <string name="boot_start_mode">وضع التشغيل</string>
+    <string name="boot_start_mode_off_label">إيقاف</string>
+    <string name="boot_start_mode_broadcast_label">بث الإقلاع</string>
+    <string name="boot_start_mode_prewarm_label">تهيئة</string>
+    <string name="boot_start_mode_script_label">Root</string>
+    <string name="boot_start_none_subtitle">لا تنفذ أي إجراء عند الإقلاع</string>
     <string name="boot_start_wireless">التصحيح اللاسلكي</string>
     <string name="boot_start_wireless_subtitle">التشغيل عبر التصحيح اللاسلكي عند الإقلاع</string>
     <string name="boot_start_root">Root</string>
     <string name="boot_start_root_subtitle">التشغيل عبر Root عند الإقلاع</string>
     <string name="boot_start_callback_mode">بث الإقلاع</string>
     <string name="boot_start_callback_mode_subtitle">التشغيل التلقائي عند الإقلاع عبر بث النظام</string>
+    <string name="boot_start_tcpip_prewarm_subtitle">انتظار WiFi عند الإقلاع وتهيئة منفذ ADB TCP/IP ثم قطع الاتصال دون بدء Stellar، حتى يمكن بدء Stellar لاحقًا بدون WiFi</string>
+    <string name="boot_start_adb_unavailable">إجراءات ADB عند الإقلاع غير متاحة بالأذونات الحالية أو ملف المستخدم الحالي</string>
     <string name="boot_start_script_mode">سكريبت الإقلاع</string>
     <string name="boot_start_script_mode_subtitle">التشغيل التلقائي عند الإقلاع عبر سكريبت Root</string>
     <string name="boot_start_script_mode_subtitle_no_root">يتطلب صلاحية Root</string>
@@ -332,12 +340,14 @@
     <string name="boot_start_notification_title">تشغيل Stellar عند الإقلاع</string>
     <string name="boot_start_waiting_wifi">في انتظار اتصال WiFi…</string>
     <string name="boot_start_enabling_wireless_adb">تمكين التصحيح اللاسلكي…</string>
+    <string name="boot_start_preparing_tcpip">جارٍ تهيئة ADB TCP/IP…</string>
     <string name="boot_start_discovering_port">اكتشاف منفذ ADB…</string>
     <string name="boot_start_connecting">الاتصال بخدمة ADB…</string>
     <string name="boot_start_waiting_unlock">في انتظار فتح قفل الجهاز…</string>
     <string name="boot_start_retry">إعادة المحاولة الآن</string>
     <string name="boot_start_port_not_found">لم يتم العثور على منفذ ADB، إعادة المحاولة…</string>
     <string name="boot_start_connect_failed">فشل اتصال ADB، إعادة المحاولة…</string>
+    <string name="boot_start_prepare_tcpip_failed">فشل تهيئة ADB TCP/IP، إعادة المحاولة…</string>
     <string name="boot_start_binder_timeout">انتهت مهلة بدء الخدمة، إعادة المحاولة…</string>
 
     <string name="boot_script_install_success">تم إنشاء سكريبت الإقلاع بنجاح</string>

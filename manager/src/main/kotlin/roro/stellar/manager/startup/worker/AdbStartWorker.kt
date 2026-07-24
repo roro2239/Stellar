@@ -25,6 +25,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
@@ -49,8 +50,19 @@ class AdbStartWorker(
     companion object {
         private const val TAG = AppConstants.TAG
         private const val UNIQUE_WORK_NAME = "stellar_adb_boot_start"
+        private const val KEY_MODE = "mode"
+        private const val MODE_START_STELLAR = "start_stellar"
+        private const val MODE_PREPARE_TCPIP = "prepare_tcpip"
 
         fun enqueue(context: Context) {
+            enqueue(context, MODE_START_STELLAR)
+        }
+
+        fun enqueuePrepareTcpip(context: Context) {
+            enqueue(context, MODE_PREPARE_TCPIP)
+        }
+
+        private fun enqueue(context: Context, mode: String) {
             val constraintsBuilder = Constraints.Builder()
             if (EnvironmentUtils.getAdbTcpPort() <= 0) {
                 constraintsBuilder.setRequiredNetworkType(NetworkType.UNMETERED)
@@ -59,6 +71,7 @@ class AdbStartWorker(
 
             val request = OneTimeWorkRequestBuilder<AdbStartWorker>()
                 .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_MODE to mode))
                 .build()
 
             WorkManager.getInstance(context).enqueueUniqueWork(
@@ -82,11 +95,18 @@ class AdbStartWorker(
     @RequiresApi(Build.VERSION_CODES.R)
     override suspend fun doWork(): Result {
         try {
+            val mode = inputData.getString(KEY_MODE) ?: MODE_START_STELLAR
             setForeground(createForegroundInfo(
-                applicationContext.getString(R.string.boot_start_enabling_wireless_adb)
+                applicationContext.getString(
+                    if (mode == MODE_PREPARE_TCPIP) {
+                        R.string.boot_start_preparing_tcpip
+                    } else {
+                        R.string.boot_start_enabling_wireless_adb
+                    }
+                )
             ))
 
-            if (Stellar.pingBinder()) {
+            if (mode == MODE_START_STELLAR && Stellar.pingBinder()) {
                 Log.i(TAG, "Stellar 已在运行，无需重启")
                 BootStartNotifications.dismiss(applicationContext)
                 return Result.success()
@@ -99,8 +119,39 @@ class AdbStartWorker(
             val port = EnvironmentUtils.getAdbTcpPort().takeIf { it > 0 } ?: waitForAdbPort(cr)
 
             setForeground(createForegroundInfo(
-                applicationContext.getString(R.string.boot_start_connecting)
+                applicationContext.getString(
+                    if (mode == MODE_PREPARE_TCPIP) {
+                        R.string.boot_start_preparing_tcpip
+                    } else {
+                        R.string.boot_start_connecting
+                    }
+                )
             ))
+
+            if (mode == MODE_PREPARE_TCPIP) {
+                val targetPort = StellarSettings.getPreferences()
+                    .getString(StellarSettings.TCPIP_PORT, "")
+                    ?.toIntOrNull()
+                    ?.takeIf { it in 1..65535 }
+
+                if (targetPort == null) {
+                    return retryWithNotification(
+                        applicationContext.getString(R.string.tcpip_port_not_configured)
+                    )
+                }
+
+                val prepared = AdbStarter.prepareTcpip("127.0.0.1", port, targetPort)
+                if (!prepared) {
+                    Log.w(TAG, "ADB TCP/IP prepare failed")
+                    return retryWithNotification(
+                        applicationContext.getString(R.string.boot_start_prepare_tcpip_failed)
+                    )
+                }
+
+                Settings.Global.putInt(cr, "adb_wifi_enabled", 0)
+                BootStartNotifications.dismiss(applicationContext)
+                return Result.success()
+            }
 
             val started = AdbStarter.startAdb("127.0.0.1", port)
             if (!started) {
