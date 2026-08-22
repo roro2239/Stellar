@@ -4,10 +4,10 @@ import android.content.pm.ApplicationInfo
 import android.ddm.DdmHandleAppName
 import android.os.Looper
 import android.os.ServiceManager
-import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.StellarService
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 
 object ServerBootstrap {
     private val LOGGER = Logger("ServerBootstrap")
@@ -31,5 +31,5 @@ object ServerBootstrap {
     }
 
     val managerApplicationInfo: ApplicationInfo?
-        get() = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+        get() = PackageManagerCompat.getApplicationInfo(MANAGER_APPLICATION_ID, 0, 0)
 }

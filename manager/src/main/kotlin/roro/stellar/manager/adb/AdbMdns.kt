@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
 class AdbMdns(
     context: Context,
     private val serviceType: String,
-    private val observer: Observer<Int>,
+    private val observer: Observer<Pair<String, Int>>,
     private val onMaxRefresh: (() -> Unit)? = null,
     private val onStatusUpdate: ((String) -> Unit)? = null,
     private val maxRefreshCount: Int = MAX_REFRESH_COUNT
@@ -165,7 +165,7 @@ class AdbMdns(
     }
 
     private fun onServiceLost(info: NsdServiceInfo) {
-        if (info.serviceName == serviceName) observer.onChanged(-1)
+        if (info.serviceName == serviceName) observer.onChanged("127.0.0.1" to -1)
     }
 
     @Suppress("DEPRECATION")
@@ -174,12 +174,13 @@ class AdbMdns(
         
         executor.execute {
             try {
+                val host = resolvedService.host.hostAddress ?: "127.0.0.1"
                 val isLocalService = NetworkInterface.getNetworkInterfaces()
                     .asSequence()
                     .any { networkInterface ->
                         networkInterface.inetAddresses
                             .asSequence()
-                            .any { resolvedService.host.hostAddress == it.hostAddress }
+                            .any { host == it.hostAddress }
                     }
 
                 Log.v(TAG, "isLocalService=$isLocalService, running=$running")
@@ -198,7 +199,7 @@ class AdbMdns(
                             mainHandler.removeCallbacks(refreshRunnable)
                             serviceName = resolvedService.serviceName
                             Log.i(TAG, "已发现服务，停止刷新")
-                            observer.onChanged(resolvedService.port)
+                            observer.onChanged(host to resolvedService.port)
                         }
                     }
                 }

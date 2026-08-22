@@ -7,6 +7,7 @@ import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ApkChangedObservers
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 import roro.stellar.server.util.UserHandleCompat
 import java.io.File
 import java.util.*
@@ -47,7 +48,7 @@ class UserServiceManager {
             return null
         }
 
-        val packageInfo = PackageManagerApis.getPackageInfoNoThrow(packageName, 0, userId)
+        val packageInfo = PackageManagerCompat.getPackageInfo(packageName, 0, userId)
         if (packageInfo == null) {
             LOGGER.w("包未找到: %s", packageName)
             notifyStartFailed(callback, UserServiceConstants.ERROR_PACKAGE_NOT_FOUND,
@@ -197,7 +198,7 @@ class UserServiceManager {
     private fun setupApkObserver(record: UserServiceRecord, apkPath: String) {
         val listener: () -> Unit = {
             val userId = UserHandleCompat.getUserId(record.callingUid)
-            val newPi = PackageManagerApis.getPackageInfoNoThrow(record.packageName, 0, userId)
+            val newPi = PackageManagerCompat.getPackageInfo(record.packageName, 0, userId)
 
             if (newPi == null) {
                 LOGGER.i("包已移除，停止服务: %s", record.packageName)
@@ -223,7 +224,7 @@ class UserServiceManager {
             "/system/bin/app_process"
         }
 
-        val managerApkPath = PackageManagerApis.getApplicationInfoNoThrow(
+        val managerApkPath = PackageManagerCompat.getApplicationInfo(
             ServerConstants.MANAGER_APPLICATION_ID, 0, 0
         )?.sourceDir ?: ""
 

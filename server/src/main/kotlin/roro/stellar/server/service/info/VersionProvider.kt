@@ -2,12 +2,12 @@ package roro.stellar.server.service.info
 
 import android.content.pm.PackageInfo
 import android.os.Build
-import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
+import roro.stellar.server.util.PackageManagerCompat
 
 class VersionProvider {
     private val managerPackageInfo: PackageInfo?
-        get() = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+        get() = PackageManagerCompat.getPackageInfo(MANAGER_APPLICATION_ID, 0, 0)
 
     fun getVersionName(): String = managerPackageInfo?.versionName ?: "unknown"
 

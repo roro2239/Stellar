@@ -1,18 +1,16 @@
 package roro.stellar.server.service.permission
 
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
 import android.content.pm.UserInfo
 import android.os.Build
 import rikka.hidden.compat.ActivityManagerApis
-import rikka.hidden.compat.PackageManagerApis
 import rikka.hidden.compat.UserManagerApis
 import roro.stellar.StellarApiConstants
 import roro.stellar.server.ClientRecord
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.ServerConstants.MANAGER_APPLICATION_ID
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 
 class PermissionConfirmation {
     companion object {
@@ -27,10 +25,10 @@ class PermissionConfirmation {
         userId: Int,
         permission: String = StellarApiConstants.PERMISSION_STELLAR
     ) {
-        val ai = PackageManagerApis.getApplicationInfoNoThrow(clientRecord.packageName, 0, userId)
+        val ai = PackageManagerCompat.getApplicationInfo(clientRecord.packageName, 0, userId)
             ?: return
 
-        val pi = PackageManagerApis.getPackageInfoNoThrow(MANAGER_APPLICATION_ID, 0, userId)
+        val pi = PackageManagerCompat.getPackageInfo(MANAGER_APPLICATION_ID, 0, userId)
         val userInfo = UserManagerApis.getUserInfo(userId)
         val isWorkProfileUser = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             userInfo.userType == "android.os.usertype.profile.MANAGED"

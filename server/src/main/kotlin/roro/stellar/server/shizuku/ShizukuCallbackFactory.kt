@@ -12,6 +12,7 @@ import roro.stellar.server.ServerConstants
 import roro.stellar.server.service.StellarServiceCore
 import roro.stellar.server.userservice.UserServiceManager
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 
 object ShizukuCallbackFactory {
     private val LOGGER = Logger("ShizukuCallbackFactory")
@@ -62,7 +63,7 @@ object ShizukuCallbackFactory {
 
                 LOGGER.i("Shizuku 权限请求: uid=$uid, pid=$pid, pkg=$packageName, code=$requestCode")
 
-                val ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, userId) ?: run {
+                val ai = PackageManagerCompat.getApplicationInfo(packageName, 0, userId) ?: run {
                     LOGGER.w("无法获取应用信息: $packageName")
                     return
                 }

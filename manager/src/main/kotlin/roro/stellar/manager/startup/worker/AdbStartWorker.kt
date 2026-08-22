@@ -41,6 +41,7 @@ import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.startup.notification.BootStartNotifications
 import roro.stellar.manager.util.EnvironmentUtils
 import java.util.concurrent.TimeoutException
+import kotlin.time.Duration.Companion.milliseconds
 
 class AdbStartWorker(
     appContext: Context,
@@ -224,7 +225,8 @@ class AdbStartWorker(
             applicationContext.getString(R.string.boot_start_discovering_port)
         ))
 
-        val observer = Observer<Int> { port ->
+        val observer = Observer<Pair<String, Int>> { service ->
+            val port = service.second
             if (port > 0) {
                 trySend(port)
             }
@@ -243,7 +245,7 @@ class AdbStartWorker(
             adbMdns.start()
             timeoutJob?.cancel()
             timeoutJob = launch {
-                delay(30_000L)
+                delay(30_000L.milliseconds)
                 close(TimeoutException("mDNS 发现超时"))
             }
         }

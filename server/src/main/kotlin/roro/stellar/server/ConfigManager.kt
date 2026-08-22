@@ -17,6 +17,7 @@ import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.ktx.workerHandler
 import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 import roro.stellar.server.util.ProviderDiscovery
 import roro.stellar.server.util.UserHandleCompat
 
@@ -72,8 +73,8 @@ class ConfigManager {
         }
 
         for (userId in UserManagerApis.getUserIdsNoThrow()) {
-            for (pi in PackageManagerApis.getInstalledPackagesNoThrow(
-                (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
+            for (pi in PackageManagerCompat.getInstalledPackagesNoThrow(
+                (PackageManager.MATCH_ALL or PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
                 userId
             )) {
                 if (
@@ -106,7 +107,7 @@ class ConfigManager {
             val permissions = LinkedHashSet<String>()
             val packages = PackageManagerApis.getPackagesForUidNoThrow(entry.key)
             for (packageName in packages) {
-                val applicationInfo = PackageManagerApis.getApplicationInfoNoThrow(
+                val applicationInfo = PackageManagerCompat.getApplicationInfo(
                     packageName, PackageManager.GET_META_DATA.toLong(),
                     UserHandleCompat.getUserId(entry.key)
                 ) ?: continue
@@ -116,7 +117,7 @@ class ConfigManager {
                         permissions.add(permission)
                     }
                 }
-                val packageInfo = PackageManagerApis.getPackageInfoNoThrow(
+                val packageInfo = PackageManagerCompat.getPackageInfo(
                     packageName,
                     (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS).toLong(),
                     UserHandleCompat.getUserId(entry.key)
@@ -196,7 +197,7 @@ class ConfigManager {
     fun createConfigWithAllPermissions(uid: Int, packageName: String) {
         synchronized(this) {
             val userId = UserHandleCompat.getUserId(uid)
-            val applicationInfo = PackageManagerApis.getApplicationInfoNoThrow(
+            val applicationInfo = PackageManagerCompat.getApplicationInfo(
                 packageName,
                 PackageManager.GET_META_DATA.toLong(),
                 userId

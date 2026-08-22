@@ -1,14 +1,13 @@
 package roro.stellar.server.shizuku
 
-import android.os.Binder
 import android.os.Parcel
 import android.util.Log
 import moe.shizuku.server.IRemoteProcess
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import moe.shizuku.server.IShizukuServiceConnection
-import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ConfigManager
+import roro.stellar.server.util.PackageManagerCompat
 
 class ShizukuServiceIntercept(
     private val callback: ShizukuServiceCallback
@@ -30,7 +29,7 @@ class ShizukuServiceIntercept(
 
     private fun isEnabled(): Boolean = configManager.isShizukuCompatEnabled()
 
-    private fun enforceEnabled(method: String) {
+    private fun enforceEnabled() {
         if (!isEnabled()) {
             throw SecurityException("Shizuku compat layer is disabled")
         }
@@ -45,11 +44,11 @@ class ShizukuServiceIntercept(
     private val shizukuManagerCache = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
 
     private inline fun <T> withClearedIdentity(block: () -> T): T {
-        val id = Binder.clearCallingIdentity()
+        val id = clearCallingIdentity()
         try {
             return block()
         } finally {
-            Binder.restoreCallingIdentity(id)
+            restoreCallingIdentity(id)
         }
     }
 
@@ -61,7 +60,7 @@ class ShizukuServiceIntercept(
             val userId = getUserId(uid)
             val packages = callback.getPackagesForUid(uid)
             packages.any { packageName ->
-                PackageManagerApis.getPackageInfoNoThrow(packageName, 0x00001000, userId)
+                PackageManagerCompat.getPackageInfo(packageName, 0x00001000, userId)
                     ?.requestedPermissions?.contains(SHIZUKU_MANAGER_PERMISSION) == true
             }
         }
@@ -81,10 +80,10 @@ class ShizukuServiceIntercept(
         clientManager.findClient(uid, pid)?.lastDenyTimeMap?.get(ShizukuApiConstants.PERMISSION_NAME) ?: 0
 
     private fun enforceCallingPermission(method: String) {
-        enforceEnabled(method)
+        enforceEnabled()
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
 
         if (callingPid == callback.servicePid) return
         if (checkCallerManagerPermission(callingUid)) return
@@ -102,8 +101,8 @@ class ShizukuServiceIntercept(
         val targetBinder = data.readStrongBinder()
         val targetCode = data.readInt()
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
         val clientRecord = clientManager.findClient(callingUid, callingPid)
 
         val targetFlags = if (clientRecord != null && clientRecord.apiVersion >= 13) {
@@ -169,8 +168,8 @@ class ShizukuServiceIntercept(
     override fun checkPermission(permission: String?): Int {
         if (!isEnabled()) return -1
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
 
         val hasPermission = checkPermission(callingUid) == ConfigManager.FLAG_GRANTED ||
                 checkOnetimePermission(callingUid, callingPid)
@@ -178,7 +177,7 @@ class ShizukuServiceIntercept(
         return if (hasPermission) 0 else -1
     }
 
-    override fun getSELinuxContext(): String? {
+    override fun getSELinuxContext(): String {
         enforceCallingPermission("getSELinuxContext")
         return callback.serviceSeLinuxContext ?: throw IllegalStateException("无法获取 SELinux 上下文")
     }
@@ -195,8 +194,8 @@ class ShizukuServiceIntercept(
 
     override fun newProcess(cmd: Array<String?>?, env: Array<String?>?, dir: String?): IRemoteProcess {
         enforceCallingPermission("newProcess")
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
         Log.d(TAG, "newProcess: uid=$callingUid, cmd=${cmd?.contentToString()}")
         val stellarProcess = withClearedIdentity { callback.newProcess(callingUid, callingPid, cmd, env, dir) }
         return StellarRemoteProcessAdapter(stellarProcess)
@@ -209,8 +208,8 @@ class ShizukuServiceIntercept(
 
         enforceCallingPermission("addUserService")
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
 
         Log.d(TAG, "addUserService: uid=$callingUid, pid=$callingPid")
 
@@ -226,7 +225,7 @@ class ShizukuServiceIntercept(
 
         enforceCallingPermission("removeUserService")
 
-        Log.d(TAG, "removeUserService: uid=${Binder.getCallingUid()}")
+        Log.d(TAG, "removeUserService: uid=${getCallingUid()}")
 
         return withClearedIdentity {
             userServiceAdapter.removeUserService(conn, args)
@@ -236,8 +235,8 @@ class ShizukuServiceIntercept(
     override fun requestPermission(requestCode: Int) {
         if (!isEnabled()) return
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
         Log.d(TAG, "requestPermission: uid=$callingUid, pid=$callingPid, code=$requestCode")
         callback.requestPermission(callingUid, callingPid, requestCode)
     }
@@ -245,8 +244,8 @@ class ShizukuServiceIntercept(
     override fun checkSelfPermission(): Boolean {
         if (!isEnabled()) return false
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
 
         if (checkPermission(callingUid) == ConfigManager.FLAG_GRANTED) return true
         return checkOnetimePermission(callingUid, callingPid)
@@ -255,8 +254,8 @@ class ShizukuServiceIntercept(
     override fun shouldShowRequestPermissionRationale(): Boolean {
         if (!isEnabled()) return false
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
 
         if (checkPermission(callingUid) == ConfigManager.FLAG_DENIED) return true
 
@@ -271,8 +270,8 @@ class ShizukuServiceIntercept(
             return
         }
 
-        val callingUid = Binder.getCallingUid()
-        val callingPid = Binder.getCallingPid()
+        val callingUid = getCallingUid()
+        val callingPid = getCallingPid()
         val apiVersion = args?.getInt(ShizukuApiConstants.AttachApplication.API_VERSION, -1) ?: -1
 
         Log.d(TAG, "attachApplication: uid=$callingUid, pid=$callingPid, apiVersion=$apiVersion")

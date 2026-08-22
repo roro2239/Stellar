@@ -50,6 +50,7 @@ class AdbPairingService : Service() {
         private const val replyAction = "reply"
         private const val remoteInputResultKey = "paring_code"
         private const val portKey = "paring_code"
+        private const val hostKey = "host"
 
         @Volatile
         private var isRunning = false
@@ -63,23 +64,30 @@ class AdbPairingService : Service() {
         private fun stopAndRetryIntent(context: Context): Intent =
             Intent(context, AdbPairingService::class.java).setAction(stopAndRetryAction)
 
-        private fun replyIntent(context: Context, port: Int): Intent =
-            Intent(context, AdbPairingService::class.java).setAction(replyAction).putExtra(portKey, port)
+        private fun replyIntent(context: Context, host: String, port: Int): Intent =
+            Intent(context, AdbPairingService::class.java)
+                .setAction(replyAction)
+                .putExtra(hostKey, host)
+                .putExtra(portKey, port)
     }
 
     private var adbMdns: AdbMdns? = null
     private val retryHandler = Handler(Looper.getMainLooper())
+    private var discoveredHost: String = "127.0.0.1"
     private var discoveredPort: Int = -1
 
-    private val observer = Observer<Int> { port ->
+    private val observer = Observer<Pair<String, Int>> { service ->
+        val host = service.first
+        val port = service.second
         Log.i(tag, "配对服务端口: $port")
         if (port <= 0) {
             return@Observer
         }
 
+        discoveredHost = host
         discoveredPort = port
 
-        val notification = createInputNotification(port)
+        val notification = createInputNotification(host, port)
         try {
             if (atLeast34) {
                 startForeground(notificationId, notification,
@@ -96,7 +104,7 @@ class AdbPairingService : Service() {
                 .setSmallIcon(R.drawable.ic_stellar)
                 .setContentTitle(getString(R.string.pairing_service_found))
                 .setContentText(getString(R.string.enter_pairing_code))
-                .addAction(replyNotificationAction(port))
+                .addAction(replyNotificationAction(host, port))
                 .setAutoCancel(true)
                 .build()
             getSystemService(NotificationManager::class.java).notify(alertNotificationId, alertNotification)
@@ -139,9 +147,10 @@ class AdbPairingService : Service() {
             }
             replyAction -> {
                 val code = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(remoteInputResultKey) ?: ""
+                val host = intent.getStringExtra(hostKey) ?: "127.0.0.1"
                 val port = intent.getIntExtra(portKey, -1)
                 if (port != -1) {
-                    onInput(code.toString(), port)
+                    onInput(code.toString(), host, port)
                 } else {
                     onStart()
                 }
@@ -218,7 +227,7 @@ class AdbPairingService : Service() {
 
     private fun onStopSearch(): Notification {
         stopSearch()
-        return createManualInputNotification(discoveredPort)
+        return createManualInputNotification(discoveredHost, discoveredPort)
     }
 
     private fun onStopAndRetry(): Notification {
@@ -246,14 +255,12 @@ class AdbPairingService : Service() {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun onInput(code: String, port: Int): Notification {
+    private fun onInput(code: String, host: String, port: Int): Notification {
         if (port == -1) {
-            return createManualInputNotification(-1)
+            return createManualInputNotification("127.0.0.1", -1)
         }
 
         GlobalScope.launch(Dispatchers.IO) {
-            val host = "127.0.0.1"
-
             val key = try {
                 AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "Stellar")
             } catch (e: Throwable) {
@@ -325,7 +332,7 @@ class AdbPairingService : Service() {
                 }
 
                 retryHandler.postDelayed({
-                    val retryNotification = createManualInputNotification(discoveredPort)
+                    val retryNotification = createManualInputNotification(discoveredHost, discoveredPort)
                     try {
                         if (atLeast34) {
                             startForeground(notificationId, retryNotification,
@@ -342,14 +349,16 @@ class AdbPairingService : Service() {
     }
 
     private fun searchConnectService() {
-        val connectObserver = Observer<Int> { port ->
+        val connectObserver = Observer<Pair<String, Int>> { service ->
+            val host = service.first
+            val port = service.second
             Log.i(tag, "连接服务端口: $port")
             if (port <= 0) return@Observer
 
             connectMdns?.destroy()
             connectMdns = null
 
-            onConnectServiceFound(port)
+            onConnectServiceFound(host, port)
         }
 
         connectMdns = AdbMdns(
@@ -363,7 +372,7 @@ class AdbPairingService : Service() {
         ).apply { start() }
     }
 
-    private fun onConnectServiceFound(port: Int) {
+    private fun onConnectServiceFound(host: String, port: Int) {
         retryHandler.post {
             Log.i(tag, "找到连接服务端口: $port")
 
@@ -378,12 +387,12 @@ class AdbPairingService : Service() {
                 Log.i(tag, "自动设置 TCP 端口: $port")
             }
 
-            grantSecureSettingsPermission(port)
+            grantSecureSettingsPermission(host, port)
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun grantSecureSettingsPermission(port: Int) {
+    private fun grantSecureSettingsPermission(host: String, port: Int) {
         GlobalScope.launch(Dispatchers.IO) {
             try {
                 val key = AdbKey(PreferenceAdbKeyStore(StellarSettings.getPreferences()), "stellar")
@@ -393,7 +402,7 @@ class AdbPairingService : Service() {
                 var elapsed = 0L
                 while (elapsed < maxWait) {
                     try {
-                        java.net.Socket("127.0.0.1", port).close()
+                        java.net.Socket(host, port).close()
                         break
                     } catch (_: Exception) {
                         kotlinx.coroutines.delay(interval)
@@ -401,7 +410,7 @@ class AdbPairingService : Service() {
                     }
                 }
 
-                AdbClient("127.0.0.1", port, key).use { client ->
+                AdbClient(host, port, key).use { client ->
                     client.connect()
                     val command = "pm grant $packageName android.permission.WRITE_SECURE_SETTINGS"
                     client.shellCommand(command) { output ->
@@ -414,16 +423,16 @@ class AdbPairingService : Service() {
             }
 
             retryHandler.post {
-                navigateToStarter(port)
+                navigateToStarter(host, port)
             }
         }
     }
 
-    private fun navigateToStarter(port: Int) {
+    private fun navigateToStarter(host: String, port: Int) {
         val intent = roro.stellar.manager.ui.features.manager.ManagerActivity.createStarterIntent(
             this,
             isRoot = false,
-            host = "127.0.0.1",
+            host = host,
             port = port
         ).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -441,7 +450,7 @@ class AdbPairingService : Service() {
 
             val systemPort = roro.stellar.manager.util.EnvironmentUtils.getAdbTcpPort()
             if (systemPort in 1..65535) {
-                grantSecureSettingsPermission(systemPort)
+                grantSecureSettingsPermission("127.0.0.1", systemPort)
             } else {
                 val notification = Notification.Builder(this, notificationChannel)
                     .setSmallIcon(R.drawable.ic_stellar)
@@ -524,7 +533,7 @@ class AdbPairingService : Service() {
         val pendingIntent = PendingIntent.getForegroundService(
             this,
             replyRequestId,
-            replyIntent(this, -1),
+            replyIntent(this, "127.0.0.1", -1),
             if (atLeast31)
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             else
@@ -540,13 +549,13 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun replyNotificationAction(port: Int): Notification.Action {
+    private fun replyNotificationAction(host: String, port: Int): Notification.Action {
         val action = replyNotificationAction
 
         PendingIntent.getForegroundService(
             this,
             replyRequestId,
-            replyIntent(this, port),
+            replyIntent(this, host, port),
             if (atLeast31)
                 PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             else
@@ -565,11 +574,11 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun createInputNotification(port: Int): Notification =
+    private fun createInputNotification(host: String, port: Int): Notification =
         Notification.Builder(this, notificationChannel)
             .setContentTitle(getString(R.string.pairing_service_found))
             .setSmallIcon(R.drawable.ic_stellar)
-            .addAction(replyNotificationAction(port))
+            .addAction(replyNotificationAction(host, port))
             .build()
 
     private fun createMaxRefreshNotification(): Notification =
@@ -587,12 +596,12 @@ class AdbPairingService : Service() {
             .build()
     }
 
-    private fun createManualInputNotification(port: Int): Notification =
+    private fun createManualInputNotification(host: String, port: Int): Notification =
         Notification.Builder(this, notificationChannel)
             .setSmallIcon(R.drawable.ic_stellar)
             .setContentTitle(getString(R.string.search_stopped))
             .setContentText(if (port > 0) getString(R.string.enter_pairing_code) else getString(R.string.pairing_service_not_found_retry))
-            .addAction(if (port > 0) replyNotificationAction(port) else retryNotificationAction)
+            .addAction(if (port > 0) replyNotificationAction(host, port) else retryNotificationAction)
             .build()
 
     override fun onBind(intent: Intent?): IBinder? = null

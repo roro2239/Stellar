@@ -17,6 +17,7 @@ import roro.stellar.server.binder.BinderDistributor
 import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.util.Logger
+import roro.stellar.server.util.PackageManagerCompat
 import roro.stellar.server.util.ProviderDiscovery
 import roro.stellar.server.util.UserHandleCompat.PER_USER_RANGE
 import kotlin.system.exitProcess
@@ -41,7 +42,7 @@ object BinderSender {
         val userId = uid / PER_USER_RANGE
         for (packageName in packages) {
             try {
-                val pi = PackageManagerApis.getPackageInfoNoThrow(
+                val pi = PackageManagerCompat.getPackageInfo(
                     packageName,
                     (PackageManager.GET_META_DATA or PackageManager.GET_PROVIDERS or PackageManager.GET_PERMISSIONS).toLong(),
                     userId
@@ -140,7 +141,7 @@ object BinderSender {
     fun register(stellarService: StellarService?) {
         BinderSender.stellarService = stellarService
 
-        val ai = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+        val ai = PackageManagerCompat.getApplicationInfo(MANAGER_APPLICATION_ID, 0, 0)
         if (ai != null) {
             initialManagerUid = ai.uid
             LOGGER.i("初始管理器 UID：%d", initialManagerUid)
@@ -315,7 +316,7 @@ object BinderSender {
             ) {
                 LOGGER.w("检测到管理器 UID gone，检查管理器是否仍然安装")
                 mainHandler.postDelayed({
-                    val ai = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+                    val ai = PackageManagerCompat.getApplicationInfo(MANAGER_APPLICATION_ID, 0, 0)
                     if (ai == null) {
                         LOGGER.w("管理器应用已卸载，退出服务")
                         exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
@@ -338,7 +339,7 @@ object BinderSender {
             }
 
             if (initialManagerUid != -1) {
-                val ai = PackageManagerApis.getApplicationInfoNoThrow(MANAGER_APPLICATION_ID, 0, 0)
+                val ai = PackageManagerCompat.getApplicationInfo(MANAGER_APPLICATION_ID, 0, 0)
                 if (ai != null && ai.uid != initialManagerUid) {
                     LOGGER.w("检测到管理器 UID 变化：%d -> %d，退出服务", initialManagerUid, ai.uid)
                     exitProcess(ServerConstants.MANAGER_APP_NOT_FOUND)
