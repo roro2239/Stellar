@@ -191,3 +191,11 @@ su (root) → libchid.so 2000 → libstellar.so --apk=...
 
 - [完整 API 文档](INTEGRATION_GUIDE.md)
 - [原版 Shizuku](https://github.com/RikkaApps/Shizuku)
+
+<a href="https://www.star-history.com/?repos=roro2239%2FStellar&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=roro2239/Stellar&type=date&theme=dark&legend=top-left&sealed_token=DOGFkMNyKuECKihlTE4gifDbvly4k4Wr5IjBhG6w407ZVASud6bVrZlbDfNkY6rKv8GpKgpOYQ8uYyfFmwMEx6uLVcustg1MI-tvtusH3twxsJFOlmpY-g" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=roro2239/Stellar&type=date&legend=top-left&sealed_token=DOGFkMNyKuECKihlTE4gifDbvly4k4Wr5IjBhG6w407ZVASud6bVrZlbDfNkY6rKv8GpKgpOYQ8uYyfFmwMEx6uLVcustg1MI-tvtusH3twxsJFOlmpY-g" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=roro2239/Stellar&type=date&legend=top-left&sealed_token=DOGFkMNyKuECKihlTE4gifDbvly4k4Wr5IjBhG6w407ZVASud6bVrZlbDfNkY6rKv8GpKgpOYQ8uYyfFmwMEx6uLVcustg1MI-tvtusH3twxsJFOlmpY-g" />
+ </picture>
+</a>
