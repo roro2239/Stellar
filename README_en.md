@@ -20,6 +20,7 @@ Language: English | [中文](README.md)
 
 Stellar is a deeply customized fork of [Shizuku](https://github.com/RikkaApps/Shizuku), designed to give developers a more flexible and powerful privileged API framework. Once the service is started via ADB wireless debugging or Root, apps can call APIs that require system-level permissions — without needing Root themselves.
 
+Tip:We encourage contributors to submit Pull Requests for stable, high-quality changes rather than keeping modifications solely in their own forked repositories.
 ## Key Features
 
 Stellar introduces the following core improvements over the original Shizuku:
