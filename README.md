@@ -20,6 +20,7 @@ Language: [English](README_en.md) | 中文
 
 Stellar 是 [Shizuku](https://github.com/RikkaApps/Shizuku) 的深度定制版本，专为开发者提供更灵活、更强大的特权 API 框架。通过 ADB 无线调试或 Root 权限启动服务后，应用程序可以调用需要系统级权限的 API，而无需应用本身拥有 Root 权限。
 
+Tip：我们鼓励贡献者为稳定性高的代码提交 PR，而不是仅将修改保留在自己的 Fork 仓库中。
 ## 核心特性
 
 Stellar 相比原版 Shizuku 进行了以下核心改进：
