@@ -147,8 +147,8 @@ su (root) → libchid.so 2000 → libstellar.so --apk=...
 
 See the full integration guide and API documentation:
 
-- **[API Integration Guide](INTEGRATION_GUIDE.md)** — complete integration steps, API reference, and code examples
-- **[Migrating from Shizuku](INTEGRATION_GUIDE.md#migrating-from-shizuku)** — detailed migration steps and API comparison
+- **[API Integration Guide](INTEGRATION_GUIDE_en.md)** — complete integration steps, API reference, and code examples
+- **[Migrating from Shizuku](INTEGRATION_GUIDE_en.md#migrating-from-shizuku)** — detailed migration steps and API comparison
 
 ### Basic Usage
 
@@ -157,7 +157,7 @@ See the full integration guide and API documentation:
 3. Initialize Stellar and request permissions
 4. Use Stellar APIs to perform privileged operations
 
-> See the [API Integration Guide](INTEGRATION_GUIDE.md) for detailed steps
+> See the [API Integration Guide](INTEGRATION_GUIDE_en.md) for detailed steps
 
 ## Credits & License
 
@@ -191,7 +191,7 @@ Issues and pull requests are welcome. Before submitting code, please ensure:
 
 ## Related Links
 
-- [Full API Documentation](INTEGRATION_GUIDE.md)
+- [Full API Documentation](INTEGRATION_GUIDE_en.md)
 - [Original Shizuku](https://github.com/RikkaApps/Shizuku)
 
 <a href="https://www.star-history.com/?repos=roro2239%2FStellar&type=date&legend=top-left">
