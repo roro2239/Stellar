@@ -12,6 +12,8 @@
 官方交流群组：
 [![QQ群](https://img.shields.io/badge/QQ-1群-12B7F5?style=flat-square&logo=qq&logoColor=white)](https://qm.qq.com/cgi-bin/qm/qr?k=bIpIHQX12Kajh951zELULlF5FN6zeN0y&jump_from=webapi&authKey=Kf6RnfWG1o7whQIi20Uz+X6/dzf/D6/TzED25Pyb0N5td/eVClgysJXgPYnbZhr5)
 
+Language: [English](README_en.md) | 中文
+
 </div>
 
 ## 项目简介
