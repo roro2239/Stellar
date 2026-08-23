@@ -2,20 +2,32 @@ package roro.stellar.server.userservice
 
 import android.os.Bundle
 import android.os.IBinder
+import android.os.Process
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import com.stellar.server.IUserServiceCallback
-import rikka.hidden.compat.PackageManagerApis
 import roro.stellar.server.ApkChangedObservers
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.util.Logger
 import roro.stellar.server.util.PackageManagerCompat
 import roro.stellar.server.util.UserHandleCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class UserServiceManager {
     companion object {
         private val LOGGER = Logger("UserServiceManager")
+        private const val SAFE_APK_DIR = "/data/local/tmp/stellar"
+        private const val SAFE_APK_PATH = "$SAFE_APK_DIR/manager_safe.apk"
+        private const val LEGACY_SAFE_APK_PATH = "/data/local/tmp/stellar_manager_safe.apk"
+        private const val DIRECTORY_MODE = 0x1C0 // 0700
+        private const val FILE_MODE = 0x100 // 0400
+        private const val PERMISSION_MASK = 0x1FF // 0777
+        private val safeApkLock = Any()
     }
 
     private val servicesByToken = ConcurrentHashMap<String, UserServiceRecord>()
@@ -224,42 +236,9 @@ class UserServiceManager {
             "/system/bin/app_process"
         }
 
-        val managerApkPath = PackageManagerCompat.getApplicationInfo(
+        val managerApkPath = prepareSafeManagerApk(PackageManagerCompat.getApplicationInfo(
             ServerConstants.MANAGER_APPLICATION_ID, 0, 0
-        )?.sourceDir ?: ""
-
-        // 防杀优化：将 Manager APK 复制到安全目录避开国内 OEM 查杀（fuck ColorOS！）
-        var safeManagerApkPath = managerApkPath
-        if (managerApkPath.isNotEmpty()) {
-            val safeDir = "/data/local/tmp/stellar"
-            val safePath = "$safeDir/manager_safe.apk"
-            try {
-                // 确保目录存在，并赋予跨进程遍历（执行）的权限
-                val dirFile = File(safeDir)
-                if (!dirFile.exists()) {
-                    dirFile.mkdirs()
-                    // 755 权限（rwxr-xr-x）
-                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 777 $safeDir")).waitFor()
-                }
-
-                val sourceFile = File(managerApkPath)
-                val destFile = File(safePath)
-                
-                // 仅在文件不存在或 Stellar 本体有更新时才进行覆盖复制，减少 I/O 损耗
-                if (!destFile.exists() || destFile.lastModified() < sourceFile.lastModified()) {
-                    sourceFile.copyTo(destFile, overwrite = true)
-                    // 赋予文件全局可读权限，确保能被正常加载
-                    Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 644 $safePath")).waitFor()
-                }
-                
-                if (destFile.exists()) {
-                    safeManagerApkPath = safePath
-                    LOGGER.i("防连带查杀机制生效，已使用安全 APK 路径: %s", safeManagerApkPath)
-                }
-            } catch (e: Exception) {
-                LOGGER.e(e, "复制安全 APK 失败，回退到原路径")
-            }
-        }
+        )?.sourceDir ?: "")
 
         val processName = "${record.packageName}:${record.processNameSuffix}"
         val debugArgs = if (debug) getDebugArgs() else ""
@@ -268,7 +247,7 @@ class UserServiceManager {
         return String.format(
             Locale.ENGLISH,
             UserServiceConstants.USER_SERVICE_CMD_FORMAT,
-            safeManagerApkPath,
+            managerApkPath,
             appProcess,
             debugArgs,
             processName,
@@ -280,6 +259,125 @@ class UserServiceManager {
             record.verificationToken,
             debugName
         )
+    }
+
+    private fun prepareSafeManagerApk(sourcePath: String): String = synchronized(safeApkLock) {
+        if (sourcePath.isBlank()) return@synchronized sourcePath
+
+        try {
+            val sourceFile = File(sourcePath)
+            checkSafePath(sourceFile, directory = false, expectedMode = null, checkOwner = false)
+
+            val safeDir = File(SAFE_APK_DIR)
+            if (lstatOrNull(safeDir) == null) {
+                check(safeDir.mkdirs()) { "无法创建安全 APK 目录" }
+            } else {
+                checkSafePath(safeDir, directory = true, expectedMode = null)
+            }
+            Os.chmod(safeDir.absolutePath, DIRECTORY_MODE)
+            checkSafePath(safeDir, directory = true, expectedMode = DIRECTORY_MODE)
+
+            deleteOwnedFile(File(LEGACY_SAFE_APK_PATH))
+
+            val destFile = File(SAFE_APK_PATH)
+            if (lstatOrNull(destFile) != null) {
+                checkSafePath(destFile, directory = false, expectedMode = null)
+            }
+
+            val needsUpdate = lstatOrNull(destFile) == null ||
+                destFile.length() != sourceFile.length() ||
+                destFile.lastModified() != sourceFile.lastModified()
+            if (needsUpdate) {
+                val sourceDigest = sha256(sourceFile)
+                val tempFile = File(safeDir, ".manager_safe.apk.tmp-${Process.myPid()}")
+                try {
+                    if (lstatOrNull(tempFile) != null) {
+                        checkSafePath(tempFile, directory = false, expectedMode = null)
+                        check(tempFile.delete()) { "无法删除旧临时 APK" }
+                    }
+                    FileOutputStream(tempFile).use { output ->
+                        sourceFile.inputStream().use { it.copyTo(output) }
+                        output.fd.sync()
+                    }
+                    check(tempFile.setLastModified(sourceFile.lastModified())) {
+                        "无法同步临时 APK 修改时间"
+                    }
+                    Os.chmod(tempFile.absolutePath, FILE_MODE)
+                    checkSafePath(tempFile, directory = false, expectedMode = FILE_MODE)
+                    check(MessageDigest.isEqual(sourceDigest, sha256(tempFile))) {
+                        "临时 APK SHA-256 校验失败"
+                    }
+                    Os.rename(tempFile.absolutePath, destFile.absolutePath)
+                } finally {
+                    deleteOwnedFile(tempFile)
+                }
+            }
+
+            Os.chmod(destFile.absolutePath, FILE_MODE)
+            checkSafePath(destFile, directory = false, expectedMode = FILE_MODE)
+            destFile.absolutePath
+        } catch (e: Throwable) {
+            LOGGER.e(e, "准备安全 APK 失败，回退到原路径")
+            sourcePath
+        }
+    }
+
+    fun cleanupManagerApkCache() = synchronized(safeApkLock) {
+        deleteOwnedFile(File(LEGACY_SAFE_APK_PATH))
+        val safeDir = File(SAFE_APK_DIR)
+        val stat = lstatOrNull(safeDir)
+        if (stat != null && !OsConstants.S_ISLNK(stat.st_mode) &&
+            OsConstants.S_ISDIR(stat.st_mode) && stat.st_uid == Process.myUid()) {
+            deleteOwnedFile(File(SAFE_APK_PATH))
+            safeDir.listFiles()
+                ?.filter { it.name.startsWith(".manager_safe.apk.tmp-") }
+                ?.forEach(::deleteOwnedFile)
+            safeDir.delete()
+        }
+    }
+
+    private fun checkSafePath(
+        file: File,
+        directory: Boolean,
+        expectedMode: Int?,
+        checkOwner: Boolean = true
+    ) {
+        val stat = lstatOrNull(file) ?: error("路径不存在: ${file.absolutePath}")
+        check(!OsConstants.S_ISLNK(stat.st_mode)) { "拒绝符号链接: ${file.absolutePath}" }
+        check(if (directory) OsConstants.S_ISDIR(stat.st_mode) else OsConstants.S_ISREG(stat.st_mode)) {
+            "路径类型错误: ${file.absolutePath}"
+        }
+        if (checkOwner) check(stat.st_uid == Process.myUid()) { "路径所有者不匹配: ${file.absolutePath}" }
+        if (expectedMode != null) {
+            check(stat.st_mode and PERMISSION_MASK == expectedMode) { "路径权限不安全: ${file.absolutePath}" }
+        }
+    }
+
+    private fun deleteOwnedFile(file: File) {
+        val stat = lstatOrNull(file) ?: return
+        if (stat.st_uid == Process.myUid() &&
+            (OsConstants.S_ISREG(stat.st_mode) || OsConstants.S_ISLNK(stat.st_mode))) {
+            file.delete()
+        }
+    }
+
+    private fun sha256(file: File): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest()
+    }
+
+    private fun lstatOrNull(file: File) = try {
+        Os.lstat(file.absolutePath)
+    } catch (e: ErrnoException) {
+        if (e.errno == OsConstants.ENOENT) null else throw e
     }
 
     private fun getDebugArgs(): String =

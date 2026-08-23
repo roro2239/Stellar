@@ -47,8 +47,6 @@ class StellarService : IStellarService.Stub() {
 
     @Volatile
     private var daemonPid: Int = -1
-    
-    // 防止无限重启死循环的变量
     @Volatile
     private var daemonRestartCount: Int = 0
     @Volatile
@@ -376,6 +374,7 @@ class StellarService : IStellarService.Stub() {
         val caller = CallerContext.fromBinder()
         permissionEnforcer.enforceManager(caller, "exit")
         LOGGER.i("exit")
+        userServiceManager.cleanupManagerApkCache()
         daemonPid = -1
         stopDaemon()
         exitProcess(0)
@@ -578,7 +577,7 @@ class StellarService : IStellarService.Stub() {
                         lastDaemonRestartTime = now
 
                         if (daemonRestartCount > 5) {
-                            LOGGER.e("守护进程频繁死亡 (连续 $daemonRestartCount 次)，为防系统判定异常而强杀主进程，已停止自动拉起守护进程。")
+                            LOGGER.e("守护进程频繁死亡，已停止自动拉起守护进程")
                             daemonPid = -1
                             break
                         }

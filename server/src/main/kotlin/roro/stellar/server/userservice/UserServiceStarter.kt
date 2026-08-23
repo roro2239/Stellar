@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.ContextHidden
 import android.content.IContentProvider
 import android.ddm.DdmHandleAppName
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Looper
@@ -20,6 +19,7 @@ import rikka.hidden.compat.ActivityManagerApis
 import roro.stellar.server.ServerConstants
 import roro.stellar.server.api.IContentProviderUtils
 import roro.stellar.server.util.UserHandleCompat.PER_USER_RANGE
+import kotlin.system.exitProcess
 
 object UserServiceStarter {
     private const val TAG = "StellarUserServiceStarter"
@@ -66,8 +66,7 @@ object UserServiceStarter {
 
         if (token == null || packageName == null || className == null || uid == -1) {
             Log.e(TAG, "缺少必需参数")
-            System.exit(1)
-            return
+            exitProcess(1)
         }
 
         val userId = uid / PER_USER_RANGE
@@ -77,8 +76,7 @@ object UserServiceStarter {
         val userBinder = createUserService(packageName, className, userId, debugName)
         if (userBinder == null) {
             Log.e(TAG, "创建 UserService 实例失败")
-            System.exit(1)
-            return
+            exitProcess(1)
         }
 
         val serviceBinder = UserServiceBinder(userBinder)
@@ -86,8 +84,7 @@ object UserServiceStarter {
 
         if (!sendBinderToServer(serviceBinder, token, packageName, className, uid, serviceMode, verificationToken ?: "")) {
             Log.e(TAG, "发送 Binder 到服务器失败")
-            System.exit(1)
-            return
+            exitProcess(1)
         }
 
         Log.i(TAG, "UserService 启动成功")
@@ -95,7 +92,7 @@ object UserServiceStarter {
         Looper.loop()
 
         Log.i(TAG, "UserService 退出")
-        System.exit(0)
+        exitProcess(0)
     }
 
     private fun createUserService(packageName: String, className: String, userId: Int, debugName: String?): IBinder? {
@@ -106,11 +103,7 @@ object UserServiceStarter {
             val systemContext = activityThread.systemContext
             DdmHandleAppName.setAppName(debugName ?: "$packageName:user_service", userId)
             val userHandle: UserHandle = Refine.unsafeCast(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    UserHandleHidden.of(userId)
-                } else {
-                    UserHandleHidden(userId)
-                }
+                UserHandleHidden.of(userId)
             )
             val context = Refine.unsafeCast<ContextHidden>(systemContext).createPackageContextAsUser(
                 packageName,
@@ -138,8 +131,8 @@ object UserServiceStarter {
                 // Application 初始化失败时回退到旧的 Context 方案
                 // 主要用于解决部分联发科设备上的兼容性问题
                 // 参见 RikkaApps/Shizuku Issue #1171 和 RikkaApps/Shizuku-API PR #299
-                Log.w(TAG, "无法初始化 Application，已回退到 Context", e);
-                application = null;
+                Log.w(TAG, "无法初始化 Application，已回退到 Context", e)
+                application = null
             }
 
             val classLoader = (if (application != null) application.classLoader else context.classLoader)
@@ -148,7 +141,7 @@ object UserServiceStarter {
             val instance = try {
                 val constructorWithContext = serviceClass.getConstructor(Context::class.java)
                 constructorWithContext.newInstance(application ?: context)
-            } catch (e: NoSuchMethodException) {
+            } catch (_: NoSuchMethodException) {
                 val constructor = serviceClass.getDeclaredConstructor()
                 constructor.isAccessible = true
                 constructor.newInstance()
@@ -223,12 +216,19 @@ object UserServiceStarter {
                     stellarBinder = container.binder
                     stellarBinder!!.linkToDeath({
                         Log.i(TAG, "Stellar 服务器已死亡，用户服务退出...")
-                        System.exit(0)
+                        exitProcess(0)
                     }, 0)
 
                     val clientContainer = reply.getParcelable<BinderContainer>(EXTRA_CLIENT_BINDER)
                     if (clientContainer?.binder != null && clientContainer.binder!!.pingBinder()) {
                         clientBinder = clientContainer.binder
+                        if (serviceMode == UserServiceConstants.MODE_ONE_TIME) {
+                            clientBinder!!.linkToDeath({
+                                Log.i(TAG, "客户端 App 已退出，一次性模式，服务退出...")
+                                exitProcess(0)
+                            }, 0)
+                            Log.i(TAG, "已设置客户端死亡监听（一次性模式）")
+                        }
                     }
 
                     return true
