@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,8 +39,7 @@ import roro.stellar.manager.db.AppDatabase
 import roro.stellar.manager.db.CommandEntity
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
-import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
+import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.shortcut.CommandShortcutManager
@@ -81,10 +79,8 @@ private suspend fun saveCommands(context: android.content.Context, commands: Lis
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalScreen(
-    topAppBarState: TopAppBarState,
     terminalViewModel: TerminalViewModel = viewModel()
 ) {
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val state by terminalViewModel.state.collectAsState()
     val screenConfig = LocalScreenConfig.current
     val context = LocalContext.current
@@ -102,14 +98,9 @@ fun TerminalScreen(
     val gridColumns = if (screenConfig.isLandscape) 4 else 2
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            StandardLargeTopAppBar(
-                title = stringResource(R.string.command),
-                scrollBehavior = scrollBehavior
-            )
+            FixedTopAppBar(title = stringResource(R.string.command))
         },
         floatingActionButton = {
             FloatingActionButton(

@@ -2,7 +2,9 @@ package roro.stellar.manager.ui.navigation.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -22,7 +24,7 @@ fun StandardBottomNavigation(
     selectedIndex: Int,
     onItemClick: (Int) -> Unit
 ) {
-    NavigationBar {
+    NavigationBar(windowInsets = WindowInsets.navigationBars) {
         MainScreen.entries.forEachIndexed { index, screen ->
             val isSelected = selectedIndex == index
 

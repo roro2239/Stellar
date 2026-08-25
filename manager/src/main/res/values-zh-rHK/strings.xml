@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">已開啟，繼續</string>
     <string name="grant_notification_permission">授權通知權限</string>
     <string name="need_notification_permission">需要通知權限才能繼續配對</string>
+    <string name="need_local_network_permission">需要區域網絡權限才能發現無線偵錯服務</string>
     <string name="cannot_open_notification_settings">無法打開通知設定</string>
     <string name="grant_permission">授予權限</string>
     <string name="wireless_debugging_pairing">無線調試配對</string>

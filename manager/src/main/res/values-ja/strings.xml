@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">有効です。続行</string>
     <string name="grant_notification_permission">通知権限</string>
     <string name="need_notification_permission">ペアリングを続けるには通知権限が必要です</string>
+    <string name="need_local_network_permission">ワイヤレスデバッグを検出するにはローカルネットワーク権限が必要です</string>
     <string name="cannot_open_notification_settings">通知設定を開けません</string>
     <string name="grant_permission">権限を付与</string>
     <string name="wireless_debugging_pairing">ワイヤレスデバッグのペアリング</string>

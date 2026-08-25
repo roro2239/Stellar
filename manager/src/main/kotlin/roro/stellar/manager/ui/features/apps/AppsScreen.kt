@@ -9,7 +9,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInHorizontally
@@ -59,7 +58,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +78,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -105,8 +102,7 @@ import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarInfoDialog
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
-import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
+import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.Logger.Companion.LOGGER
@@ -150,10 +146,8 @@ private fun rememberShizukuCompatEnabled(): Boolean {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppsScreen(
-    topAppBarState: TopAppBarState,
     appsViewModel: AppsViewModel
 ) {
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val stellarAppsResource by appsViewModel.stellarApps.observeAsState()
     val shizukuAppsResource by appsViewModel.shizukuApps.observeAsState()
     var showPermissionError by remember { mutableStateOf(false) }
@@ -168,7 +162,6 @@ fun AppsScreen(
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    val searchScope = rememberCoroutineScope()
 
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedApps by remember { mutableStateOf(setOf<String>()) }
@@ -187,9 +180,7 @@ fun AppsScreen(
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize(),
         topBar = {
             if (isSearching) {
                 TopAppBar(
@@ -241,45 +232,17 @@ fun AppsScreen(
                     }
                 )
             } else {
-                StandardLargeTopAppBar(
+                FixedTopAppBar(
                     title = stringResource(R.string.authorized_apps),
-                    scrollBehavior = scrollBehavior,
-                    titleContent = {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(end = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.authorized_apps),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = {
-                                    searchScope.launch {
-                                        val target = topAppBarState.heightOffsetLimit
-                                        animate(
-                                            initialValue = topAppBarState.heightOffset,
-                                            targetValue = target
-                                        ) { value, _ ->
-                                            topAppBarState.heightOffset = value
-                                        }
-                                        isSearching = true
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Search, contentDescription = null)
-                                }
-                                IconButton(onClick = {
-                                    isSelectionMode = !isSelectionMode
-                                    selectedApps = emptySet()
-                                }) {
-                                    Icon(Icons.Default.Checklist, contentDescription = null)
-                                }
-                            }
+                    actions = {
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(Icons.Default.Search, contentDescription = null)
+                        }
+                        IconButton(onClick = {
+                            isSelectionMode = !isSelectionMode
+                            selectedApps = emptySet()
+                        }) {
+                            Icon(Icons.Default.Checklist, contentDescription = null)
                         }
                     }
                 )

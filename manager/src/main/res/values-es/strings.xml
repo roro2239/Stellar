@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">Activado, continuar</string>
     <string name="grant_notification_permission">Permiso de notificaciones</string>
     <string name="need_notification_permission">Se requiere permiso de notificaciones para continuar el emparejamiento</string>
+    <string name="need_local_network_permission">Se requiere permiso de red local para descubrir la depuración inalámbrica</string>
     <string name="cannot_open_notification_settings">No se pudo abrir la configuración de notificaciones</string>
     <string name="grant_permission">Conceder permiso</string>
     <string name="wireless_debugging_pairing">Emparejamiento de depuración inalámbrica</string>

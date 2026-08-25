@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">Activé, continuer</string>
     <string name="grant_notification_permission">Permission de notification</string>
     <string name="need_notification_permission">La permission de notification est requise pour continuer l\'appairage</string>
+    <string name="need_local_network_permission">L\'autorisation réseau local est requise pour découvrir le débogage sans fil</string>
     <string name="cannot_open_notification_settings">Impossible d\'ouvrir les paramètres de notification</string>
     <string name="grant_permission">Accorder la permission</string>
     <string name="wireless_debugging_pairing">Appairage du débogage sans fil</string>
