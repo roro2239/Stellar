@@ -18,12 +18,15 @@ import roro.stellar.manager.compat.BuildUtils
 import java.io.Closeable
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.net.ssl.SSLSocket
 
 private const val TAG = "AdbClient"
+private const val CONNECT_TIMEOUT_MILLIS = 3_000
+private const val AUTH_TIMEOUT_MILLIS = 5_000
 
 class AdbClient(private val host: String, private val port: Int, private val key: AdbKey) : Closeable {
 
@@ -41,8 +44,10 @@ class AdbClient(private val host: String, private val port: Int, private val key
     private val outputStream get() = if (useTls) tlsOutputStream else plainOutputStream
 
     fun connect() {
-        socket = Socket(host, port)
+        socket = Socket()
+        socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MILLIS)
         socket.tcpNoDelay = true
+        socket.soTimeout = AUTH_TIMEOUT_MILLIS
         plainInputStream = DataInputStream(socket.getInputStream())
         plainOutputStream = DataOutputStream(socket.getOutputStream())
 
@@ -57,6 +62,7 @@ class AdbClient(private val host: String, private val port: Int, private val key
 
             val sslContext = key.sslContext
             tlsSocket = sslContext.socketFactory.createSocket(socket, host, port, true) as SSLSocket
+            tlsSocket.soTimeout = AUTH_TIMEOUT_MILLIS
             tlsSocket.startHandshake()
             Log.d(TAG, "握手成功")
 
@@ -77,6 +83,9 @@ class AdbClient(private val host: String, private val port: Int, private val key
         }
 
         if (message.command != A_CNXN) error("不是 A_CNXN")
+
+        socket.soTimeout = 0
+        if (useTls) tlsSocket.soTimeout = 0
     }
 
     fun shellCommand(command: String, listener: ((ByteArray) -> Unit)?) {

@@ -70,7 +70,9 @@ import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.EnvironmentUtils
+import java.io.EOFException
 import java.net.ConnectException
+import java.net.SocketTimeoutException
 import javax.net.ssl.SSLException
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -1355,7 +1357,10 @@ internal class StarterViewModel(
                 if (_isCompleted.value) return@startStellarViaAdb
                 addOutputLine("错误：${error.message}")
                 viewModelScope.launch(Dispatchers.Main) {
-                    val needsPairing = error is SSLException || error is ConnectException
+                    val needsPairing = error is SSLException ||
+                        error is ConnectException ||
+                        error is SocketTimeoutException ||
+                        error is EOFException
                     if (needsPairing) {
                         // 配对失败，回到配对步骤
                         val pairingStepIndex = _steps.value.indexOfFirst { it.title == context.getString(R.string.wireless_debugging_pairing) }
