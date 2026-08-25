@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">Включено, продолжить</string>
     <string name="grant_notification_permission">Разрешение на уведомления</string>
     <string name="need_notification_permission">Для продолжения сопряжения требуется разрешение на уведомления</string>
+    <string name="need_local_network_permission">Для обнаружения беспроводной отладки требуется разрешение на доступ к локальной сети</string>
     <string name="cannot_open_notification_settings">Не удалось открыть настройки уведомлений</string>
     <string name="grant_permission">Предоставить разрешение</string>
     <string name="wireless_debugging_pairing">Сопряжение беспроводной отладки</string>

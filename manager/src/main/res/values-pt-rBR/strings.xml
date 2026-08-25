@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">Ativado, continuar</string>
     <string name="grant_notification_permission">Permissão de notificação</string>
     <string name="need_notification_permission">A permissão de notificação é necessária para continuar o pareamento</string>
+    <string name="need_local_network_permission">A permissão de rede local é necessária para descobrir a depuração sem fio</string>
     <string name="cannot_open_notification_settings">Não foi possível abrir as configurações de notificação</string>
     <string name="grant_permission">Conceder permissão</string>
     <string name="wireless_debugging_pairing">Pareamento de depuração sem fio</string>

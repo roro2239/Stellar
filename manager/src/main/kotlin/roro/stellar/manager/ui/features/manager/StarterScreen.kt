@@ -64,6 +64,7 @@ import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.AppConstants
+import roro.stellar.manager.compat.LocalNetwork
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
@@ -116,6 +117,18 @@ internal fun StarterScreen(
     val scrollState = rememberScrollState()
 
     val horizontalPadding = if (isLandscape) 48.dp else AppSpacing.screenHorizontalPadding
+
+    val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onLocalNetworkPermissionResult(granted)
+    }
+
+    LaunchedEffect(isRoot) {
+        if (!isRoot && LocalNetwork.isRequired() && !LocalNetwork.hasAccess(context)) {
+            localNetworkPermissionLauncher.launch(LocalNetwork.PERMISSION)
+        }
+    }
 
     LaunchedEffect(currentStepIndex, steps) {
         if (currentStepIndex > 0) {
@@ -919,7 +932,23 @@ internal class StarterViewModel(
 
     init {
         initializeSteps()
-        startProcess()
+        if (!needsLocalNetworkPermission()) {
+            startProcess()
+        }
+    }
+
+    private fun needsLocalNetworkPermission(): Boolean =
+        !isRoot && LocalNetwork.isRequired() && !LocalNetwork.hasAccess(context)
+
+    fun onLocalNetworkPermissionResult(granted: Boolean) {
+        if (granted) {
+            if (_steps.value.firstOrNull()?.status == StepStatus.PENDING) {
+                startProcess()
+            }
+            return
+        }
+        updateStep(0, StepStatus.ERROR, context.getString(R.string.need_local_network_permission))
+        _errorMessage.value = context.getString(R.string.need_local_network_permission)
     }
 
     private fun initializeSteps() {
@@ -979,7 +1008,7 @@ internal class StarterViewModel(
 
     fun setNotificationPermission(granted: Boolean) {
         _hasNotificationPermission.value = granted
-        if (granted) {
+            if (granted) {
             val currentSteps = _steps.value
             val notificationStepIndex = currentSteps.indexOfFirst { it.title == context.getString(R.string.grant_notification_permission) }
             if (notificationStepIndex >= 0) {
@@ -989,7 +1018,7 @@ internal class StarterViewModel(
                     updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
                 }
             }
-            if (atLeast30) startPairingService()
+            if (atLeast30 && LocalNetwork.hasAccess(context)) startPairingService()
         }
     }
 
@@ -1159,6 +1188,13 @@ internal class StarterViewModel(
             }
 
             if (atLeast30) {
+                if (!LocalNetwork.hasAccess(context)) {
+                    launch(Dispatchers.Main) {
+                        updateStep(0, StepStatus.ERROR, context.getString(R.string.need_local_network_permission))
+                        _errorMessage.value = context.getString(R.string.need_local_network_permission)
+                    }
+                    return@launch
+                }
                 launch(Dispatchers.Main) {
                     startMdnsDetection(hasValidCustomPort, customPort ?: -1)
                 }
@@ -1251,7 +1287,7 @@ internal class StarterViewModel(
 
         _currentStepIndex.value = if (hasPermission) 2 else 1
 
-        if (hasPermission && atLeast30) {
+        if (hasPermission && atLeast30 && LocalNetwork.hasAccess(context)) {
             startPairingService()
         }
     }

@@ -23,4 +23,7 @@ object BuildUtils {
 
     val atLeast34: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+
+    val atLeast37: Boolean
+        get() = Build.VERSION.SDK_INT >= 37
 }

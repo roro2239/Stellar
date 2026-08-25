@@ -223,6 +223,7 @@
     <string name="already_enabled_continue">مفعّل، متابعة</string>
     <string name="grant_notification_permission">إذن الإشعارات</string>
     <string name="need_notification_permission">يلزم إذن الإشعارات لمتابعة الاقتران</string>
+    <string name="need_local_network_permission">يلزم إذن الشبكة المحلية لاكتشاف تصحيح الأخطاء اللاسلكي</string>
     <string name="cannot_open_notification_settings">تعذّر فتح إعدادات الإشعارات</string>
     <string name="grant_permission">منح الإذن</string>
     <string name="wireless_debugging_pairing">اقتران التصحيح اللاسلكي</string>

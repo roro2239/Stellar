@@ -230,6 +230,7 @@
     <string name="already_enabled_continue">Enabled, continue</string>
     <string name="grant_notification_permission">Notification Permission</string>
     <string name="need_notification_permission">Notification permission is required to continue pairing</string>
+    <string name="need_local_network_permission">Local network permission is required to discover wireless debugging</string>
     <string name="cannot_open_notification_settings">Cannot open notification settings</string>
     <string name="grant_permission">Grant Permission</string>
     <string name="wireless_debugging_pairing">Wireless Debugging Pairing</string>
