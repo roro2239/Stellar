@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -50,11 +49,9 @@ import roro.stellar.manager.ui.features.manager.ManagerActivity
 import roro.stellar.manager.ui.features.settings.SettingsScreen
 import roro.stellar.manager.ui.features.terminal.TerminalScreen
 import roro.stellar.manager.ui.navigation.components.LocalNavigationState
-import roro.stellar.manager.ui.navigation.components.LocalTopAppBarState
 import roro.stellar.manager.ui.navigation.components.NavigationState
 import roro.stellar.manager.ui.navigation.components.StandardBottomNavigation
 import roro.stellar.manager.ui.navigation.components.StandardNavigationRail
-import roro.stellar.manager.ui.navigation.components.TopAppBarProvider
 import roro.stellar.manager.ui.navigation.routes.MainScreen
 import roro.stellar.manager.ui.navigation.safePopBackStack
 import roro.stellar.manager.ui.theme.StellarTheme
@@ -105,12 +102,10 @@ class MainActivity : ComponentActivity() {
             val themeMode = ThemePreferences.themeMode.value
 
             StellarTheme(themeMode = themeMode) {
-                TopAppBarProvider {
-                    MainScreenContent(
-                        homeViewModel = homeModel,
-                        appsViewModel = appsModel
-                    )
-                }
+                MainScreenContent(
+                    homeViewModel = homeModel,
+                    appsViewModel = appsModel
+                )
             }
         }
 
@@ -209,13 +204,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     homeViewModel: HomeViewModel,
     appsViewModel: AppsViewModel
 ) {
-    val topAppBarState = LocalTopAppBarState.current!!
     val navController = rememberNavController()
 
     val startPage = remember { ThemePreferences.startPage.value }
@@ -286,7 +279,6 @@ private fun MainScreenContent(
             ) {
                 composable("home") {
                     HomeScreen(
-                        topAppBarState = topAppBarState,
                         homeViewModel = homeViewModel,
                         onNavigateToStarter = { isRoot, host, port, hasSecureSettings ->
                             context.startActivity(ManagerActivity.createStarterIntent(context, isRoot, host, port, hasSecureSettings))
@@ -301,7 +293,6 @@ private fun MainScreenContent(
             ) {
                 composable("apps") {
                     AppsScreen(
-                        topAppBarState = topAppBarState,
                         appsViewModel = appsViewModel
                     )
                 }
@@ -312,9 +303,7 @@ private fun MainScreenContent(
                 route = MainScreen.Terminal.route
             ) {
                 composable("terminal") {
-                    TerminalScreen(
-                        topAppBarState = topAppBarState
-                    )
+                    TerminalScreen()
                 }
             }
 
@@ -324,7 +313,6 @@ private fun MainScreenContent(
             ) {
                 composable("settings") {
                     SettingsScreen(
-                        topAppBarState = topAppBarState,
                         onNavigateToLogs = {
                             context.startActivity(ManagerActivity.createLogsIntent(context))
                         }

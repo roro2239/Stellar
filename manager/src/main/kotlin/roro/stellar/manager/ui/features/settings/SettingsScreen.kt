@@ -65,7 +65,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,7 +76,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -115,8 +113,7 @@ import roro.stellar.manager.ui.components.SettingsExpandableCard
 import roro.stellar.manager.ui.components.SettingsInnerSwitchRow
 import roro.stellar.manager.ui.components.SettingsSwitchCard
 import roro.stellar.manager.ui.components.StellarSegmentedSelector
-import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
+import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.ui.theme.StartPage
@@ -139,10 +136,8 @@ private const val TAG = "SettingsScreen"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    topAppBarState: TopAppBarState,
     onNavigateToLogs: () -> Unit = {}
 ) {
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val context = LocalContext.current
     val componentName = ComponentName(context.packageName, BootCompleteReceiver::class.java.name)
     val screenConfig = LocalScreenConfig.current
@@ -296,14 +291,9 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            StandardLargeTopAppBar(
-                title = "Stellar",
-                scrollBehavior = scrollBehavior
-            )
+            FixedTopAppBar(title = "Stellar")
         }
     ) { paddingValues ->
         LazyVerticalGrid(

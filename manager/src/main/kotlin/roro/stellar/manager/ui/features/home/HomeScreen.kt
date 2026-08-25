@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -21,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import roro.stellar.Stellar
@@ -30,21 +27,17 @@ import roro.stellar.manager.compat.ClipboardUtils
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.ui.components.LocalScreenConfig
 import roro.stellar.manager.ui.components.StellarDialog
-import roro.stellar.manager.ui.navigation.components.StandardLargeTopAppBar
-import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavior
+import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.util.EnvironmentUtils
 import roro.stellar.manager.util.UserHandleCompat
 
 @SuppressLint("LocalContextGetResourceValueCall")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    topAppBarState: TopAppBarState,
     homeViewModel: HomeViewModel,
     onNavigateToStarter: (isRoot: Boolean, host: String?, port: Int, hasSecureSettings: Boolean) -> Unit = { _, _, _, _ -> }
 ) {
-    val scrollBehavior = createTopAppBarScrollBehavior(topAppBarState)
     val context = LocalContext.current
     val serviceStatusResource by homeViewModel.serviceStatus.observeAsState()
     val screenConfig = LocalScreenConfig.current
@@ -63,14 +56,9 @@ fun HomeScreen(
     val gridColumns = screenConfig.gridColumns
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.fillMaxSize(),
         topBar = {
-            StandardLargeTopAppBar(
-                title = "Stellar",
-                scrollBehavior = scrollBehavior
-            )
+            FixedTopAppBar(title = "Stellar")
         }
     ) { paddingValues ->
         LazyVerticalGrid(
