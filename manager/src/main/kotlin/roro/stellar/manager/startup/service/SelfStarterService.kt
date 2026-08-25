@@ -32,18 +32,16 @@ class SelfStarterService : Service(), LifecycleOwner {
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
 
-    private val portLive = MutableLiveData<Pair<String, Int>>()
+    private val portLive = MutableLiveData<Int>()
     private var adbMdns: AdbMdns? = null
     private val adbWirelessHelper = AdbWirelessHelper()
 
-    private val portObserver = Observer<Pair<String, Int>> { service ->
-        val host = service.first
-        val p = service.second
+    private val portObserver = Observer<Int> { p ->
         if (p in 1..65535) {
             Log.i(
                 AppConstants.TAG, "通过 mDNS 发现 ADB 端口: $p"
             )
-            changeTcpipPortThenStart(host, p)
+            changeTcpipPortThenStart("127.0.0.1", p)
         } else {
             Log.w(AppConstants.TAG, "mDNS返回无效端口: $p")
         }

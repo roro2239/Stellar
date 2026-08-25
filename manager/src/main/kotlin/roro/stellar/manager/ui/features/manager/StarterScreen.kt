@@ -280,13 +280,6 @@ private fun StepActionContent(
     context: Context
 ) {
     val hasNotificationPermission by viewModel.hasNotificationPermission.collectAsState()
-    val localNetworkPermission = remember {
-        when {
-            Build.VERSION.SDK_INT >= 37 -> "android.permission.ACCESS_LOCAL_NETWORK"
-            Build.VERSION.SDK_INT >= 36 -> Manifest.permission.NEARBY_WIFI_DEVICES
-            else -> null
-        }
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -295,12 +288,6 @@ private fun StepActionContent(
         if (!isGranted) {
             Toast.makeText(context, context.getString(R.string.need_notification_permission), Toast.LENGTH_LONG).show()
         }
-    }
-
-    val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        viewModel.setLocalNetworkPermission(isGranted)
     }
 
     Column {
@@ -416,21 +403,15 @@ private fun StepActionContent(
                 }
                 Button(
                     onClick = {
-                        if (localNetworkPermission != null &&
-                            ContextCompat.checkSelfPermission(context, localNetworkPermission) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            localNetworkPermissionLauncher.launch(localNetworkPermission)
-                        } else {
-                            try {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                        putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
-                                    }
-                                )
-                            } catch (_: ActivityNotFoundException) {
-                                Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
-                            }
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    putExtra(":settings:fragment_args_key", "toggle_adb_wireless")
+                                }
+                            )
+                        } catch (_: ActivityNotFoundException) {
+                            Toast.makeText(context, context.getString(R.string.cannot_open_dev_options), Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -879,7 +860,6 @@ internal class StarterViewModel(
     private val port: Int,
     private val hasSecureSettings: Boolean = false
 ) : ViewModel() {
-    private var detectedHost: String? = host
 
     val canWriteSecureSettings: Boolean =
         hasSecureSettings ||
@@ -924,16 +904,6 @@ internal class StarterViewModel(
         }
     )
     val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
-
-    private val _hasLocalNetworkPermission = MutableStateFlow(
-        when {
-            Build.VERSION.SDK_INT >= 37 ->
-                ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_LOCAL_NETWORK") == PackageManager.PERMISSION_GRANTED
-            Build.VERSION.SDK_INT >= 36 ->
-                ContextCompat.checkSelfPermission(context, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED
-            else -> true
-        }
-    )
 
     private val _outputLines = MutableStateFlow<List<String>>(emptyList())
     val outputLines: StateFlow<List<String>> = _outputLines.asStateFlow()
@@ -1017,7 +987,7 @@ internal class StarterViewModel(
                     updateStep(nextIndex, StepStatus.RUNNING, currentSteps[nextIndex].description, true)
                 }
             }
-            maybeStartPairingService()
+            if (atLeast30) startPairingService()
         }
     }
 
@@ -1028,17 +998,6 @@ internal class StarterViewModel(
             context.startForegroundService(intent)
         } catch (e: Throwable) {
             Log.e(AppConstants.TAG, "启动前台服务失败", e)
-        }
-    }
-
-    fun setLocalNetworkPermission(granted: Boolean) {
-        _hasLocalNetworkPermission.value = granted
-        maybeStartPairingService()
-    }
-
-    private fun maybeStartPairingService() {
-        if (atLeast30 && _hasNotificationPermission.value && _hasLocalNetworkPermission.value) {
-            startPairingService()
         }
     }
 
@@ -1214,17 +1173,14 @@ internal class StarterViewModel(
     @RequiresApi(Build.VERSION_CODES.R)
     private fun startMdnsDetection(hasValidCustomPort: Boolean, customPort: Int) {
         var handled = false
-        val portObserver = Observer<Pair<String, Int>> { service ->
-            val discoveredHost = service.first
-            val discoveredPort = service.second
+        val portObserver = Observer<Int> { discoveredPort ->
             if (discoveredPort in 1..65535 && !handled) {
                 handled = true
                 adbMdns?.stop()
                 adbMdns = null
-                detectedHost = discoveredHost
 
                 viewModelScope.launch(Dispatchers.IO) {
-                    val canConnect = adbWirelessHelper.hasAdbPermission(discoveredHost, discoveredPort)
+                    val canConnect = adbWirelessHelper.hasAdbPermission(host ?: "127.0.0.1", discoveredPort)
                     launch(Dispatchers.Main) {
                         updateStep(0, StepStatus.COMPLETED, context.getString(R.string.port_available, discoveredPort))
 
@@ -1304,7 +1260,7 @@ internal class StarterViewModel(
             updateStep(connectIndex, StepStatus.RUNNING, context.getString(R.string.connecting_ellipsis))
         }
 
-        val targetHost = detectedHost ?: "127.0.0.1"
+        val targetHost = host ?: "127.0.0.1"
         val (shouldChange, newPort) = adbWirelessHelper.shouldChangePort(detectedPort)
         if (!isRoot && shouldChange && newPort > 0) {
             addOutputLine(context.getString(R.string.switching_port, newPort))

@@ -225,8 +225,7 @@ class AdbStartWorker(
             applicationContext.getString(R.string.boot_start_discovering_port)
         ))
 
-        val observer = Observer<Pair<String, Int>> { service ->
-            val port = service.second
+        val observer = Observer<Int> { port ->
             if (port > 0) {
                 trySend(port)
             }
