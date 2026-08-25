@@ -232,20 +232,18 @@ internal fun LogsScreen(
                 val addedCount = previous?.firstOrNull()?.key?.let { previousFirstKey ->
                     latest.indexOfFirst { it.key == previousFirstKey }.coerceAtLeast(0)
                 } ?: (latest.size - logs.size).coerceAtLeast(0)
+                val wasAtTop = listState.firstVisibleItemIndex == 0 &&
+                    listState.firstVisibleItemScrollOffset == 0
                 val visibleCount = (logs.size + addedCount).coerceAtLeast(pageSize)
                 allServiceLogs = latest
                 logs = latest.take(visibleCount)
                 hasMore = logs.size < latest.size
-                if (addedCount > 0 && logs.isNotEmpty()) {
+                if (addedCount > 0 && logs.isNotEmpty() && wasAtTop) {
                     listState.scrollToItem(addedCount.coerceAtMost(logs.lastIndex))
                     listState.animateScrollToItem(0)
                 }
             }
         }
-    }
-
-    LaunchedEffect(selectedLevels, searchQuery) {
-        listState.animateScrollToItem(0)
     }
 
     LaunchedEffect(listState, hasMore) {

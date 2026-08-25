@@ -53,17 +53,6 @@ object PackageManagerCompat {
 
     fun getInstalledPackages(flags: Long, userId: Int): List<PackageInfo?>? {
         val queryFlags = flags or PackageManager.MATCH_ALL.toLong()
-        try {
-            val method = systemPackageManager.javaClass.getMethod(
-                "getInstalledPackagesAsUser",
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType
-            )
-            val result = invokeMethod(systemPackageManager, method, queryFlags.toInt(), userId)
-            return unwrapPackageInfoList(result)
-        } catch (tr: Throwable) {
-            LOGGER.d("getInstalledPackagesAsUser failed, falling back to package service: %s", tr.message)
-        }
 
         return try {
             val service = packageManagerService ?: return PackageManagerApis.getInstalledPackagesNoThrow(queryFlags, userId)
@@ -105,7 +94,7 @@ object PackageManagerCompat {
 
     private fun obtainPackageManagerService(): Any {
         val binder = ServiceManager.getService("package")
-        val stubClass = Class.forName("android.content.pm.IPackageManager\$Stub")
+        val stubClass = Class.forName($$"android.content.pm.IPackageManager$Stub")
         return checkNotNull(
             stubClass.getDeclaredMethod("asInterface", IBinder::class.java).invoke(null, binder)
         )
