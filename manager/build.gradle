@@ -98,12 +98,18 @@ autoResConfig {
     generatedArrayFirstItem = "SYSTEM"
     generateLocaleConfig = true
 }
+interface InjectedExecOps {
+    @javax.inject.Inject
+    ExecOperations getExecOps()
+}
+
+def execOps = project.objects.newInstance(InjectedExecOps).execOps
 def collapseReleaseResourceNames = task('collapseReleaseResourceNames').doLast {
     def aapt2 = Paths.get(project.android.sdkDirectory.path, 'build-tools', project.android.buildToolsVersion, 'aapt2')
     def zip = Paths.get(project.buildDir.path, 'intermediates',
             'optimized_processed_res', 'release', 'optimizeReleaseResources', 'resources-release-optimize.ap_')
     def optimized = new File("${zip}.opt")
-    def cmd = exec {
+    def cmd = execOps.exec {
         commandLine aapt2, 'optimize', '--collapse-resource-names',
                 '--resources-config-path', 'aapt2-resources.cfg',
                 '-o', optimized, zip
